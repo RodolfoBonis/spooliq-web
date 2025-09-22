@@ -450,32 +450,26 @@ export default function UsersPage() {
                   {/* Actions */}
                   <div className="flex gap-3 mt-auto">
                     <Link href={`/users/${user.id}`} className="flex-1">
-                      <button className="w-full h-12 flex items-center justify-center gap-2 bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 hover:from-slate-200 hover:to-slate-300 dark:hover:from-slate-600 dark:hover:to-slate-500 text-slate-700 dark:text-slate-200 hover:text-slate-800 dark:hover:text-slate-100 rounded-xl font-medium shadow-sm hover:shadow-md transition-all duration-200 group">
+                      <button className="w-full h-10 flex items-center justify-center gap-2 border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 rounded-lg font-medium transition-all duration-200 group">
                         <Eye className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                        <span className="text-sm">Ver Detalhes</span>
+                        <span className="text-sm">Ver</span>
                       </button>
                     </Link>
 
                     <button
                       onClick={() => handleToggleStatus(user.id)}
                       disabled={toggleStatus.isPending}
-                      className={`h-12 px-4 flex items-center justify-center gap-2 rounded-xl font-medium shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 group ${
+                      className={`h-10 px-3 flex items-center justify-center gap-2 border-2 bg-white dark:bg-slate-800 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 group ${
                         user.status === 'active'
-                          ? 'bg-gradient-to-r from-amber-100 to-amber-200 dark:from-amber-900/30 dark:to-amber-800/30 hover:from-amber-200 hover:to-amber-300 dark:hover:from-amber-800/40 dark:hover:to-amber-700/40 text-amber-700 dark:text-amber-300 hover:text-amber-800 dark:hover:text-amber-200'
-                          : 'bg-gradient-to-r from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30 hover:from-green-200 hover:to-green-300 dark:hover:from-green-800/40 dark:hover:to-green-700/40 text-green-700 dark:text-green-300 hover:text-green-800 dark:hover:text-green-200'
+                          ? 'border-green-400 dark:border-green-500 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-500 dark:hover:border-green-400'
+                          : 'border-amber-400 dark:border-amber-500 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:border-amber-500 dark:hover:border-amber-400'
                       }`}
                       title={user.status === 'active' ? 'Desativar usuário' : 'Ativar usuário'}
                     >
                       {user.status === 'active' ? (
-                        <>
-                          <ToggleRight className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          <span className="text-sm hidden sm:inline">Ativo</span>
-                        </>
+                        <ToggleRight className="w-4 h-4 group-hover:scale-110 transition-transform" />
                       ) : (
-                        <>
-                          <ToggleLeft className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          <span className="text-sm hidden sm:inline">Inativo</span>
-                        </>
+                        <ToggleLeft className="w-4 h-4 group-hover:scale-110 transition-transform" />
                       )}
                     </button>
 
@@ -483,11 +477,10 @@ export default function UsersPage() {
                       <button
                         onClick={() => handleDelete(user.id, user.name)}
                         disabled={deleteUser.isPending}
-                        className="h-12 px-4 flex items-center justify-center gap-2 bg-gradient-to-r from-red-100 to-red-200 dark:from-red-900/30 dark:to-red-800/30 hover:from-red-200 hover:to-red-300 dark:hover:from-red-800/40 dark:hover:to-red-700/40 text-red-700 dark:text-red-300 hover:text-red-800 dark:hover:text-red-200 rounded-xl font-medium shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 group"
+                        className="h-10 px-3 flex items-center justify-center border-2 border-red-400 dark:border-red-500 bg-white dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 hover:border-red-500 dark:hover:border-red-400 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 group"
                         title="Excluir usuário"
                       >
                         <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                        <span className="text-sm hidden sm:inline">Excluir</span>
                       </button>
                     )}
                   </div>
