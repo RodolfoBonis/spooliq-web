@@ -6,12 +6,21 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string
   error?: string
   placeholder?: string
-  options: Array<{ value: string; label: string }>
+  options?: Array<{ value: string; label: string }>
   isLoading?: boolean
+  onValueChange?: (value: string) => void
 }
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, label, error, placeholder, options, isLoading, ...props }, ref) => {
+  ({ className, label, error, placeholder, options, isLoading, onValueChange, ...props }, ref) => {
+    const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      if (onValueChange) {
+        onValueChange(e.target.value)
+      }
+      if (props.onChange) {
+        props.onChange(e)
+      }
+    }
     return (
       <div className="space-y-1">
         {label && (
@@ -37,17 +46,18 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             )}
             disabled={isLoading}
             {...props}
+            onChange={handleChange}
           >
             {placeholder && (
               <option value="" disabled>
                 {placeholder}
               </option>
             )}
-            {options.map((option) => (
+            {options ? options.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
-            ))}
+            )) : props.children}
           </select>
 
           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">

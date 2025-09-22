@@ -1,13 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { Settings, Save, User, Bell, Shield, Palette, Zap } from 'lucide-react'
+import { Settings, Save, User, Bell, Shield, Palette, Zap, Battery, Cog, DollarSign, TrendingUp } from 'lucide-react'
 import { Card, Button, Input } from '@/components/ui'
 import { useAuthStore } from '@/stores/auth-store'
+import Link from 'next/link'
 
 export default function SettingsPage() {
   const { user } = useAuthStore()
   const [isLoading, setIsLoading] = useState(false)
+  const isAdmin = user?.role === "admin"
 
   const handleSave = () => {
     setIsLoading(true)
@@ -58,6 +60,32 @@ export default function SettingsPage() {
                   <Zap className="w-4 h-4 mr-3" />
                   API
                 </a>
+                {isAdmin && (
+                  <>
+                    <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
+                    <div className="px-3 py-2">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Administração
+                      </p>
+                    </div>
+                    <Link href="/settings/energy" className="flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800">
+                      <Battery className="w-4 h-4 mr-3" />
+                      Presets de Energia
+                    </Link>
+                    <Link href="/settings/machines" className="flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800">
+                      <Cog className="w-4 h-4 mr-3" />
+                      Presets de Máquina
+                    </Link>
+                    <Link href="/settings/cost" className="flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800">
+                      <DollarSign className="w-4 h-4 mr-3" />
+                      Presets de Custo
+                    </Link>
+                    <Link href="/settings/margin" className="flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800">
+                      <TrendingUp className="w-4 h-4 mr-3" />
+                      Presets de Margem
+                    </Link>
+                  </>
+                )}
               </nav>
             </div>
           </Card>
