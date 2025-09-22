@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app:*)",
+      "Read(//c/Users/rodol/OneDrive/Documentos/projects/**)",
+      "Bash(npm install:*)",
+      "Bash(mkdir:*)",
+      "Bash(touch:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Bash(ls:*)",
+      "Bash(pkill:*)",
+      "WebFetch(domain:api.spooliq.rodolfodebonis.com.br)",
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
