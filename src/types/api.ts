@@ -4,6 +4,10 @@ export interface User {
   name: string
   email: string
   roles: string[]
+  role?: string // Primary role for simplified access
+  status?: 'active' | 'inactive' | 'suspended'
+  last_login_at?: string
+  email_verified_at?: string
   created_at: string
   updated_at: string
 }
