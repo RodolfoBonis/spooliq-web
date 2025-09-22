@@ -448,34 +448,48 @@ export default function UsersPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2 mt-auto">
+                  <div className="flex gap-3 mt-auto">
                     <Link href={`/users/${user.id}`} className="flex-1">
-                      <button className="w-full h-10 flex items-center justify-center gap-2 border-2 border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-800 dark:hover:text-purple-200 bg-white dark:bg-slate-800 rounded-lg transition-all duration-200">
-                        <Eye className="w-4 h-4" />
-                        <span className="text-sm font-medium">Ver</span>
+                      <button className="w-full h-12 flex items-center justify-center gap-2 bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 hover:from-slate-200 hover:to-slate-300 dark:hover:from-slate-600 dark:hover:to-slate-500 text-slate-700 dark:text-slate-200 hover:text-slate-800 dark:hover:text-slate-100 rounded-xl font-medium shadow-sm hover:shadow-md transition-all duration-200 group">
+                        <Eye className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                        <span className="text-sm">Ver Detalhes</span>
                       </button>
                     </Link>
 
                     <button
                       onClick={() => handleToggleStatus(user.id)}
                       disabled={toggleStatus.isPending}
-                      className="w-10 h-10 flex items-center justify-center border-2 border-amber-300 dark:border-amber-600 hover:border-amber-400 dark:hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 bg-white dark:bg-slate-800 rounded-lg transition-all duration-200 disabled:opacity-50"
+                      className={`h-12 px-4 flex items-center justify-center gap-2 rounded-xl font-medium shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 group ${
+                        user.status === 'active'
+                          ? 'bg-gradient-to-r from-amber-100 to-amber-200 dark:from-amber-900/30 dark:to-amber-800/30 hover:from-amber-200 hover:to-amber-300 dark:hover:from-amber-800/40 dark:hover:to-amber-700/40 text-amber-700 dark:text-amber-300 hover:text-amber-800 dark:hover:text-amber-200'
+                          : 'bg-gradient-to-r from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30 hover:from-green-200 hover:to-green-300 dark:hover:from-green-800/40 dark:hover:to-green-700/40 text-green-700 dark:text-green-300 hover:text-green-800 dark:hover:text-green-200'
+                      }`}
                       title={user.status === 'active' ? 'Desativar usuário' : 'Ativar usuário'}
                     >
                       {user.status === 'active' ? (
-                        <ToggleRight className="w-4 h-4 text-amber-600 hover:text-amber-700" />
+                        <>
+                          <ToggleRight className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                          <span className="text-sm hidden sm:inline">Ativo</span>
+                        </>
                       ) : (
-                        <ToggleLeft className="w-4 h-4 text-amber-600 hover:text-amber-700" />
+                        <>
+                          <ToggleLeft className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                          <span className="text-sm hidden sm:inline">Inativo</span>
+                        </>
                       )}
                     </button>
 
-                    <button
-                      onClick={() => handleDelete(user.id, user.name)}
-                      disabled={deleteUser.isPending || user.id === currentUser?.id}
-                      className="w-10 h-10 flex items-center justify-center border-2 border-red-300 dark:border-red-600 hover:border-red-400 dark:hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 bg-white dark:bg-slate-800 rounded-lg transition-all duration-200 disabled:opacity-50"
-                    >
-                      <Trash2 className="w-4 h-4 text-red-600 hover:text-red-700" />
-                    </button>
+                    {user.id !== currentUser?.id && (
+                      <button
+                        onClick={() => handleDelete(user.id, user.name)}
+                        disabled={deleteUser.isPending}
+                        className="h-12 px-4 flex items-center justify-center gap-2 bg-gradient-to-r from-red-100 to-red-200 dark:from-red-900/30 dark:to-red-800/30 hover:from-red-200 hover:to-red-300 dark:hover:from-red-800/40 dark:hover:to-red-700/40 text-red-700 dark:text-red-300 hover:text-red-800 dark:hover:text-red-200 rounded-xl font-medium shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 group"
+                        title="Excluir usuário"
+                      >
+                        <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                        <span className="text-sm hidden sm:inline">Excluir</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </Card>
