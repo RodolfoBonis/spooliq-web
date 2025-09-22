@@ -55,33 +55,58 @@ export default function UsersPage() {
     switch (userRole) {
       case 'admin':
         return (
-          <Badge variant="success" className="gap-1">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 border border-purple-200 dark:border-purple-700/50 text-purple-700 dark:text-purple-300 rounded-full text-xs font-semibold">
             <Crown className="w-3 h-3" />
             Admin
-          </Badge>
+          </div>
         )
       case 'user':
         return (
-          <Badge variant="secondary" className="gap-1">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-700/50 border border-slate-200 dark:border-slate-600/50 text-slate-600 dark:text-slate-400 rounded-full text-xs font-semibold">
             <Shield className="w-3 h-3" />
             Usuário
-          </Badge>
+          </div>
         )
       default:
-        return <Badge variant="secondary">{userRole || 'Usuário'}</Badge>
+        return (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-700/50 border border-slate-200 dark:border-slate-600/50 text-slate-600 dark:text-slate-400 rounded-full text-xs font-semibold">
+            <Shield className="w-3 h-3" />
+            {userRole || 'Usuário'}
+          </div>
+        )
     }
   }
 
   const getStatusBadge = (status?: string) => {
     switch (status) {
       case 'active':
-        return <Badge variant="success">Ativo</Badge>
+        return (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border border-green-200 dark:border-green-700/50 text-green-700 dark:text-green-300 rounded-full text-xs font-semibold">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            Ativo
+          </div>
+        )
       case 'inactive':
-        return <Badge variant="secondary">Inativo</Badge>
+        return (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-800/30 border border-amber-200 dark:border-amber-700/50 text-amber-700 dark:text-amber-300 rounded-full text-xs font-semibold">
+            <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+            Inativo
+          </div>
+        )
       case 'suspended':
-        return <Badge variant="error">Suspenso</Badge>
+        return (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border border-red-200 dark:border-red-700/50 text-red-700 dark:text-red-300 rounded-full text-xs font-semibold">
+            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+            Suspenso
+          </div>
+        )
       default:
-        return <Badge variant="success">Ativo</Badge>
+        return (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border border-green-200 dark:border-green-700/50 text-green-700 dark:text-green-300 rounded-full text-xs font-semibold">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            Ativo
+          </div>
+        )
     }
   }
 
