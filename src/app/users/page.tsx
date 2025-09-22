@@ -55,7 +55,7 @@ export default function UsersPage() {
     switch (userRole) {
       case 'admin':
         return (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 border border-purple-200 dark:border-purple-700/50 text-purple-700 dark:text-purple-300 rounded-full text-xs font-semibold">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border border-blue-200 dark:border-blue-700/50 text-blue-700 dark:text-blue-300 rounded-full text-xs font-semibold">
             <Crown className="w-3 h-3" />
             Admin
           </div>
@@ -81,7 +81,7 @@ export default function UsersPage() {
     switch (status) {
       case 'active':
         return (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border border-green-200 dark:border-green-700/50 text-green-700 dark:text-green-300 rounded-full text-xs font-semibold">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border border-green-200 dark:border-green-700/50 text-green-700 dark:text-green-300 rounded-full text-xs font-semibold">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             Ativo
           </div>
@@ -102,7 +102,7 @@ export default function UsersPage() {
         )
       default:
         return (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border border-green-200 dark:border-green-700/50 text-green-700 dark:text-green-300 rounded-full text-xs font-semibold">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border border-green-200 dark:border-green-700/50 text-green-700 dark:text-green-300 rounded-full text-xs font-semibold">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             Ativo
           </div>
@@ -208,71 +208,71 @@ export default function UsersPage() {
       {/* Stats Cards */}
       {stats && (
         <AnimatedContainer animation="slideUp" delay={0.2}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <Card className="border-slate-200 dark:border-slate-700">
-              <div className="p-4">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
-                    <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            <Card className="border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors">
+              <div className="p-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-md flex items-center justify-center">
+                    <Users className="w-3 h-3 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <div className="ml-4">
-                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.total}</p>
+                  <div>
+                    <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{stats.total}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">Total</p>
                   </div>
                 </div>
               </div>
             </Card>
 
-            <Card className="border-slate-200 dark:border-slate-700">
-              <div className="p-4">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
-                    <Shield className="w-4 h-4 text-green-600 dark:text-green-400" />
+            <Card className="border-slate-200 dark:border-slate-700 hover:border-green-300 dark:hover:border-green-600 transition-colors">
+              <div className="p-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-6 h-6 bg-green-100 dark:bg-green-900/30 rounded-md flex items-center justify-center">
+                    <Shield className="w-3 h-3 text-green-600 dark:text-green-400" />
                   </div>
-                  <div className="ml-4">
-                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.active}</p>
+                  <div>
+                    <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{stats.active}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">Ativos</p>
                   </div>
                 </div>
               </div>
             </Card>
 
-            <Card className="border-slate-200 dark:border-slate-700">
-              <div className="p-4">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center">
-                    <Users className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+            <Card className="border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-colors">
+              <div className="p-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-6 h-6 bg-slate-100 dark:bg-slate-800 rounded-md flex items-center justify-center">
+                    <Users className="w-3 h-3 text-slate-600 dark:text-slate-400" />
                   </div>
-                  <div className="ml-4">
-                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.inactive}</p>
+                  <div>
+                    <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{stats.inactive}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">Inativos</p>
                   </div>
                 </div>
               </div>
             </Card>
 
-            <Card className="border-slate-200 dark:border-slate-700">
-              <div className="p-4">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-red-100 dark:bg-red-900/20 rounded-lg flex items-center justify-center">
-                    <X className="w-4 h-4 text-red-600 dark:text-red-400" />
+            <Card className="border-slate-200 dark:border-slate-700 hover:border-red-300 dark:hover:border-red-600 transition-colors">
+              <div className="p-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-6 h-6 bg-red-100 dark:bg-red-900/30 rounded-md flex items-center justify-center">
+                    <X className="w-3 h-3 text-red-600 dark:text-red-400" />
                   </div>
-                  <div className="ml-4">
-                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.suspended}</p>
+                  <div>
+                    <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{stats.suspended}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">Suspensos</p>
                   </div>
                 </div>
               </div>
             </Card>
 
-            <Card className="border-slate-200 dark:border-slate-700">
-              <div className="p-4">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center">
-                    <Crown className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            <Card className="border-slate-200 dark:border-slate-700 hover:border-purple-300 dark:hover:border-purple-600 transition-colors">
+              <div className="p-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-6 h-6 bg-purple-100 dark:bg-purple-900/30 rounded-md flex items-center justify-center">
+                    <Crown className="w-3 h-3 text-purple-600 dark:text-purple-400" />
                   </div>
-                  <div className="ml-4">
-                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.admins}</p>
+                  <div>
+                    <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{stats.admins}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">Admins</p>
                   </div>
                 </div>
