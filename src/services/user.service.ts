@@ -45,10 +45,30 @@ export class UserService {
     if (filters.sortOrder) params.append('sort_order', filters.sortOrder)
 
     params.append('page', page.toString())
-    params.append('per_page', perPage.toString())
+    params.append('size', perPage.toString()) // Backend usa 'size' ao invés de 'per_page'
 
-    const response = await apiClient.get<PaginatedResponse<User>>(`/users?${params.toString()}`)
-    return response
+    const response = await apiClient.get<{
+      users: User[]
+      total: number
+      page: number
+      size: number
+    }>(`/users?${params.toString()}`)
+
+    // Normalizar dados dos usuários e converter para o formato esperado pelo frontend
+    const normalizedUsers = response.users.map(user => ({
+      ...user,
+      name: user.full_name || user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || 'Usuário',
+      status: user.enabled ? 'active' : 'inactive' as 'active' | 'inactive' | 'suspended',
+      role: user.roles?.find(role => role === 'Admin') ? 'admin' : 'user'
+    }))
+
+    return {
+      data: normalizedUsers,
+      total: response.total,
+      page: response.page,
+      per_page: response.size,
+      last_page: Math.ceil(response.total / response.size)
+    }
   }
 
   static async getUser(id: string): Promise<User> {
@@ -98,13 +118,37 @@ export class UserService {
     suspended: number
     admins: number
   }> {
-    const response = await apiClient.get<{
-      total: number
-      active: number
-      inactive: number
-      suspended: number
-      admins: number
-    }>('/users/stats')
-    return response
+    try {
+      // Tentar buscar stats específicos do endpoint
+      const response = await apiClient.get<{
+        total: number
+        active: number
+        inactive: number
+        suspended: number
+        admins: number
+      }>('/users/stats')
+      return response
+    } catch (error) {
+      // Se não houver endpoint de stats, calcular baseado na lista de usuários
+      const usersData = await this.getUsers({}, 1, 1000) // Buscar todos os usuários
+
+      const stats = {
+        total: usersData.total,
+        active: 0,
+        inactive: 0,
+        suspended: 0,
+        admins: 0
+      }
+
+      usersData.data.forEach(user => {
+        if (user.status === 'active') stats.active++
+        else if (user.status === 'inactive') stats.inactive++
+        else if (user.status === 'suspended') stats.suspended++
+
+        if (user.role === 'admin') stats.admins++
+      })
+
+      return stats
+    }
   }
 }

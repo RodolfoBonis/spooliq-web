@@ -1,10 +1,15 @@
 // Auth Types
 export interface User {
   id: string
-  name: string
+  username?: string
   email: string
+  first_name?: string
+  last_name?: string
+  full_name?: string
+  name?: string // Computed from full_name or first_name + last_name
   roles: string[]
   role?: string // Primary role for simplified access
+  enabled?: boolean // Backend usa 'enabled' ao invés de status
   status?: 'active' | 'inactive' | 'suspended'
   last_login_at?: string
   email_verified_at?: string
