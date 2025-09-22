@@ -291,3 +291,118 @@ export interface MaterialFilters {
   active_only?: boolean
   search?: string
 }
+
+// Preset Types
+export interface EnergyPreset {
+  key: string
+  location: string
+  state?: string
+  city?: string
+  base_tariff: number
+  flag_surcharge: number
+  year: number
+  month?: number
+  flag_type?: 'green' | 'yellow' | 'red'
+  description?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface MachinePreset {
+  key: string
+  name: string
+  brand: string
+  model: string
+  watt: number
+  idle_factor: number
+  description?: string
+  url?: string
+  build_volume?: {
+    x: number
+    y: number
+    z: number
+  }
+  nozzle_diameter?: number
+  max_temperature?: number
+  heated_bed?: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateEnergyPresetRequest {
+  location: string
+  state: string
+  city: string
+  base_tariff: number
+  flag_surcharge: number
+  year: number
+  month?: number
+  flag_type: 'green' | 'yellow' | 'red'
+  description?: string
+}
+
+export interface CreateMachinePresetRequest {
+  name: string
+  brand: string
+  model: string
+  watt: number
+  idle_factor: number
+  build_volume?: {
+    x: number
+    y: number
+    z: number
+  }
+  nozzle_diameter?: number
+  max_temperature?: number
+  heated_bed?: boolean
+}
+
+export interface UpdatePresetRequest {
+  [key: string]: any // Dynamic based on preset type
+}
+
+// Cost Profile Preset
+export interface CostPreset {
+  key: string
+  name: string
+  description?: string
+  overhead_amount: number
+  wear_percentage: number
+  is_default?: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateCostPresetRequest {
+  name: string
+  description?: string
+  overhead_amount: number
+  wear_percentage: number
+  is_default?: boolean
+}
+
+// Margin Profile Preset
+export interface MarginPreset {
+  key: string
+  name: string
+  description?: string
+  printing_only_margin: number
+  printing_plus_margin: number
+  full_service_margin: number
+  operator_rate_per_hour: number
+  modeler_rate_per_hour: number
+  is_default?: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateMarginPresetRequest {
+  name: string
+  description?: string
+  printing_only_margin: number
+  printing_plus_margin: number
+  full_service_margin: number
+  operator_rate_per_hour: number
+  modeler_rate_per_hour: number
+  is_default?: boolean
+}
