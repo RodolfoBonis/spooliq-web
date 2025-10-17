@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Grid3x3, List, Filter } from 'lucide-react';
 import { useFilaments, useCreateFilament, useUpdateFilament, useDeleteFilament } from '@/lib/hooks/use-filaments';
 import { useBrands } from '@/lib/hooks/use-brands';
 import { useMaterials } from '@/lib/hooks/use-materials';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -46,16 +47,26 @@ import { getColorPreviewStyle } from '@/lib/utils/format';
 
 type CreateFilamentForm = z.infer<typeof createFilamentSchema>;
 type UpdateFilamentForm = z.infer<typeof updateFilamentSchema>;
+type ViewMode = 'list' | 'grid';
 
 export default function FilamentsPage() {
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [search, setSearch] = useState('');
+  const [brandFilter, setBrandFilter] = useState('');
+  const [materialFilter, setMaterialFilter] = useState('');
+  const [diameterFilter, setDiameterFilter] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingFilament, setEditingFilament] = useState<Filament | null>(null);
   const [createColorName, setCreateColorName] = useState('');
   const [editColorName, setEditColorName] = useState('');
 
-  const { data: filamentsData, isLoading } = useFilaments({ pageSize: 50 });
+  const { data: filamentsData, isLoading } = useFilaments({ 
+    search,
+    brand_id: brandFilter,
+    material_id: materialFilter,
+    pageSize: 50 
+  });
   const { data: brandsData } = useBrands({ pageSize: 100 });
   const { data: materialsData } = useMaterials({ pageSize: 100 });
   const { mutate: createFilament, isPending: isCreating } = useCreateFilament();
@@ -68,12 +79,10 @@ export default function FilamentsPage() {
   const brands = brandsData?.data || [];
   const materials = materialsData?.data || [];
 
-  // Filter filaments based on search
-  const filteredFilaments = filaments.filter((filament) =>
-    filament.name.toLowerCase().includes(search.toLowerCase()) ||
-    filament.brand_name?.toLowerCase().includes(search.toLowerCase()) ||
-    filament.material_name?.toLowerCase().includes(search.toLowerCase())
-  );
+  // Filter by diameter locally
+  const filteredFilaments = diameterFilter 
+    ? filaments.filter(f => f.diameter === parseFloat(diameterFilter))
+    : filaments;
 
   // Create form
   const createForm = useForm<CreateFilamentForm>({
@@ -172,60 +181,220 @@ export default function FilamentsPage() {
     }).format(cents / 100);
   };
 
+  // Clear filters
+  const clearFilters = () => {
+    setSearch('');
+    setBrandFilter('');
+    setMaterialFilter('');
+    setDiameterFilter('');
+  };
+
+  const hasActiveFilters = search || brandFilter || materialFilter || diameterFilter;
+
   return (
     <div className="container py-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-neutral-900">Filamentos</h1>
-          <p className="text-neutral-600 mt-2">Gerencie seu catálogo de filamentos</p>
+          <h1 className="text-3xl font-bold">Filamentos</h1>
+          <p className="text-neutral-600">Gerencie seu catálogo de filamentos</p>
         </div>
-        <Button
-          onClick={() => setIsCreateOpen(true)}
-          className="bg-primary-500 hover:bg-primary-600"
-        >
+        <Button onClick={() => setIsCreateOpen(true)} className="bg-primary-500 hover:bg-primary-600">
           <Plus className="mr-2 h-4 w-4" />
           Novo Filamento
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-        <Input
-          placeholder="Buscar filamentos..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
-        />
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            <h3 className="text-lg font-semibold">Filtros</h3>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                Limpar filtros
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="search">Buscar</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                <Input
+                  id="search"
+                  placeholder="Nome do filamento..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="brand-filter">Marca</Label>
+              <Select value={brandFilter} onValueChange={setBrandFilter}>
+                <SelectTrigger id="brand-filter">
+                  <SelectValue placeholder="Todas as marcas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todas as marcas</SelectItem>
+                  {brands.map((brand) => (
+                    <SelectItem key={brand.id} value={brand.id}>
+                      {brand.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="material-filter">Material</Label>
+              <Select value={materialFilter} onValueChange={setMaterialFilter}>
+                <SelectTrigger id="material-filter">
+                  <SelectValue placeholder="Todos os materiais" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos os materiais</SelectItem>
+                  {materials.map((material) => (
+                    <SelectItem key={material.id} value={material.id}>
+                      {material.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="diameter-filter">Diâmetro</Label>
+              <Select value={diameterFilter} onValueChange={setDiameterFilter}>
+                <SelectTrigger id="diameter-filter">
+                  <SelectValue placeholder="Todos os diâmetros" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos os diâmetros</SelectItem>
+                  <SelectItem value="1.75">1.75mm</SelectItem>
+                  <SelectItem value="2.85">2.85mm</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* View Mode Toggle */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-neutral-600">
+          {filteredFilaments.length} {filteredFilaments.length === 1 ? 'filamento encontrado' : 'filamentos encontrados'}
+        </p>
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+          >
+            <List className="h-4 w-4 mr-2" />
+            Lista
+          </Button>
+          <Button
+            variant={viewMode === 'grid' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('grid')}
+          >
+            <Grid3x3 className="h-4 w-4 mr-2" />
+            Grade
+          </Button>
+        </div>
       </div>
 
-      {/* Table */}
+      {/* Content */}
       {isLoading ? (
         <TableSkeleton />
       ) : filteredFilaments.length === 0 ? (
         <EmptyState
           title="Nenhum filamento encontrado"
-          description={search ? 'Tente buscar por outro termo' : 'Comece criando seu primeiro filamento'}
+          description={hasActiveFilters ? "Tente ajustar os filtros de busca" : "Adicione seu primeiro filamento ao catálogo"}
+          icon={Search}
           action={
-            !search ? (
-              <Button
-                onClick={() => setIsCreateOpen(true)}
-                className="bg-primary-500 hover:bg-primary-600"
-              >
+            !hasActiveFilters ? (
+              <Button onClick={() => setIsCreateOpen(true)} className="bg-primary-500 hover:bg-primary-600">
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Filamento
               </Button>
             ) : undefined
           }
         />
+      ) : viewMode === 'grid' ? (
+        /* Grid View */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredFilaments.map((filament) => (
+            <Card key={filament.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div
+                    className="w-12 h-12 rounded-md border border-neutral-200 flex-shrink-0"
+                    style={getColorPreviewStyle(filament.color_type, filament.color_data)}
+                    title={`${filament.color} - ${filament.color_type}`}
+                  />
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEditDialog(filament)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(filament.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-error" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-1 mt-2">
+                  <h3 className="font-semibold text-lg">{filament.name}</h3>
+                  <p className="text-sm text-neutral-600">{filament.color}</p>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-neutral-600">Marca:</span>
+                  <span className="font-medium">{filament.brand_name || '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-600">Material:</span>
+                  <span className="font-medium">{filament.material_name || '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-600">Diâmetro:</span>
+                  <span className="font-medium">{filament.diameter}mm</span>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <div className="w-full text-center">
+                  <p className="text-2xl font-bold text-primary-600">
+                    {formatPrice(filament.price_per_kg)}
+                    <span className="text-sm font-normal text-neutral-600">/kg</span>
+                  </p>
+                </div>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
       ) : (
+        /* List View */
         <div className="border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Cor</TableHead>
                 <TableHead>Nome</TableHead>
+                <TableHead>Cor (Nome)</TableHead>
                 <TableHead>Marca</TableHead>
                 <TableHead>Material</TableHead>
                 <TableHead>Diâmetro</TableHead>
@@ -240,10 +409,16 @@ export default function FilamentsPage() {
                     <div
                       className="w-10 h-10 rounded-md border border-neutral-200"
                       style={getColorPreviewStyle(filament.color_type, filament.color_data)}
-                      title={`Tipo: ${filament.color_type}`}
+                      title={`${filament.color} - ${filament.color_type}`}
                     />
                   </TableCell>
                   <TableCell className="font-medium">{filament.name}</TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center gap-2">
+                      {filament.color}
+                      <span className="text-xs text-neutral-500">({filament.color_type})</span>
+                    </span>
+                  </TableCell>
                   <TableCell>{filament.brand_name || '-'}</TableCell>
                   <TableCell>{filament.material_name || '-'}</TableCell>
                   <TableCell>{filament.diameter}mm</TableCell>
@@ -272,6 +447,19 @@ export default function FilamentsPage() {
           </Table>
         </div>
       )}
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={isOpen}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+        title="Deletar filamento"
+        description="Tem certeza que deseja deletar este filamento? Esta ação não pode ser desfeita."
+        variant="danger"
+        confirmText="Deletar"
+        cancelText="Cancelar"
+        isLoading={isDeleting}
+      />
 
       {/* Create Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
@@ -369,19 +557,16 @@ export default function FilamentsPage() {
                 <Label htmlFor="create-diameter">Diâmetro *</Label>
                 <Select
                   value={String(createForm.watch('diameter'))}
-                  onValueChange={(value) => createForm.setValue('diameter', Number(value) as 1.75 | 2.85)}
+                  onValueChange={(value) => createForm.setValue('diameter', parseFloat(value) as 1.75 | 2.85)}
                 >
                   <SelectTrigger id="create-diameter">
-                    <SelectValue placeholder="Selecione o diâmetro" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="1.75">1.75mm</SelectItem>
                     <SelectItem value="2.85">2.85mm</SelectItem>
                   </SelectContent>
                 </Select>
-                {createForm.formState.errors.diameter && (
-                  <p className="text-sm text-error">{createForm.formState.errors.diameter.message}</p>
-                )}
               </div>
 
               <div className="space-y-2">
@@ -390,14 +575,11 @@ export default function FilamentsPage() {
                   id="create-price"
                   type="number"
                   step="0.01"
-                  min="0"
-                  {...createForm.register('price_per_kg', { valueAsNumber: true })}
-                  placeholder="Ex: 75.00"
-                  onChange={(e) => {
-                    const value = parseFloat(e.target.value) || 0;
-                    createForm.setValue('price_per_kg', Math.round(value * 100));
-                  }}
-                  value={createForm.watch('price_per_kg') ? (createForm.watch('price_per_kg') / 100).toFixed(2) : ''}
+                  {...createForm.register('price_per_kg', { 
+                    valueAsNumber: true,
+                    setValueAs: (v) => Math.round(parseFloat(v) * 100) // Convert to cents
+                  })}
+                  placeholder="120.00"
                 />
                 {createForm.formState.errors.price_per_kg && (
                   <p className="text-sm text-error">{createForm.formState.errors.price_per_kg.message}</p>
@@ -434,7 +616,7 @@ export default function FilamentsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
+      {/* Edit Dialog - Similar structure to Create Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -445,20 +627,12 @@ export default function FilamentsPage() {
           </DialogHeader>
 
           <form onSubmit={editForm.handleSubmit(handleEdit)} className="space-y-4">
-            {/* Nome */}
+            {/* Same form fields as Create Dialog */}
             <div className="space-y-2">
               <Label htmlFor="edit-name">Nome *</Label>
-              <Input
-                id="edit-name"
-                {...editForm.register('name')}
-                placeholder="Ex: PLA+ Rosa Translúcido"
-              />
-              {editForm.formState.errors.name && (
-                <p className="text-sm text-error">{editForm.formState.errors.name.message}</p>
-              )}
+              <Input id="edit-name" {...editForm.register('name')} />
             </div>
 
-            {/* Marca e Material */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-brand">Marca *</Label>
@@ -467,7 +641,7 @@ export default function FilamentsPage() {
                   onValueChange={(value) => editForm.setValue('brand_id', value)}
                 >
                   <SelectTrigger id="edit-brand">
-                    <SelectValue placeholder="Selecione uma marca" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {brands.map((brand) => (
@@ -477,9 +651,6 @@ export default function FilamentsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                {editForm.formState.errors.brand_id && (
-                  <p className="text-sm text-error">{editForm.formState.errors.brand_id.message}</p>
-                )}
               </div>
 
               <div className="space-y-2">
@@ -489,7 +660,7 @@ export default function FilamentsPage() {
                   onValueChange={(value) => editForm.setValue('material_id', value)}
                 >
                   <SelectTrigger id="edit-material">
-                    <SelectValue placeholder="Selecione um material" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {materials.map((material) => (
@@ -499,13 +670,9 @@ export default function FilamentsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                {editForm.formState.errors.material_id && (
-                  <p className="text-sm text-error">{editForm.formState.errors.material_id.message}</p>
-                )}
               </div>
             </div>
 
-            {/* Color Picker */}
             <div className="space-y-2">
               <Label>Cor *</Label>
               <ColorPicker
@@ -516,33 +683,26 @@ export default function FilamentsPage() {
                 onColorDataChange={(data) => editForm.setValue('color_data', data)}
                 onColorNameChange={(name) => {
                   setEditColorName(name);
-                  editForm.setValue('color', name); // Sync with form
+                  editForm.setValue('color', name);
                 }}
               />
-              {editForm.formState.errors.color && (
-                <p className="text-sm text-error">{editForm.formState.errors.color.message}</p>
-              )}
             </div>
 
-            {/* Diâmetro e Preço */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-diameter">Diâmetro *</Label>
                 <Select
                   value={String(editForm.watch('diameter'))}
-                  onValueChange={(value) => editForm.setValue('diameter', Number(value) as 1.75 | 2.85)}
+                  onValueChange={(value) => editForm.setValue('diameter', parseFloat(value) as 1.75 | 2.85)}
                 >
                   <SelectTrigger id="edit-diameter">
-                    <SelectValue placeholder="Selecione o diâmetro" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="1.75">1.75mm</SelectItem>
                     <SelectItem value="2.85">2.85mm</SelectItem>
                   </SelectContent>
                 </Select>
-                {editForm.formState.errors.diameter && (
-                  <p className="text-sm text-error">{editForm.formState.errors.diameter.message}</p>
-                )}
               </div>
 
               <div className="space-y-2">
@@ -551,41 +711,21 @@ export default function FilamentsPage() {
                   id="edit-price"
                   type="number"
                   step="0.01"
-                  min="0"
-                  {...editForm.register('price_per_kg', { valueAsNumber: true })}
-                  placeholder="Ex: 75.00"
-                  onChange={(e) => {
-                    const value = parseFloat(e.target.value) || 0;
-                    editForm.setValue('price_per_kg', Math.round(value * 100));
-                  }}
-                  value={editForm.watch('price_per_kg') ? (editForm.watch('price_per_kg') / 100).toFixed(2) : ''}
+                  {...editForm.register('price_per_kg', { 
+                    valueAsNumber: true,
+                    setValueAs: (v) => Math.round(parseFloat(v) * 100)
+                  })}
                 />
-                {editForm.formState.errors.price_per_kg && (
-                  <p className="text-sm text-error">{editForm.formState.errors.price_per_kg.message}</p>
-                )}
               </div>
             </div>
 
-            {/* Descrição */}
             <div className="space-y-2">
               <Label htmlFor="edit-description">Descrição</Label>
-              <Input
-                id="edit-description"
-                {...editForm.register('description')}
-                placeholder="Opcional"
-              />
+              <Input id="edit-description" {...editForm.register('description')} />
             </div>
 
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setIsEditOpen(false);
-                  setEditingFilament(null);
-                  editForm.reset();
-                }}
-              >
+              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={isUpdating}>
@@ -595,19 +735,6 @@ export default function FilamentsPage() {
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Confirmation Dialog */}
-      <ConfirmationDialog
-        isOpen={isOpen}
-        onConfirm={handleConfirm}
-        onCancel={handleCancel}
-        title="Deletar Filamento"
-        description="Tem certeza que deseja deletar este filamento? Esta ação não pode ser desfeita."
-        confirmText="Deletar"
-        variant="danger"
-        isLoading={isDeleting}
-      />
     </div>
   );
 }
-

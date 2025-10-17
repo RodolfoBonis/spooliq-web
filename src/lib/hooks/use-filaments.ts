@@ -9,7 +9,13 @@ import {
 export function useFilaments(filters?: FilamentFilters) {
   return useQuery({
     queryKey: ['filaments', filters],
-    queryFn: () => filamentService.list(filters),
+    queryFn: () => {
+      // Use search endpoint if filters are provided, otherwise use list
+      if (filters && (filters.search || filters.brand_id || filters.material_id)) {
+        return filamentService.search(filters)
+      }
+      return filamentService.list(filters)
+    },
   })
 }
 

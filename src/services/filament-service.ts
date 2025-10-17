@@ -40,6 +40,32 @@ export interface UpdateFilamentDTO {
 
 export const filamentService = {
   /**
+   * Search filaments with filters
+   */
+  async search(filters?: FilamentFilters): Promise<{ data: Filament[]; total: number }> {
+    const { search, brand_id, material_id, pageSize } = filters || {}
+    const params = new URLSearchParams()
+    if (search) params.append('name', search)
+    if (brand_id) params.append('brand_id', brand_id)
+    if (material_id) params.append('material_id', material_id)
+    if (pageSize) params.append('limit', pageSize.toString())
+
+    const response = await api.get<{ 
+      data: Array<any>; 
+      total: number 
+    }>(`/filaments/search?${params.toString()}`)
+
+    // Map backend response to frontend format
+    const filaments: Filament[] = response.data.data.map((item: any) => ({
+      ...item,
+      brand_name: item.brand?.name || '',
+      material_name: item.material?.name || '',
+    }))
+
+    return { data: filaments, total: response.data.total }
+  },
+
+  /**
    * List filaments
    */
   async list(filters?: FilamentFilters): Promise<{ data: Filament[]; total: number }> {
