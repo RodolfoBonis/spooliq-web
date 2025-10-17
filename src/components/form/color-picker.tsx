@@ -1,23 +1,43 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { Plus, X } from 'lucide-react'
+import { Plus, X, Sparkles } from 'lucide-react'
 import type { ColorType, ColorData } from '@/types/models'
+import { generateColorName } from '@/lib/utils/color-names'
 
 interface ColorPickerProps {
   colorType: ColorType
   colorData: ColorData
+  colorName?: string
   onColorTypeChange: (type: ColorType) => void
   onColorDataChange: (data: ColorData) => void
+  onColorNameChange?: (name: string) => void
 }
 
-export function ColorPicker({ colorType, colorData, onColorTypeChange, onColorDataChange }: ColorPickerProps) {
+export function ColorPicker({ 
+  colorType, 
+  colorData, 
+  colorName = '',
+  onColorTypeChange, 
+  onColorDataChange,
+  onColorNameChange 
+}: ColorPickerProps) {
   const [localType, setLocalType] = useState<ColorType>(colorType)
   const [localData, setLocalData] = useState<ColorData>(colorData)
+  const [localName, setLocalName] = useState<string>(colorName)
+  
+  // Auto-generate color name when color data changes
+  useEffect(() => {
+    const generatedName = generateColorName(localType, localData)
+    setLocalName(generatedName)
+    if (onColorNameChange) {
+      onColorNameChange(generatedName)
+    }
+  }, [localType, localData, onColorNameChange])
 
   const handleTypeChange = (type: ColorType) => {
     setLocalType(type)
@@ -67,6 +87,15 @@ export function ColorPicker({ colorType, colorData, onColorTypeChange, onColorDa
 
   return (
     <div className="space-y-4">
+      {/* Auto-generated Color Name */}
+      <div className="rounded-lg bg-accent-50 border border-accent-200 p-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-accent-600" />
+          <Label className="text-sm font-medium text-accent-900">Nome da Cor (Gerado Automaticamente)</Label>
+        </div>
+        <p className="text-lg font-semibold text-accent-700 mt-1">{localName || 'Selecione uma cor'}</p>
+      </div>
+
       <Label>Tipo de Cor</Label>
       <Tabs value={localType} onValueChange={(v) => handleTypeChange(v as ColorType)}>
         <TabsList className="grid w-full grid-cols-4">

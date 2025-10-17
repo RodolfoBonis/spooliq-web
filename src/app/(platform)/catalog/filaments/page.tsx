@@ -52,6 +52,8 @@ export default function FilamentsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingFilament, setEditingFilament] = useState<Filament | null>(null);
+  const [createColorName, setCreateColorName] = useState('');
+  const [editColorName, setEditColorName] = useState('');
 
   const { data: filamentsData, isLoading } = useFilaments({ pageSize: 50 });
   const { data: brandsData } = useBrands({ pageSize: 100 });
@@ -343,8 +345,10 @@ export default function FilamentsPage() {
               <ColorPicker
                 colorType={createForm.watch('color_type') as ColorType}
                 colorData={createForm.watch('color_data') as ColorData}
+                colorName={createColorName}
                 onColorTypeChange={(type) => createForm.setValue('color_type', type)}
                 onColorDataChange={(data) => createForm.setValue('color_data', data)}
+                onColorNameChange={setCreateColorName}
               />
             </div>
 
@@ -496,8 +500,10 @@ export default function FilamentsPage() {
               <ColorPicker
                 colorType={editForm.watch('color_type') as ColorType}
                 colorData={editForm.watch('color_data') as ColorData}
+                colorName={editColorName}
                 onColorTypeChange={(type) => editForm.setValue('color_type', type)}
                 onColorDataChange={(data) => editForm.setValue('color_data', data)}
+                onColorNameChange={setEditColorName}
               />
             </div>
 
