@@ -81,10 +81,15 @@ export default function CustomersPage() {
           icon={Mail}
           title="Nenhum cliente encontrado"
           description="Comece adicionando seu primeiro cliente para começar a criar orçamentos"
-          action={{
-            label: 'Novo Cliente',
-            onClick: () => (window.location.href = '/customers/new'),
-          }}
+          action={
+            <Button
+              onClick={() => (window.location.href = '/customers/new')}
+              className="bg-primary-500 hover:bg-primary-600"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Cliente
+            </Button>
+          }
         />
       ) : (
         <Card>
