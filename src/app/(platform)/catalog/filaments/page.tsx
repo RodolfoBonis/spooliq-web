@@ -98,13 +98,7 @@ export default function FilamentsPage() {
 
   // Handle create
   const handleCreate = (data: CreateFilamentForm) => {
-    // Ensure color name is included
-    const formData = {
-      ...data,
-      color: createColorName || 'Cor Personalizada',
-    };
-    
-    createFilament(formData, {
+    createFilament(data, {
       onSuccess: () => {
         toast.success('Filamento criado com sucesso!');
         setIsCreateOpen(false);
@@ -121,14 +115,8 @@ export default function FilamentsPage() {
   const handleEdit = (data: UpdateFilamentForm) => {
     if (!editingFilament) return;
 
-    // Ensure color name is included
-    const formData = {
-      ...data,
-      color: editColorName || editingFilament.color || 'Cor Personalizada',
-    };
-
     updateFilament(
-      { id: editingFilament.id, data: formData },
+      { id: editingFilament.id, data },
       {
         onSuccess: () => {
           toast.success('Filamento atualizado com sucesso!');
@@ -365,8 +353,14 @@ export default function FilamentsPage() {
                 colorName={createColorName}
                 onColorTypeChange={(type) => createForm.setValue('color_type', type)}
                 onColorDataChange={(data) => createForm.setValue('color_data', data)}
-                onColorNameChange={setCreateColorName}
+                onColorNameChange={(name) => {
+                  setCreateColorName(name);
+                  createForm.setValue('color', name); // Sync with form
+                }}
               />
+              {createForm.formState.errors.color && (
+                <p className="text-sm text-error">{createForm.formState.errors.color.message}</p>
+              )}
             </div>
 
             {/* Diâmetro e Preço */}
@@ -520,8 +514,14 @@ export default function FilamentsPage() {
                 colorName={editColorName}
                 onColorTypeChange={(type) => editForm.setValue('color_type', type)}
                 onColorDataChange={(data) => editForm.setValue('color_data', data)}
-                onColorNameChange={setEditColorName}
+                onColorNameChange={(name) => {
+                  setEditColorName(name);
+                  editForm.setValue('color', name); // Sync with form
+                }}
               />
+              {editForm.formState.errors.color && (
+                <p className="text-sm text-error">{editForm.formState.errors.color.message}</p>
+              )}
             </div>
 
             {/* Diâmetro e Preço */}
