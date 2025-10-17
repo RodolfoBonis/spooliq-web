@@ -4,7 +4,6 @@ export const customerSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório').min(3, 'Nome deve ter no mínimo 3 caracteres'),
   email: z.string().min(1, 'Email é obrigatório').email('Email inválido'),
   phone: z.string().optional(),
-  whatsapp: z.string().optional(),
   document: z.string().optional(), // CPF/CNPJ
   address: z.string().optional(),
   city: z.string().optional(),

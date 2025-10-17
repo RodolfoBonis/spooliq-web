@@ -10,23 +10,15 @@ export interface MaterialFilters {
 export interface CreateMaterialDTO {
   name: string
   description?: string
-  properties?: {
-    density?: number        // g/cm³
-    print_temp_min?: number // °C
-    print_temp_max?: number
-    bed_temp?: number
-  }
+  tempTable?: number    // °C - Bed temperature
+  tempExtruder?: number // °C - Extruder temperature
 }
 
 export interface UpdateMaterialDTO {
   name?: string
   description?: string
-  properties?: {
-    density?: number
-    print_temp_min?: number
-    print_temp_max?: number
-    bed_temp?: number
-  }
+  tempTable?: number    // °C - Bed temperature
+  tempExtruder?: number // °C - Extruder temperature
 }
 
 export const materialService = {
@@ -37,14 +29,13 @@ export const materialService = {
     const { search, page, pageSize } = filters || {}
     const params = new URLSearchParams()
     if (search) params.append('search', search)
-    if (page) params.append('page', page.toString())
     if (pageSize) params.append('pageSize', pageSize.toString())
 
-    const { data } = await api.get<{ materials: Material[]; total: number }>(
+    const response = await api.get<{ data: Material[] }>(
       `/materials/?${params.toString()}`
     )
 
-    return { data: data.materials, total: data.total }
+    return { data: response.data.data, total: response.data.data.length }
   },
 
   /**

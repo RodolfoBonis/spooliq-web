@@ -9,13 +9,11 @@ export interface BrandFilters {
 
 export interface CreateBrandDTO {
   name: string
-  website?: string
   description?: string
 }
 
 export interface UpdateBrandDTO {
   name?: string
-  website?: string
   description?: string
 }
 
@@ -27,14 +25,13 @@ export const brandService = {
     const { search, page, pageSize } = filters || {}
     const params = new URLSearchParams()
     if (search) params.append('search', search)
-    if (page) params.append('page', page.toString())
     if (pageSize) params.append('pageSize', pageSize.toString())
 
-    const { data } = await api.get<{ brands: Brand[]; total: number }>(
+    const response = await api.get<{ data: Brand[] }>(
       `/brands/?${params.toString()}`
     )
 
-    return { data: data.brands, total: data.total }
+    return { data: response.data.data, total: response.data.data.length }
   },
 
   /**

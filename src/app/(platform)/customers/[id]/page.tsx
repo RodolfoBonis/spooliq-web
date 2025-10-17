@@ -153,18 +153,8 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                 <div className="flex items-start space-x-3">
                   <Phone className="h-5 w-5 text-neutral-400 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-neutral-700">Telefone</p>
+                    <p className="text-sm font-medium text-neutral-700">Telefone / WhatsApp</p>
                     <p className="text-sm text-neutral-600">{customer.phone}</p>
-                  </div>
-                </div>
-              )}
-
-              {customer.whatsapp && (
-                <div className="flex items-start space-x-3">
-                  <Phone className="h-5 w-5 text-neutral-400 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-neutral-700">WhatsApp</p>
-                    <p className="text-sm text-neutral-600">{customer.whatsapp}</p>
                   </div>
                 </div>
               )}

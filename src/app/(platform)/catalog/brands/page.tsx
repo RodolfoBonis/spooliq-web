@@ -55,7 +55,6 @@ export default function BrandsPage() {
     resolver: zodResolver(brandSchema),
     defaultValues: {
       name: '',
-      website: '',
       description: '',
     },
   })
@@ -64,7 +63,6 @@ export default function BrandsPage() {
     setEditingBrand(null)
     form.reset({
       name: '',
-      website: '',
       description: '',
     })
     setShowDialog(true)
@@ -74,7 +72,6 @@ export default function BrandsPage() {
     setEditingBrand(brand)
     form.reset({
       name: brand.name,
-      website: brand.website || '',
       description: brand.description || '',
     })
     setShowDialog(true)
@@ -159,7 +156,6 @@ export default function BrandsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Website</TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
@@ -168,20 +164,6 @@ export default function BrandsPage() {
               {brands.map((brand) => (
                 <TableRow key={brand.id}>
                   <TableCell className="font-medium">{brand.name}</TableCell>
-                  <TableCell>
-                    {brand.website ? (
-                      <a
-                        href={brand.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary-600 hover:underline text-sm"
-                      >
-                        {brand.website}
-                      </a>
-                    ) : (
-                      <span className="text-neutral-400 text-sm">-</span>
-                    )}
-                  </TableCell>
                   <TableCell className="text-sm text-neutral-600">
                     {brand.description || '-'}
                   </TableCell>
@@ -236,24 +218,6 @@ export default function BrandsPage() {
                     <FormControl>
                       <Input
                         placeholder="Ex: Bambu Lab, Creality, eSun"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="website"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Website (Opcional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="url"
-                        placeholder="https://exemplo.com"
                         {...field}
                       />
                     </FormControl>

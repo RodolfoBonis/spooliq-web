@@ -108,6 +108,14 @@ async function proxyRequest(
 
     console.log('✅ Proxy Response:', response.status, targetUrl)
 
+    // Handle 204 No Content - return empty response
+    if (response.status === 204) {
+      return new NextResponse(null, {
+        status: 204,
+        statusText: 'No Content',
+      })
+    }
+
     // Forward response headers
     const responseHeaders = new Headers()
     response.headers.forEach((value, key) => {

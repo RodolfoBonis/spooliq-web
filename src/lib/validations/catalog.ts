@@ -3,7 +3,6 @@ import { z } from 'zod'
 // Brand Schema
 export const brandSchema = z.object({
   name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
-  website: z.string().url('URL inválida').optional().or(z.literal('')),
   description: z.string().optional(),
 })
 
@@ -13,12 +12,8 @@ export type BrandFormData = z.infer<typeof brandSchema>
 export const materialSchema = z.object({
   name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
   description: z.string().optional(),
-  properties: z.object({
-    density: z.number().positive('Densidade deve ser positiva').optional(),
-    print_temp_min: z.number().int('Deve ser um número inteiro').optional(),
-    print_temp_max: z.number().int('Deve ser um número inteiro').optional(),
-    bed_temp: z.number().int('Deve ser um número inteiro').optional(),
-  }).optional(),
+  tempTable: z.number().min(0).max(300, 'Temperatura máxima: 300°C').optional(),
+  tempExtruder: z.number().min(0).max(500, 'Temperatura máxima: 500°C').optional(),
 })
 
 export type MaterialFormData = z.infer<typeof materialSchema>

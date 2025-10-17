@@ -41,27 +41,26 @@ export const filamentService = {
    * List filaments
    */
   async list(filters?: FilamentFilters): Promise<{ data: Filament[]; total: number }> {
-    const { search, brand_id, material_id, page, pageSize } = filters || {}
+    const { search, brand_id, material_id, pageSize } = filters || {}
     const params = new URLSearchParams()
     if (search) params.append('search', search)
     if (brand_id) params.append('brand_id', brand_id)
     if (material_id) params.append('material_id', material_id)
-    if (page) params.append('page', page.toString())
     if (pageSize) params.append('pageSize', pageSize.toString())
 
-    const { data } = await api.get<{ filaments: Filament[]; total: number }>(
+    const response = await api.get<{ data: Filament[]; total: number }>(
       `/filaments/?${params.toString()}`
     )
 
-    return { data: data.filaments, total: data.total }
+    return { data: response.data.data, total: response.data.total }
   },
 
   /**
    * Get filament by ID
    */
   async getById(id: string): Promise<Filament> {
-    const { data } = await api.get<{ filament: Filament }>(`/filaments/${id}`)
-    return data.filament
+    const { data } = await api.get<{ data: Filament }>(`/filaments/${id}`)
+    return data.data
   },
 
   /**

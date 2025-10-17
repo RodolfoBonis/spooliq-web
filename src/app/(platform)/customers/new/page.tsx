@@ -34,7 +34,6 @@ export default function NewCustomerPage() {
       name: '',
       email: '',
       phone: '',
-      whatsapp: '',
       document: '',
       address: '',
       city: '',
@@ -115,7 +114,7 @@ export default function NewCustomerPage() {
               {/* Contact */}
               <div className="space-y-4">
                 <h3 className="text-sm font-medium text-neutral-900">Contatos</h3>
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="phone"
@@ -125,21 +124,8 @@ export default function NewCustomerPage() {
                         <FormControl>
                           <Input {...field} placeholder="(11) 99999-9999" />
                         </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="whatsapp"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>WhatsApp</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="(11) 99999-9999" />
-                        </FormControl>
                         <FormDescription>
-                          Número com DDD
+                          Número com DDD (incluindo WhatsApp se houver)
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

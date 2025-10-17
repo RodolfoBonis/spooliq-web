@@ -12,7 +12,6 @@ export interface CreateCustomerDTO {
   name: string
   email: string
   phone?: string
-  whatsapp?: string
   document?: string // CPF/CNPJ
   address?: string
   city?: string

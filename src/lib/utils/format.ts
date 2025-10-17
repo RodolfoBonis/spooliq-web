@@ -55,3 +55,47 @@ export function getInitials(name?: string | null): string {
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
 }
 
+/**
+ * Generate CSS preview style for filament colors
+ * @param colorType - Type of color (solid, gradient, duo, rainbow)
+ * @param colorData - Color data object
+ * @returns CSS properties for color preview
+ */
+export function getColorPreviewStyle(
+  colorType: string,
+  colorData: any
+): React.CSSProperties {
+  switch (colorType) {
+    case 'solid':
+      return {
+        backgroundColor: colorData.color || '#000000',
+      }
+    case 'gradient':
+      const direction =
+        colorData.direction === 'vertical'
+          ? 'to bottom'
+          : colorData.direction === 'diagonal'
+          ? 'to bottom right'
+          : 'to right'
+      return {
+        background: `linear-gradient(${direction}, ${colorData.from || '#000000'}, ${
+          colorData.to || '#FFFFFF'
+        })`,
+      }
+    case 'duo':
+      return {
+        background: `linear-gradient(to right, ${colorData.primary || '#000000'} ${
+          colorData.ratio || 50
+        }%, ${colorData.secondary || '#FFFFFF'} ${colorData.ratio || 50}%)`,
+      }
+    case 'rainbow':
+      return {
+        background: `linear-gradient(to right, ${(colorData.colors || []).join(', ')})`,
+      }
+    default:
+      return {
+        backgroundColor: '#CCCCCC',
+      }
+  }
+}
+

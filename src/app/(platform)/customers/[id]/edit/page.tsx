@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -36,7 +37,6 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
       name: '',
       email: '',
       phone: '',
-      whatsapp: '',
       document: '',
       address: '',
       city: '',
@@ -53,7 +53,6 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
         name: customer.name || '',
         email: customer.email || '',
         phone: customer.phone || '',
-        whatsapp: customer.whatsapp || '',
         document: customer.document || '',
         address: customer.address || '',
         city: customer.city || '',
@@ -179,7 +178,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                 />
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-1">
                 <FormField
                   control={form.control}
                   name="phone"
@@ -189,20 +188,9 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                       <FormControl>
                         <Input placeholder="(11) 98765-4321" {...field} />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="whatsapp"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>WhatsApp</FormLabel>
-                      <FormControl>
-                        <Input placeholder="(11) 98765-4321" {...field} />
-                      </FormControl>
+                      <FormDescription>
+                        Número com DDD (incluindo WhatsApp se houver)
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

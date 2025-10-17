@@ -146,7 +146,6 @@ export interface Customer {
   name: string
   email: string
   phone?: string
-  whatsapp?: string
   document?: string // CPF/CNPJ
   address?: string
   city?: string
@@ -188,13 +187,13 @@ export interface Filament {
   brand_name: string
   material_id: string
   material_name: string
+  color: string // Readable color name (e.g., "Rosa", "Azul Metálico")
+  color_hex: string // Legacy hex color
   color_type: ColorType
   color_data: ColorData
   color_preview: string // CSS string for preview
   diameter: 1.75 | 2.85
   price_per_kg: number // cents
-  stock_quantity?: number
-  min_stock_alert?: number
   description?: string
   is_active: boolean
   created_at: string
@@ -205,7 +204,6 @@ export interface Brand {
   id: string
   organization_id: string
   name: string
-  website?: string
   description?: string
   created_at: string
   updated_at: string
@@ -216,12 +214,8 @@ export interface Material {
   organization_id: string
   name: string // PLA, ABS, PETG, TPU, etc.
   description?: string
-  properties?: {
-    density?: number // g/cm³
-    print_temp_min?: number // °C
-    print_temp_max?: number
-    bed_temp?: number
-  }
+  tempTable?: number // Bed temperature in °C
+  tempExtruder?: number // Extruder temperature in °C
   created_at: string
   updated_at: string
 }
