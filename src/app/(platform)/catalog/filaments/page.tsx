@@ -232,9 +232,9 @@ export default function FilamentsPage() {
       {/* Filters */}
       <div 
         ref={filterRef}
-        className={`transition-all ${
+        className={`sticky top-0 z-10 transition-all ${
           isFilterSticky 
-            ? 'sticky top-0 z-10 shadow-md -mx-6 px-6 bg-white -mt-6 pt-6' 
+            ? 'shadow-md -mx-6 px-6 bg-white -mt-6 pt-6' 
             : ''
         }`}
       >
