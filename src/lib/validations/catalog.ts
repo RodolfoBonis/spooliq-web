@@ -29,6 +29,7 @@ export const filamentSchema = z.object({
   name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
   brand_id: z.string().uuid('Selecione uma marca válida'),
   material_id: z.string().uuid('Selecione um material válido'),
+  color: z.string().min(1, 'Nome da cor é obrigatório'),
   color_type: z.enum(['solid', 'gradient', 'duo', 'rainbow']),
   color_data: z.object({
     // Solid

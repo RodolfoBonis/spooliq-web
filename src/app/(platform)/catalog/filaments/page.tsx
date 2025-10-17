@@ -82,6 +82,7 @@ export default function FilamentsPage() {
       name: '',
       brand_id: '',
       material_id: '',
+      color: '',
       color_type: 'solid',
       color_data: { color: '#000000' },
       diameter: 1.75,
@@ -97,11 +98,18 @@ export default function FilamentsPage() {
 
   // Handle create
   const handleCreate = (data: CreateFilamentForm) => {
-    createFilament(data, {
+    // Ensure color name is included
+    const formData = {
+      ...data,
+      color: createColorName || 'Cor Personalizada',
+    };
+    
+    createFilament(formData, {
       onSuccess: () => {
         toast.success('Filamento criado com sucesso!');
         setIsCreateOpen(false);
         createForm.reset();
+        setCreateColorName('');
       },
       onError: (error: any) => {
         toast.error(error.response?.data?.error || 'Erro ao criar filamento');
@@ -113,13 +121,20 @@ export default function FilamentsPage() {
   const handleEdit = (data: UpdateFilamentForm) => {
     if (!editingFilament) return;
 
+    // Ensure color name is included
+    const formData = {
+      ...data,
+      color: editColorName || editingFilament.color || 'Cor Personalizada',
+    };
+
     updateFilament(
-      { id: editingFilament.id, data },
+      { id: editingFilament.id, data: formData },
       {
         onSuccess: () => {
           toast.success('Filamento atualizado com sucesso!');
           setIsEditOpen(false);
           setEditingFilament(null);
+          setEditColorName('');
           editForm.reset();
         },
         onError: (error: any) => {
@@ -146,10 +161,12 @@ export default function FilamentsPage() {
   // Open edit dialog
   const openEditDialog = (filament: Filament) => {
     setEditingFilament(filament);
+    setEditColorName(filament.color); // Initialize color name
     editForm.reset({
       name: filament.name,
       brand_id: filament.brand_id,
       material_id: filament.material_id,
+      color: filament.color,
       color_type: filament.color_type,
       color_data: filament.color_data,
       diameter: filament.diameter,

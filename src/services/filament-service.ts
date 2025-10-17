@@ -13,6 +13,7 @@ export interface CreateFilamentDTO {
   name: string
   brand_id: string
   material_id: string
+  color: string // Color name (e.g., "Vermelho", "Azul → Rosa")
   color_type: ColorType
   color_data: ColorData
   diameter: 1.75 | 2.85
@@ -26,6 +27,7 @@ export interface UpdateFilamentDTO {
   name?: string
   brand_id?: string
   material_id?: string
+  color?: string // Color name (e.g., "Vermelho", "Azul → Rosa")
   color_type?: ColorType
   color_data?: ColorData
   diameter?: 1.75 | 2.85
