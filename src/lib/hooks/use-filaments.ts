@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import {
   filamentService,
   type FilamentFilters,
@@ -29,10 +28,6 @@ export function useCreateFilament() {
     mutationFn: filamentService.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['filaments'] })
-      toast.success('Filamento criado com sucesso!')
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao criar filamento')
     },
   })
 }
@@ -46,10 +41,6 @@ export function useUpdateFilament() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['filaments'] })
       queryClient.invalidateQueries({ queryKey: ['filaments', variables.id] })
-      toast.success('Filamento atualizado com sucesso!')
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao atualizar filamento')
     },
   })
 }
@@ -61,10 +52,6 @@ export function useDeleteFilament() {
     mutationFn: filamentService.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['filaments'] })
-      toast.success('Filamento deletado com sucesso!')
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao deletar filamento')
     },
   })
 }
