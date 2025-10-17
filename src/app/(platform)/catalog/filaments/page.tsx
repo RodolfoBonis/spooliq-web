@@ -89,13 +89,16 @@ export default function FilamentsPage() {
     const handleScroll = () => {
       if (filterRef.current) {
         const rect = filterRef.current.getBoundingClientRect();
-        setIsFilterSticky(rect.top <= -24); // -1.5rem = -24px
+        const shouldBeSticky = rect.top <= -24;
+        setIsFilterSticky(shouldBeSticky);
       }
       
       if (headerRef.current) {
         const headerRect = headerRef.current.getBoundingClientRect();
-        // Show FAB when header is scrolled up (top is negative)
-        setShowFab(headerRect.top < -50);
+        // Show FAB when header button is out of view (scrolled up past viewport)
+        const shouldShowFab = headerRect.bottom < 0;
+        console.log('Header top:', headerRect.top, 'bottom:', headerRect.bottom, 'showFab:', shouldShowFab);
+        setShowFab(shouldShowFab);
       }
     };
 
@@ -236,7 +239,7 @@ export default function FilamentsPage() {
       <div 
         ref={filterRef}
         className="sticky z-10 transition-all"
-        style={{ top: 0, marginTop: '-1.5rem', paddingTop: '1.5rem' }}
+        style={{ top: -25 }}
       >
         <div className={`transition-all ${
           isFilterSticky 
@@ -778,15 +781,19 @@ export default function FilamentsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Floating Action Button */}
+      {/* Floating Action Button - Debug: showFab={showFab} */}
       <button
-        onClick={() => setIsCreateOpen(true)}
+        onClick={() => {
+          console.log('FAB clicked! showFab:', showFab);
+          setIsCreateOpen(true);
+        }}
         className={`fixed bottom-8 right-8 z-50 bg-primary-500 hover:bg-primary-600 text-white rounded-full p-4 shadow-lg transition-all duration-300 ${
           showFab 
             ? 'opacity-100 translate-y-0 scale-100' 
             : 'opacity-0 translate-y-16 scale-0 pointer-events-none'
         }`}
         aria-label="Adicionar novo filamento"
+        style={{ border: showFab ? '3px solid lime' : '3px solid red' }}
       >
         <Plus className="h-6 w-6" />
       </button>
