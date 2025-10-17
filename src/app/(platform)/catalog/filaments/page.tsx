@@ -202,7 +202,10 @@ export default function FilamentsPage() {
           description={search ? 'Tente buscar por outro termo' : 'Comece criando seu primeiro filamento'}
           action={
             !search ? (
-              <Button onClick={() => setIsCreateOpen(true)}>
+              <Button
+                onClick={() => setIsCreateOpen(true)}
+                className="bg-primary-500 hover:bg-primary-600"
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Filamento
               </Button>
