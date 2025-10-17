@@ -232,12 +232,15 @@ export default function FilamentsPage() {
       {/* Filters */}
       <div 
         ref={filterRef}
-        className={`sticky top-0 z-10 transition-all ${
+        className="sticky top-[-1.5rem] z-10 transition-all pt-6"
+        style={{ marginTop: '-1.5rem' }}
+      >
+        <div className={`transition-all ${
           isFilterSticky 
-            ? 'shadow-md -mx-6 px-6 bg-white -mt-6 pt-6' 
+            ? 'shadow-md -mx-6 px-6 bg-white' 
             : ''
         }`}
-      >
+        >
         <Card className={isFilterSticky ? 'border-0 rounded-none' : ''}>
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -316,6 +319,7 @@ export default function FilamentsPage() {
           </div>
         </CardContent>
         </Card>
+        </div>
       </div>
 
       {/* View Mode Toggle */}
