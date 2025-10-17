@@ -85,7 +85,9 @@ export default function FilamentsPage() {
 
   // Handle sticky filter and FAB on scroll
   useEffect(() => {
-    const handleScroll = () => {
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement;
+      
       if (filterRef.current) {
         const rect = filterRef.current.getBoundingClientRect();
         const shouldBeSticky = rect.top <= -24;
@@ -93,16 +95,22 @@ export default function FilamentsPage() {
       }
       
       // Show FAB when scrolled down more than 200px
-      const scrollY = window.scrollY || window.pageYOffset;
+      // The scroll happens on the main container, not window
+      const scrollY = target.scrollTop || window.scrollY || window.pageYOffset;
       const shouldShowFab = scrollY > 200;
       setShowFab(shouldShowFab);
     };
 
-    // Run on mount to set initial state
-    handleScroll();
+    // Find the scrollable parent (main element with overflow-y-auto)
+    const scrollContainer = document.querySelector('main');
     
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    if (scrollContainer) {
+      // Run on mount to set initial state
+      handleScroll({ target: scrollContainer } as any);
+      
+      scrollContainer.addEventListener('scroll', handleScroll);
+      return () => scrollContainer.removeEventListener('scroll', handleScroll);
+    }
   }, []);
 
   // Filter by diameter locally
