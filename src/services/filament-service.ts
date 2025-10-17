@@ -84,7 +84,7 @@ export const filamentService = {
    */
   async create(filamentData: CreateFilamentDTO): Promise<Filament> {
     try {
-      const response = await api.post<{ message: string; filament: any }>(
+      const response = await api.post<{ data: any }>(
         '/filaments/',
         filamentData
       )
@@ -94,11 +94,14 @@ export const filamentService = {
       
       const { data } = response
       
+      // Backend returns { data: filament }, not { filament: ... }
+      const filament = data.data
+      
       // Map backend response to frontend format
       const mappedData = {
-        ...data.filament,
-        brand_name: data.filament.brand?.name || '',
-        material_name: data.filament.material?.name || '',
+        ...filament,
+        brand_name: filament.brand?.name || '',
+        material_name: filament.material?.name || '',
       }
       
       console.log('Mapped filament data:', mappedData)
@@ -114,16 +117,19 @@ export const filamentService = {
    * Update filament
    */
   async update(id: string, filamentData: UpdateFilamentDTO): Promise<Filament> {
-    const { data } = await api.put<{ message: string; filament: any }>(
+    const response = await api.put<{ data: any }>(
       `/filaments/${id}`,
       filamentData
     )
     
+    const { data } = response
+    const filament = data.data
+    
     // Map backend response to frontend format
     return {
-      ...data.filament,
-      brand_name: data.filament.brand?.name || '',
-      material_name: data.filament.material?.name || '',
+      ...filament,
+      brand_name: filament.brand?.name || '',
+      material_name: filament.material?.name || '',
     }
   },
 
