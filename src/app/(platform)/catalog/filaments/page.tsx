@@ -171,9 +171,12 @@ export default function FilamentsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-neutral-900">Filamentos</h1>
-          <p className="text-neutral-600">Gerencie seu catálogo de filamentos</p>
+          <p className="text-neutral-600 mt-2">Gerencie seu catálogo de filamentos</p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)}>
+        <Button
+          onClick={() => setIsCreateOpen(true)}
+          className="bg-primary-500 hover:bg-primary-600"
+        >
           <Plus className="mr-2 h-4 w-4" />
           Novo Filamento
         </Button>
