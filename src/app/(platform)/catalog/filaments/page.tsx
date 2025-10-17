@@ -290,19 +290,21 @@ export default function FilamentsPage() {
         <p className="text-sm text-neutral-600">
           {filteredFilaments.length} {filteredFilaments.length === 1 ? 'filamento encontrado' : 'filamentos encontrados'}
         </p>
-        <div className="flex gap-2">
+        <div className="flex gap-1 border rounded-lg p-1 bg-neutral-100">
           <Button
-            variant={viewMode === 'list' ? 'default' : 'outline'}
+            variant={viewMode === 'list' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('list')}
+            className={viewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-white/50'}
           >
             <List className="h-4 w-4 mr-2" />
             Lista
           </Button>
           <Button
-            variant={viewMode === 'grid' ? 'default' : 'outline'}
+            variant={viewMode === 'grid' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('grid')}
+            className={viewMode === 'grid' ? 'bg-white shadow-sm' : 'hover:bg-white/50'}
           >
             <Grid3x3 className="h-4 w-4 mr-2" />
             Grade
