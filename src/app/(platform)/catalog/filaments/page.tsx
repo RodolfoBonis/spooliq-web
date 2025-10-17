@@ -232,8 +232,8 @@ export default function FilamentsPage() {
       {/* Filters */}
       <div 
         ref={filterRef}
-        className="sticky top-[-1.5rem] z-10 transition-all pt-6"
-        style={{ marginTop: '-1.5rem' }}
+        className="sticky z-10 transition-all pt-6"
+        style={{ top: '-1.5rem', marginTop: '-1.5rem' }}
       >
         <div className={`transition-all ${
           isFilterSticky 
