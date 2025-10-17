@@ -83,16 +83,30 @@ export const filamentService = {
    * Create new filament
    */
   async create(filamentData: CreateFilamentDTO): Promise<Filament> {
-    const { data } = await api.post<{ message: string; filament: any }>(
-      '/filaments/',
-      filamentData
-    )
-    
-    // Map backend response to frontend format
-    return {
-      ...data.filament,
-      brand_name: data.filament.brand?.name || '',
-      material_name: data.filament.material?.name || '',
+    try {
+      const response = await api.post<{ message: string; filament: any }>(
+        '/filaments/',
+        filamentData
+      )
+      
+      console.log('Create filament response:', response)
+      console.log('Response data:', response.data)
+      
+      const { data } = response
+      
+      // Map backend response to frontend format
+      const mappedData = {
+        ...data.filament,
+        brand_name: data.filament.brand?.name || '',
+        material_name: data.filament.material?.name || '',
+      }
+      
+      console.log('Mapped filament data:', mappedData)
+      
+      return mappedData
+    } catch (error) {
+      console.error('Error creating filament:', error)
+      throw error
     }
   },
 

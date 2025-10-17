@@ -82,9 +82,11 @@ api.interceptors.response.use(
       'Erro ao processar requisição'
 
     // Don't show toast for expected errors (like validation errors that component handles)
-    if (error.response?.status !== 400) {
-      toast.error(errorMessage)
-    }
+    // Also don't show toast for successful responses that had processing errors
+    // Let components handle their own error messages
+    // if (error.response?.status !== 400) {
+    //   toast.error(errorMessage)
+    // }
 
     return Promise.reject(error)
   }
