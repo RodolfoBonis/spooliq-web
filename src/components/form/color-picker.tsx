@@ -5,8 +5,9 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, X, Sparkles } from 'lucide-react'
-import type { ColorType, ColorData } from '@/types/models'
+import type { ColorType, ColorData, GradientStop } from '@/types/models'
 import { generateColorName } from '@/lib/utils/color-names'
 
 interface ColorPickerProps {
@@ -48,13 +49,29 @@ export function ColorPicker({
         newData = { color: '#FF6B6B' }
         break
       case 'gradient':
-        newData = { from: '#FF6B6B', to: '#4ECDC4', direction: 'horizontal' }
+        newData = { 
+          direction: '90deg',
+          colors: [
+            { color: '#FF6B6B', position: 0 },
+            { color: '#4ECDC4', position: 100 }
+          ]
+        }
         break
       case 'duo':
-        newData = { primary: '#FF6B6B', secondary: '#FFFFFF', ratio: 50 }
+        newData = { 
+          primary: '#FF6B6B', 
+          secondary: '#FFFFFF', 
+          pattern: 'stripes',
+          ratio: 0.5 
+        }
         break
       case 'rainbow':
-        newData = { colors: ['#FF6B6B', '#FFA07A', '#FFD700', '#98D8C8', '#6495ED', '#DDA0DD'] }
+        newData = { 
+          intensity: 1.0,
+          saturation: 1.0,
+          direction: '90deg',
+          repetitions: 1
+        }
         break
     }
 
@@ -69,19 +86,24 @@ export function ColorPicker({
     onColorDataChange(newData)
   }
 
-  const addRainbowColor = () => {
+  // Gradient helpers
+  const addGradientStop = () => {
     const colors = localData.colors || []
-    handleDataChange({ colors: [...colors, '#000000'] })
+    const newStop: GradientStop = { 
+      color: '#000000', 
+      position: colors.length > 0 ? 100 : 0 
+    }
+    handleDataChange({ colors: [...colors, newStop] })
   }
 
-  const removeRainbowColor = (index: number) => {
+  const removeGradientStop = (index: number) => {
     const colors = localData.colors || []
     handleDataChange({ colors: colors.filter((_, i) => i !== index) })
   }
 
-  const updateRainbowColor = (index: number, color: string) => {
+  const updateGradientStop = (index: number, updates: Partial<GradientStop>) => {
     const colors = [...(localData.colors || [])]
-    colors[index] = color
+    colors[index] = { ...colors[index], ...updates }
     handleDataChange({ colors })
   }
 
@@ -117,92 +139,116 @@ export function ColorPicker({
                 className="h-10 w-14 cursor-pointer rounded border"
               />
               <Input
+                type="text"
                 value={localData.color || '#FF6B6B'}
                 onChange={(e) => handleDataChange({ color: e.target.value })}
                 placeholder="#FF6B6B"
                 pattern="^#[0-9A-Fa-f]{6}$"
-                className="font-mono"
+                className="max-w-[120px] font-mono"
               />
             </div>
-            {/* Preview */}
+          </div>
+
+          {/* Preview */}
+          <div className="space-y-2">
+            <Label>Preview</Label>
             <div
-              className="h-20 rounded-md border"
-              style={{ backgroundColor: localData.color || '#FF6B6B' }}
+              className="h-20 w-full rounded-md border border-neutral-200"
+              style={{ backgroundColor: localData.color }}
             />
           </div>
         </TabsContent>
 
-        {/* Gradient */}
+        {/* Gradient Color */}
         <TabsContent value="gradient" className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>De</Label>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="color"
-                  value={localData.from || '#FF6B6B'}
-                  onChange={(e) => handleDataChange({ from: e.target.value })}
-                  className="h-10 w-14 cursor-pointer rounded border"
-                />
-                <Input
-                  value={localData.from || '#FF6B6B'}
-                  onChange={(e) => handleDataChange({ from: e.target.value })}
-                  placeholder="#FF6B6B"
-                  className="font-mono text-sm"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Para</Label>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="color"
-                  value={localData.to || '#4ECDC4'}
-                  onChange={(e) => handleDataChange({ to: e.target.value })}
-                  className="h-10 w-14 cursor-pointer rounded border"
-                />
-                <Input
-                  value={localData.to || '#4ECDC4'}
-                  onChange={(e) => handleDataChange({ to: e.target.value })}
-                  placeholder="#4ECDC4"
-                  className="font-mono text-sm"
-                />
-              </div>
-            </div>
+          <div className="space-y-2">
+            <Label>Direção</Label>
+            <Select
+              value={localData.direction || '90deg'}
+              onValueChange={(value) => handleDataChange({ direction: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="90deg">Horizontal (→)</SelectItem>
+                <SelectItem value="180deg">Vertical (↓)</SelectItem>
+                <SelectItem value="45deg">Diagonal (↘)</SelectItem>
+                <SelectItem value="135deg">Diagonal (↗)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
-            <Label>Direção</Label>
-            <select
-              value={localData.direction || 'horizontal'}
-              onChange={(e) =>
-                handleDataChange({ direction: e.target.value as 'horizontal' | 'vertical' | 'diagonal' })
-              }
-              className="w-full rounded-md border border-neutral-300 px-3 py-2"
-            >
-              <option value="horizontal">Horizontal</option>
-              <option value="vertical">Vertical</option>
-              <option value="diagonal">Diagonal</option>
-            </select>
+            <div className="flex items-center justify-between">
+              <Label>Cores do Gradiente</Label>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={addGradientStop}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar Cor
+              </Button>
+            </div>
+
+            {(localData.colors || []).map((stop, index) => (
+              <div key={index} className="flex items-center gap-2 p-3 bg-neutral-50 rounded-lg">
+                <input
+                  type="color"
+                  value={stop.color}
+                  onChange={(e) => updateGradientStop(index, { color: e.target.value })}
+                  className="h-10 w-14 cursor-pointer rounded border"
+                />
+                <Input
+                  type="text"
+                  value={stop.color}
+                  onChange={(e) => updateGradientStop(index, { color: e.target.value })}
+                  placeholder="#000000"
+                  className="max-w-[100px] font-mono text-sm"
+                />
+                <Input
+                  type="number"
+                  value={stop.position}
+                  onChange={(e) => updateGradientStop(index, { position: parseFloat(e.target.value) })}
+                  min="0"
+                  max="100"
+                  step="1"
+                  className="max-w-[80px]"
+                />
+                <span className="text-sm text-neutral-500">%</span>
+                {(localData.colors?.length || 0) > 2 && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => removeGradientStop(index)}
+                  >
+                    <X className="h-4 w-4 text-error" />
+                  </Button>
+                )}
+              </div>
+            ))}
           </div>
 
           {/* Preview */}
-          <div
-            className="h-20 rounded-md border"
-            style={{
-              background: `linear-gradient(${
-                localData.direction === 'vertical'
-                  ? 'to bottom'
-                  : localData.direction === 'diagonal'
-                  ? 'to bottom right'
-                  : 'to right'
-              }, ${localData.from || '#FF6B6B'}, ${localData.to || '#4ECDC4'})`,
-            }}
-          />
+          <div className="space-y-2">
+            <Label>Preview</Label>
+            <div
+              className="h-20 w-full rounded-md border border-neutral-200"
+              style={{
+                background: `linear-gradient(${localData.direction || '90deg'}, ${
+                  (localData.colors || [])
+                    .map((stop) => `${stop.color} ${stop.position}%`)
+                    .join(', ')
+                })`
+              }}
+            />
+          </div>
         </TabsContent>
 
-        {/* Duo */}
+        {/* Duo Color */}
         <TabsContent value="duo" className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -215,9 +261,9 @@ export function ColorPicker({
                   className="h-10 w-14 cursor-pointer rounded border"
                 />
                 <Input
+                  type="text"
                   value={localData.primary || '#FF6B6B'}
                   onChange={(e) => handleDataChange({ primary: e.target.value })}
-                  placeholder="#FF6B6B"
                   className="font-mono text-sm"
                 />
               </div>
@@ -233,9 +279,9 @@ export function ColorPicker({
                   className="h-10 w-14 cursor-pointer rounded border"
                 />
                 <Input
+                  type="text"
                   value={localData.secondary || '#FFFFFF'}
                   onChange={(e) => handleDataChange({ secondary: e.target.value })}
-                  placeholder="#FFFFFF"
                   className="font-mono text-sm"
                 />
               </div>
@@ -243,87 +289,132 @@ export function ColorPicker({
           </div>
 
           <div className="space-y-2">
-            <Label>Proporção (%)</Label>
-            <Input
-              type="number"
-              value={localData.ratio || 50}
-              onChange={(e) => handleDataChange({ ratio: parseInt(e.target.value) })}
-              min="0"
-              max="100"
+            <Label>Padrão</Label>
+            <Select
+              value={localData.pattern || 'stripes'}
+              onValueChange={(value) => handleDataChange({ pattern: value as any })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="stripes">Listras</SelectItem>
+                <SelectItem value="spots">Pontos</SelectItem>
+                <SelectItem value="random">Aleatório</SelectItem>
+                <SelectItem value="marbled">Mármore</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Proporção Primária ({Math.round((localData.ratio || 0.5) * 100)}%)</Label>
+            <input
+              type="range"
+              min="10"
+              max="90"
+              step="5"
+              value={(localData.ratio || 0.5) * 100}
+              onChange={(e) => handleDataChange({ ratio: parseFloat(e.target.value) / 100 })}
+              className="w-full"
             />
           </div>
 
           {/* Preview */}
-          <div className="h-20 rounded-md border overflow-hidden flex">
+          <div className="space-y-2">
+            <Label>Preview</Label>
             <div
+              className="h-20 w-full rounded-md border border-neutral-200"
               style={{
-                backgroundColor: localData.primary || '#FF6B6B',
-                width: `${localData.ratio || 50}%`,
-              }}
-            />
-            <div
-              style={{
-                backgroundColor: localData.secondary || '#FFFFFF',
-                width: `${100 - (localData.ratio || 50)}%`,
+                background:
+                  localData.pattern === 'stripes'
+                    ? `linear-gradient(90deg, ${localData.primary} ${(localData.ratio || 0.5) * 100}%, ${localData.secondary} ${(localData.ratio || 0.5) * 100}%)`
+                    : localData.pattern === 'spots'
+                    ? `radial-gradient(circle, ${localData.primary} 30%, ${localData.secondary} 30%)`
+                    : localData.pattern === 'marbled'
+                    ? `linear-gradient(45deg, ${localData.primary} 0%, ${localData.secondary} 25%, ${localData.primary} 50%, ${localData.secondary} 75%, ${localData.primary} 100%)`
+                    : `linear-gradient(45deg, ${localData.primary} ${(localData.ratio || 0.5) * 100}%, ${localData.secondary} ${(localData.ratio || 0.5) * 100}%)`
               }}
             />
           </div>
         </TabsContent>
 
-        {/* Rainbow */}
+        {/* Rainbow Color */}
         <TabsContent value="rainbow" className="space-y-4">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Cores</Label>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={addRainbowColor}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Adicionar Cor
-              </Button>
-            </div>
+          <div className="space-y-2">
+            <Label>Direção</Label>
+            <Select
+              value={localData.direction || '90deg'}
+              onValueChange={(value) => handleDataChange({ direction: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="90deg">Horizontal (→)</SelectItem>
+                <SelectItem value="180deg">Vertical (↓)</SelectItem>
+                <SelectItem value="45deg">Diagonal (↘)</SelectItem>
+                <SelectItem value="135deg">Diagonal (↗)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-            {(localData.colors || []).map((color, index) => (
-              <div key={index} className="flex items-center space-x-2">
-                <input
-                  type="color"
-                  value={color}
-                  onChange={(e) => updateRainbowColor(index, e.target.value)}
-                  className="h-10 w-14 cursor-pointer rounded border"
-                />
-                <Input
-                  value={color}
-                  onChange={(e) => updateRainbowColor(index, e.target.value)}
-                  placeholder="#000000"
-                  className="font-mono flex-1"
-                />
-                {(localData.colors || []).length > 2 && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => removeRainbowColor(index)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
+          <div className="space-y-2">
+            <Label>Intensidade ({Math.round((localData.intensity || 1.0) * 100)}%)</Label>
+            <input
+              type="range"
+              min="10"
+              max="100"
+              step="5"
+              value={(localData.intensity || 1.0) * 100}
+              onChange={(e) => handleDataChange({ intensity: parseFloat(e.target.value) / 100 })}
+              className="w-full"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Saturação ({Math.round((localData.saturation || 1.0) * 100)}%)</Label>
+            <input
+              type="range"
+              min="10"
+              max="100"
+              step="5"
+              value={(localData.saturation || 1.0) * 100}
+              onChange={(e) => handleDataChange({ saturation: parseFloat(e.target.value) / 100 })}
+              className="w-full"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Repetições</Label>
+            <Select
+              value={String(localData.repetitions || 1)}
+              onValueChange={(value) => handleDataChange({ repetitions: parseInt(value) })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n}x
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Preview */}
-          <div
-            className="h-20 rounded-md border"
-            style={{
-              background: `linear-gradient(to right, ${(localData.colors || []).join(', ')})`,
-            }}
-          />
+          <div className="space-y-2">
+            <Label>Preview</Label>
+            <div
+              className="h-20 w-full rounded-md border border-neutral-200"
+              style={{
+                background: `linear-gradient(${localData.direction || '90deg'}, #ff0000 0%, #ff8000 8.33%, #ffff00 16.66%, #80ff00 25%, #00ff00 33.33%, #00ff80 41.66%, #00ffff 50%, #0080ff 58.33%, #0000ff 66.66%, #8000ff 75%, #ff00ff 83.33%, #ff0080 91.66%, #ff0000 100%)`
+              }}
+            />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
   )
 }
-

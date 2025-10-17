@@ -160,23 +160,29 @@ export interface Customer {
 
 export type ColorType = 'solid' | 'gradient' | 'duo' | 'rainbow'
 
+export interface GradientStop {
+  color: string // #HEX
+  position: number // 0-100
+}
+
 export interface ColorData {
   // Solid
   color?: string // #HEX
 
   // Gradient
-  from?: string
-  to?: string
-  direction?: 'horizontal' | 'vertical' | 'diagonal'
+  direction?: string // CSS direction (e.g., "90deg", "to right")
+  colors?: GradientStop[] // Array of color stops
 
   // Duo
-  primary?: string
-  secondary?: string
-  ratio?: number
+  primary?: string // #HEX
+  secondary?: string // #HEX
+  pattern?: 'stripes' | 'spots' | 'random' | 'marbled'
+  ratio?: number // 0.1-0.9 (primary color ratio)
 
   // Rainbow
-  colors?: string[]
-  pattern?: string
+  intensity?: number // 0.1-1.0
+  saturation?: number // 0.1-1.0
+  repetitions?: number // 1-10
 }
 
 export interface Filament {

@@ -71,26 +71,38 @@ export function getColorPreviewStyle(
         backgroundColor: colorData.color || '#000000',
       }
     case 'gradient':
-      const direction =
-        colorData.direction === 'vertical'
-          ? 'to bottom'
-          : colorData.direction === 'diagonal'
-          ? 'to bottom right'
-          : 'to right'
+      const colors = colorData.colors || []
+      if (colors.length === 0) {
+        return { backgroundColor: '#000000' }
+      }
+      const stops = colors.map((stop: any) => `${stop.color} ${stop.position}%`).join(', ')
       return {
-        background: `linear-gradient(${direction}, ${colorData.from || '#000000'}, ${
-          colorData.to || '#FFFFFF'
-        })`,
+        background: `linear-gradient(${colorData.direction || '90deg'}, ${stops})`,
       }
     case 'duo':
-      return {
-        background: `linear-gradient(to right, ${colorData.primary || '#000000'} ${
-          colorData.ratio || 50
-        }%, ${colorData.secondary || '#FFFFFF'} ${colorData.ratio || 50}%)`,
+      const ratio = (colorData.ratio || 0.5) * 100
+      const pattern = colorData.pattern || 'stripes'
+      
+      if (pattern === 'stripes') {
+        return {
+          background: `linear-gradient(90deg, ${colorData.primary || '#000000'} ${ratio}%, ${colorData.secondary || '#FFFFFF'} ${ratio}%)`,
+        }
+      } else if (pattern === 'spots') {
+        return {
+          background: `radial-gradient(circle, ${colorData.primary || '#000000'} 30%, ${colorData.secondary || '#FFFFFF'} 30%)`,
+        }
+      } else if (pattern === 'marbled') {
+        return {
+          background: `linear-gradient(45deg, ${colorData.primary || '#000000'} 0%, ${colorData.secondary || '#FFFFFF'} 25%, ${colorData.primary || '#000000'} 50%, ${colorData.secondary || '#FFFFFF'} 75%, ${colorData.primary || '#000000'} 100%)`,
+        }
+      } else {
+        return {
+          background: `linear-gradient(45deg, ${colorData.primary || '#000000'} ${ratio}%, ${colorData.secondary || '#FFFFFF'} ${ratio}%)`,
+        }
       }
     case 'rainbow':
       return {
-        background: `linear-gradient(to right, ${(colorData.colors || []).join(', ')})`,
+        background: `linear-gradient(${colorData.direction || '90deg'}, #ff0000 0%, #ff8000 8.33%, #ffff00 16.66%, #80ff00 25%, #00ff00 33.33%, #00ff80 41.66%, #00ffff 50%, #0080ff 58.33%, #0000ff 66.66%, #8000ff 75%, #ff00ff 83.33%, #ff0080 91.66%, #ff0000 100%)`,
       }
     default:
       return {

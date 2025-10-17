@@ -141,9 +141,14 @@ export function generateColorName(colorType: string, colorData: any): string {
       return getColorName(colorData.color || '#000000')
     
     case 'gradient':
-      const from = getColorName(colorData.from || '#000000')
-      const to = getColorName(colorData.to || '#000000')
-      return `${from} → ${to}`
+      const colors = colorData.colors || []
+      if (colors.length === 0) return 'Gradiente'
+      if (colors.length === 2) {
+        const from = getColorName(colors[0].color || '#000000')
+        const to = getColorName(colors[1].color || '#000000')
+        return `${from} → ${to}`
+      }
+      return `Gradiente ${colors.length} Cores`
     
     case 'duo':
       const primary = getColorName(colorData.primary || '#000000')
@@ -151,11 +156,6 @@ export function generateColorName(colorType: string, colorData: any): string {
       return `${primary} / ${secondary}`
     
     case 'rainbow':
-      const colors = colorData.colors || []
-      if (colors.length === 0) return 'Rainbow'
-      if (colors.length <= 3) {
-        return colors.map((c: string) => getColorName(c)).join(' / ')
-      }
       return 'Rainbow Multi-Color'
     
     default:
