@@ -61,8 +61,10 @@ export default function FilamentsPage() {
   const [createColorName, setCreateColorName] = useState('');
   const [editColorName, setEditColorName] = useState('');
   const [isFilterSticky, setIsFilterSticky] = useState(false);
+  const [showFab, setShowFab] = useState(false);
   
   const filterRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
 
   const { data: filamentsData, isLoading } = useFilaments({ 
     search,
@@ -82,12 +84,18 @@ export default function FilamentsPage() {
   const brands = brandsData?.data || [];
   const materials = materialsData?.data || [];
 
-  // Handle sticky filter on scroll
+  // Handle sticky filter and FAB on scroll
   useEffect(() => {
     const handleScroll = () => {
       if (filterRef.current) {
         const rect = filterRef.current.getBoundingClientRect();
         setIsFilterSticky(rect.top <= 0);
+      }
+      
+      if (headerRef.current) {
+        const headerRect = headerRef.current.getBoundingClientRect();
+        // Show FAB when header button is out of view
+        setShowFab(headerRect.bottom < 0);
       }
     };
 
@@ -210,7 +218,7 @@ export default function FilamentsPage() {
   return (
     <div className="container py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div ref={headerRef} className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Filamentos</h1>
           <p className="text-neutral-600">Gerencie seu catálogo de filamentos</p>
@@ -762,6 +770,19 @@ export default function FilamentsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Floating Action Button */}
+      <button
+        onClick={() => setIsCreateOpen(true)}
+        className={`fixed bottom-8 right-8 z-50 bg-primary-500 hover:bg-primary-600 text-white rounded-full p-4 shadow-lg transition-all duration-300 ${
+          showFab 
+            ? 'opacity-100 translate-y-0 scale-100' 
+            : 'opacity-0 translate-y-16 scale-0 pointer-events-none'
+        }`}
+        aria-label="Adicionar novo filamento"
+      >
+        <Plus className="h-6 w-6" />
+      </button>
     </div>
   );
 }
