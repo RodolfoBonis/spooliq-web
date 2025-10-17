@@ -36,18 +36,22 @@ export const filamentSchema = z.object({
     color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Cor inválida').optional(),
     
     // Gradient
-    from: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Cor inválida').optional(),
-    to: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Cor inválida').optional(),
-    direction: z.enum(['horizontal', 'vertical', 'diagonal']).optional(),
+    direction: z.string().optional(), // CSS direction like "90deg"
+    colors: z.array(z.object({
+      color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Cor inválida'),
+      position: z.number().min(0).max(100),
+    })).optional(),
     
     // Duo
     primary: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Cor inválida').optional(),
     secondary: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Cor inválida').optional(),
-    ratio: z.number().min(0).max(100).optional(),
+    pattern: z.enum(['stripes', 'spots', 'random', 'marbled']).optional(),
+    ratio: z.number().min(0.1).max(0.9).optional(),
     
     // Rainbow
-    colors: z.array(z.string().regex(/^#[0-9A-Fa-f]{6}$/)).optional(),
-    pattern: z.string().optional(),
+    intensity: z.number().min(0.1).max(1.0).optional(),
+    saturation: z.number().min(0.1).max(1.0).optional(),
+    repetitions: z.number().min(1).max(10).optional(),
   }),
   diameter: z.union([z.literal(1.75), z.literal(2.85)]),
   price_per_kg: z.number().positive('Preço deve ser positivo'),

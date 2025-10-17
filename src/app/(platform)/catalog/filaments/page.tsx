@@ -450,9 +450,9 @@ export default function FilamentsPage() {
 
       {/* Confirmation Dialog */}
       <ConfirmationDialog
-        isOpen={isOpen}
+        open={isOpen}
+        onOpenChange={(open) => !open && handleCancel()}
         onConfirm={handleConfirm}
-        onCancel={handleCancel}
         title="Deletar filamento"
         description="Tem certeza que deseja deletar este filamento? Esta ação não pode ser desfeita."
         variant="danger"
