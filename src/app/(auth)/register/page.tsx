@@ -372,7 +372,7 @@ export default function RegisterPage() {
                   <Button
                     type="button"
                     onClick={nextStep}
-                    className="ml-auto bg-primary-500 hover:bg-primary-600"
+                    className="ml-auto bg-primary-500 hover:bg-primary-600 text-white"
                   >
                     Próximo
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -381,7 +381,7 @@ export default function RegisterPage() {
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="ml-auto bg-primary-500 hover:bg-primary-600"
+                    className="ml-auto bg-primary-500 hover:bg-primary-600 text-white"
                   >
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Criar Conta
