@@ -63,8 +63,8 @@ export default function FilamentsPage() {
 
   const { data: filamentsData, isLoading } = useFilaments({ 
     search,
-    brand_id: brandFilter,
-    material_id: materialFilter,
+    brand_id: brandFilter && brandFilter !== 'all' ? brandFilter : undefined,
+    material_id: materialFilter && materialFilter !== 'all' ? materialFilter : undefined,
     pageSize: 50 
   });
   const { data: brandsData } = useBrands({ pageSize: 100 });
@@ -80,7 +80,7 @@ export default function FilamentsPage() {
   const materials = materialsData?.data || [];
 
   // Filter by diameter locally
-  const filteredFilaments = diameterFilter 
+  const filteredFilaments = diameterFilter && diameterFilter !== 'all'
     ? filaments.filter(f => f.diameter === parseFloat(diameterFilter))
     : filaments;
 
@@ -189,7 +189,7 @@ export default function FilamentsPage() {
     setDiameterFilter('');
   };
 
-  const hasActiveFilters = search || brandFilter || materialFilter || diameterFilter;
+  const hasActiveFilters = search || (brandFilter && brandFilter !== 'all') || (materialFilter && materialFilter !== 'all') || (diameterFilter && diameterFilter !== 'all');
 
   return (
     <div className="container py-6 space-y-6">
@@ -236,12 +236,12 @@ export default function FilamentsPage() {
 
             <div className="space-y-2">
               <Label htmlFor="brand-filter">Marca</Label>
-              <Select value={brandFilter} onValueChange={setBrandFilter}>
+              <Select value={brandFilter || undefined} onValueChange={setBrandFilter}>
                 <SelectTrigger id="brand-filter">
                   <SelectValue placeholder="Todas as marcas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as marcas</SelectItem>
+                  <SelectItem value="all">Todas as marcas</SelectItem>
                   {brands.map((brand) => (
                     <SelectItem key={brand.id} value={brand.id}>
                       {brand.name}
@@ -253,12 +253,12 @@ export default function FilamentsPage() {
 
             <div className="space-y-2">
               <Label htmlFor="material-filter">Material</Label>
-              <Select value={materialFilter} onValueChange={setMaterialFilter}>
+              <Select value={materialFilter || undefined} onValueChange={setMaterialFilter}>
                 <SelectTrigger id="material-filter">
                   <SelectValue placeholder="Todos os materiais" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os materiais</SelectItem>
+                  <SelectItem value="all">Todos os materiais</SelectItem>
                   {materials.map((material) => (
                     <SelectItem key={material.id} value={material.id}>
                       {material.name}
@@ -270,12 +270,12 @@ export default function FilamentsPage() {
 
             <div className="space-y-2">
               <Label htmlFor="diameter-filter">Diâmetro</Label>
-              <Select value={diameterFilter} onValueChange={setDiameterFilter}>
+              <Select value={diameterFilter || undefined} onValueChange={setDiameterFilter}>
                 <SelectTrigger id="diameter-filter">
                   <SelectValue placeholder="Todos os diâmetros" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os diâmetros</SelectItem>
+                  <SelectItem value="all">Todos os diâmetros</SelectItem>
                   <SelectItem value="1.75">1.75mm</SelectItem>
                   <SelectItem value="2.85">2.85mm</SelectItem>
                 </SelectContent>
