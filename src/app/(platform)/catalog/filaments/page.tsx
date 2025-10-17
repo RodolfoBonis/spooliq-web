@@ -64,7 +64,6 @@ export default function FilamentsPage() {
   const [showFab, setShowFab] = useState(false);
   
   const filterRef = useRef<HTMLDivElement>(null);
-  const headerRef = useRef<HTMLDivElement>(null);
 
   const { data: filamentsData, isLoading } = useFilaments({ 
     search,
@@ -93,13 +92,10 @@ export default function FilamentsPage() {
         setIsFilterSticky(shouldBeSticky);
       }
       
-      if (headerRef.current) {
-        const headerRect = headerRef.current.getBoundingClientRect();
-        // Show FAB when header button is out of view (scrolled up past viewport)
-        const shouldShowFab = headerRect.bottom < 0;
-        console.log('Header top:', headerRect.top, 'bottom:', headerRect.bottom, 'showFab:', shouldShowFab);
-        setShowFab(shouldShowFab);
-      }
+      // Show FAB when scrolled down more than 200px
+      const scrollY = window.scrollY || window.pageYOffset;
+      const shouldShowFab = scrollY > 200;
+      setShowFab(shouldShowFab);
     };
 
     // Run on mount to set initial state
@@ -224,7 +220,7 @@ export default function FilamentsPage() {
   return (
     <div className="container py-6 space-y-6">
       {/* Header */}
-      <div ref={headerRef} className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Filamentos</h1>
           <p className="text-neutral-600">Gerencie seu catálogo de filamentos</p>
@@ -781,22 +777,22 @@ export default function FilamentsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Floating Action Button - Debug: showFab={showFab} */}
-      <button
-        onClick={() => {
-          console.log('FAB clicked! showFab:', showFab);
-          setIsCreateOpen(true);
-        }}
-        className={`fixed bottom-8 right-8 z-50 bg-primary-500 hover:bg-primary-600 text-white rounded-full p-4 shadow-lg transition-all duration-300 ${
+      {/* Floating Action Button */}
+      <div
+        className={`fixed bottom-8 right-8 z-[9999] transition-all duration-300 ${
           showFab 
             ? 'opacity-100 translate-y-0 scale-100' 
             : 'opacity-0 translate-y-16 scale-0 pointer-events-none'
         }`}
-        aria-label="Adicionar novo filamento"
-        style={{ border: showFab ? '3px solid lime' : '3px solid red' }}
       >
-        <Plus className="h-6 w-6" />
-      </button>
+        <button
+          onClick={() => setIsCreateOpen(true)}
+          className="bg-primary-500 hover:bg-primary-600 text-white rounded-full p-4 shadow-lg transition-transform hover:scale-110"
+          aria-label="Adicionar novo filamento"
+        >
+          <Plus className="h-6 w-6" />
+        </button>
+      </div>
     </div>
   );
 }
