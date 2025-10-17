@@ -303,7 +303,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
             </Button>
             <Button
               type="submit"
-              className="bg-primary-500 hover:bg-primary-600"
+              className="bg-primary-500 hover:bg-primary-600 text-white"
               disabled={isPending}
             >
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

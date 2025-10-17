@@ -52,7 +52,7 @@ export default function CustomersPage() {
             Gerencie seus clientes e histórico de orçamentos
           </p>
         </div>
-        <Button asChild className="bg-primary-500 hover:bg-primary-600">
+        <Button asChild className="bg-primary-500 hover:bg-primary-600 text-white">
           <Link href="/customers/new">
             <Plus className="mr-2 h-4 w-4" />
             Novo Cliente
@@ -84,7 +84,7 @@ export default function CustomersPage() {
           action={
             <Button
               onClick={() => (window.location.href = '/customers/new')}
-              className="bg-primary-500 hover:bg-primary-600"
+              className="bg-primary-500 hover:bg-primary-600 text-white"
             >
               <Plus className="mr-2 h-4 w-4" />
               Novo Cliente

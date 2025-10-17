@@ -243,7 +243,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Orçamentos</CardTitle>
-                <Button size="sm" asChild>
+                <Button size="sm" asChild className="bg-primary-500 hover:bg-primary-600 text-white">
                   <Link href={`/budgets/new?customer=${customer.id}`}>
                     Novo Orçamento
                   </Link>
@@ -256,7 +256,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                 <p className="text-sm text-neutral-600 mb-4">
                   Nenhum orçamento encontrado para este cliente
                 </p>
-                <Button variant="outline" size="sm" asChild>
+                <Button variant="outline" size="sm" asChild className="bg-primary-500 hover:bg-primary-600 text-white">
                   <Link href={`/budgets/new?customer=${customer.id}`}>
                     Criar Primeiro Orçamento
                   </Link>

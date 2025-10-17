@@ -129,7 +129,7 @@ export default function MaterialsPage() {
         </div>
         <Button
           onClick={handleOpenCreate}
-          className="bg-primary-500 hover:bg-primary-600"
+          className="bg-primary-500 hover:bg-primary-600 text-white"
         >
           <Plus className="mr-2 h-4 w-4" />
           Novo Material
@@ -160,7 +160,7 @@ export default function MaterialsPage() {
           action={
             <Button
               onClick={handleOpenCreate}
-              className="bg-primary-500 hover:bg-primary-600"
+              className="bg-primary-500 hover:bg-primary-600 text-white"
             >
               <Plus className="mr-2 h-4 w-4" />
               Novo Material
@@ -341,7 +341,7 @@ export default function MaterialsPage() {
                 <Button
                   type="submit"
                   disabled={isCreating || isUpdating}
-                  className="bg-primary-500 hover:bg-primary-600"
+                  className="bg-primary-500 hover:bg-primary-600 text-white"
                 >
                   {isCreating || isUpdating ? 'Salvando...' : 'Salvar'}
                 </Button>

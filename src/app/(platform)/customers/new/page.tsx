@@ -241,7 +241,7 @@ export default function NewCustomerPage() {
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="bg-primary-500 hover:bg-primary-600"
+                  className="bg-primary-500 hover:bg-primary-600 text-white"
                 >
                   {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Criar Cliente

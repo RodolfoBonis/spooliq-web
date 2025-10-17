@@ -233,7 +233,7 @@ export default function FilamentsPage() {
           <h1 className="text-3xl font-bold">Filamentos</h1>
           <p className="text-neutral-600">Gerencie seu catálogo de filamentos</p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} className="bg-primary-500 hover:bg-primary-600">
+        <Button onClick={() => setIsCreateOpen(true)} className="bg-primary-500 hover:bg-primary-600 text-white ">
           <Plus className="mr-2 h-4 w-4" />
           Novo Filamento
         </Button>
@@ -369,7 +369,7 @@ export default function FilamentsPage() {
           icon={Search}
           action={
             !hasActiveFilters ? (
-              <Button onClick={() => setIsCreateOpen(true)} className="bg-primary-500 hover:bg-primary-600">
+              <Button onClick={() => setIsCreateOpen(true)} className="bg-primary-500 hover:bg-primary-600 text-white">
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Filamento
               </Button>
@@ -657,7 +657,7 @@ export default function FilamentsPage() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isCreating}>
+              <Button type="submit" disabled={isCreating} className="bg-primary-500 hover:bg-primary-600 text-white">
                 {isCreating ? 'Criando...' : 'Criar Filamento'}
               </Button>
             </DialogFooter>
@@ -777,7 +777,7 @@ export default function FilamentsPage() {
               <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isUpdating}>
+              <Button type="submit" disabled={isUpdating} className="bg-primary-500 hover:bg-primary-600 text-white">
                 {isUpdating ? 'Salvando...' : 'Salvar Alterações'}
               </Button>
             </DialogFooter>
