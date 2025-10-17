@@ -145,10 +145,15 @@ export default function BrandsPage() {
           icon={Package}
           title="Nenhuma marca encontrada"
           description="Comece adicionando marcas de filamentos para organizar seu catálogo"
-          action={{
-            label: 'Nova Marca',
-            onClick: handleOpenCreate,
-          }}
+          action={
+            <Button
+              onClick={handleOpenCreate}
+              className="bg-primary-500 hover:bg-primary-600"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Marca
+            </Button>
+          }
         />
       ) : (
         <Card>

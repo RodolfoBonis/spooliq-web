@@ -157,10 +157,15 @@ export default function MaterialsPage() {
           icon={Boxes}
           title="Nenhum material encontrado"
           description="Comece adicionando materiais como PLA, ABS, PETG, TPU, etc."
-          action={{
-            label: 'Novo Material',
-            onClick: handleOpenCreate,
-          }}
+          action={
+            <Button
+              onClick={handleOpenCreate}
+              className="bg-primary-500 hover:bg-primary-600"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Material
+            </Button>
+          }
         />
       ) : (
         <Card>
