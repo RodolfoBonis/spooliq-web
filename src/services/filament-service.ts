@@ -84,24 +84,21 @@ export const filamentService = {
    */
   async create(filamentData: CreateFilamentDTO): Promise<Filament> {
     try {
-      const response = await api.post<{ data: any }>(
+      // Backend returns FilamentEntity directly (no wrapper object)
+      const { data: filament } = await api.post<any>(
         '/filaments/',
         filamentData
       )
       
-      console.log('Create filament response:', response)
-      console.log('Response data:', response.data)
+      console.log('Create filament response:', filament)
       
-      const { data } = response
-      
-      // Backend returns { data: filament }, not { filament: ... }
-      const filament = data.data
-      
-      // Map backend response to frontend format
-      const mappedData = {
+      // Create endpoint returns FilamentEntity without brand/material nested objects
+      // We need to fetch the full filament data to get brand_name and material_name
+      // For now, return empty strings and let the list refresh populate them
+      const mappedData: Filament = {
         ...filament,
-        brand_name: filament.brand?.name || '',
-        material_name: filament.material?.name || '',
+        brand_name: '', // Will be populated when list refreshes
+        material_name: '', // Will be populated when list refreshes
       }
       
       console.log('Mapped filament data:', mappedData)
@@ -117,19 +114,18 @@ export const filamentService = {
    * Update filament
    */
   async update(id: string, filamentData: UpdateFilamentDTO): Promise<Filament> {
-    const response = await api.put<{ data: any }>(
+    // Backend returns FilamentEntity directly (no wrapper object)
+    const { data: filament } = await api.put<any>(
       `/filaments/${id}`,
       filamentData
     )
     
-    const { data } = response
-    const filament = data.data
-    
-    // Map backend response to frontend format
+    // Update endpoint returns FilamentEntity without brand/material nested objects
+    // Empty strings will be populated when list refreshes
     return {
       ...filament,
-      brand_name: filament.brand?.name || '',
-      material_name: filament.material?.name || '',
+      brand_name: '', // Will be populated when list refreshes
+      material_name: '', // Will be populated when list refreshes
     }
   },
 
