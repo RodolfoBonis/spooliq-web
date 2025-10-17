@@ -50,41 +50,67 @@ export const filamentService = {
     if (material_id) params.append('material_id', material_id)
     if (pageSize) params.append('pageSize', pageSize.toString())
 
-    const response = await api.get<{ data: Filament[]; total: number }>(
-      `/filaments/?${params.toString()}`
-    )
+    const response = await api.get<{ 
+      data: Array<any>; 
+      total: number 
+    }>(`/filaments/?${params.toString()}`)
 
-    return { data: response.data.data, total: response.data.total }
+    // Map backend response to frontend format
+    const filaments: Filament[] = response.data.data.map((item: any) => ({
+      ...item,
+      brand_name: item.brand?.name || '',
+      material_name: item.material?.name || '',
+    }))
+
+    return { data: filaments, total: response.data.total }
   },
 
   /**
    * Get filament by ID
    */
   async getById(id: string): Promise<Filament> {
-    const { data } = await api.get<{ data: Filament }>(`/filaments/${id}`)
-    return data.data
+    const { data } = await api.get<{ data: any }>(`/filaments/${id}`)
+    
+    // Map backend response to frontend format
+    return {
+      ...data.data,
+      brand_name: data.data.brand?.name || '',
+      material_name: data.data.material?.name || '',
+    }
   },
 
   /**
    * Create new filament
    */
   async create(filamentData: CreateFilamentDTO): Promise<Filament> {
-    const { data } = await api.post<{ message: string; filament: Filament }>(
+    const { data } = await api.post<{ message: string; filament: any }>(
       '/filaments/',
       filamentData
     )
-    return data.filament
+    
+    // Map backend response to frontend format
+    return {
+      ...data.filament,
+      brand_name: data.filament.brand?.name || '',
+      material_name: data.filament.material?.name || '',
+    }
   },
 
   /**
    * Update filament
    */
   async update(id: string, filamentData: UpdateFilamentDTO): Promise<Filament> {
-    const { data } = await api.put<{ message: string; filament: Filament }>(
+    const { data } = await api.put<{ message: string; filament: any }>(
       `/filaments/${id}`,
       filamentData
     )
-    return data.filament
+    
+    // Map backend response to frontend format
+    return {
+      ...data.filament,
+      brand_name: data.filament.brand?.name || '',
+      material_name: data.filament.material?.name || '',
+    }
   },
 
   /**
