@@ -89,16 +89,19 @@ export default function FilamentsPage() {
     const handleScroll = () => {
       if (filterRef.current) {
         const rect = filterRef.current.getBoundingClientRect();
-        setIsFilterSticky(rect.top <= 0);
+        setIsFilterSticky(rect.top <= -24); // -1.5rem = -24px
       }
       
       if (headerRef.current) {
         const headerRect = headerRef.current.getBoundingClientRect();
-        // Show FAB when header button is out of view
-        setShowFab(headerRect.bottom < 0);
+        // Show FAB when header is scrolled up (top is negative)
+        setShowFab(headerRect.top < -50);
       }
     };
 
+    // Run on mount to set initial state
+    handleScroll();
+    
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -232,8 +235,8 @@ export default function FilamentsPage() {
       {/* Filters */}
       <div 
         ref={filterRef}
-        className="sticky z-10 transition-all pt-6"
-        style={{ top: '-1.5rem', marginTop: '-1.5rem' }}
+        className="sticky z-10 transition-all"
+        style={{ top: 0, marginTop: '-1.5rem', paddingTop: '1.5rem' }}
       >
         <div className={`transition-all ${
           isFilterSticky 
