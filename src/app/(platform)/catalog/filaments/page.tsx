@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, Search, Edit, Trash2, Grid3x3, List, Filter } from 'lucide-react';
 import { useFilaments, useCreateFilament, useUpdateFilament, useDeleteFilament } from '@/lib/hooks/use-filaments';
 import { useBrands } from '@/lib/hooks/use-brands';
@@ -60,6 +60,9 @@ export default function FilamentsPage() {
   const [editingFilament, setEditingFilament] = useState<Filament | null>(null);
   const [createColorName, setCreateColorName] = useState('');
   const [editColorName, setEditColorName] = useState('');
+  const [isFilterSticky, setIsFilterSticky] = useState(false);
+  
+  const filterRef = useRef<HTMLDivElement>(null);
 
   const { data: filamentsData, isLoading } = useFilaments({ 
     search,
@@ -78,6 +81,19 @@ export default function FilamentsPage() {
   const filaments = filamentsData?.data || [];
   const brands = brandsData?.data || [];
   const materials = materialsData?.data || [];
+
+  // Handle sticky filter on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      if (filterRef.current) {
+        const rect = filterRef.current.getBoundingClientRect();
+        setIsFilterSticky(rect.top <= 0);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Filter by diameter locally
   const filteredFilaments = diameterFilter && diameterFilter !== 'all'
@@ -206,19 +222,27 @@ export default function FilamentsPage() {
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            <h3 className="text-lg font-semibold">Filtros</h3>
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
-                Limpar filtros
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
+      <div 
+        ref={filterRef}
+        className={`sticky top-0 z-10 transition-all ${
+          isFilterSticky 
+            ? 'shadow-md -mx-6 px-6 bg-white' 
+            : ''
+        }`}
+      >
+        <Card className={isFilterSticky ? 'border-0 rounded-none' : ''}>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              <h3 className="text-lg font-semibold">Filtros</h3>
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  Limpar filtros
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="search">Buscar</Label>
@@ -283,7 +307,8 @@ export default function FilamentsPage() {
             </div>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
 
       {/* View Mode Toggle */}
       <div className="flex items-center justify-between">
