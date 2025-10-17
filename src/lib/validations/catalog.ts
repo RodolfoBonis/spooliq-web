@@ -6,6 +6,9 @@ export const brandSchema = z.object({
   description: z.string().optional(),
 })
 
+export const createBrandSchema = brandSchema
+export const updateBrandSchema = brandSchema.partial()
+
 export type BrandFormData = z.infer<typeof brandSchema>
 
 // Material Schema
@@ -15,6 +18,9 @@ export const materialSchema = z.object({
   tempTable: z.number().min(0).max(300, 'Temperatura máxima: 300°C').optional(),
   tempExtruder: z.number().min(0).max(500, 'Temperatura máxima: 500°C').optional(),
 })
+
+export const createMaterialSchema = materialSchema
+export const updateMaterialSchema = materialSchema.partial()
 
 export type MaterialFormData = z.infer<typeof materialSchema>
 
@@ -42,12 +48,13 @@ export const filamentSchema = z.object({
     colors: z.array(z.string().regex(/^#[0-9A-Fa-f]{6}$/)).optional(),
     pattern: z.string().optional(),
   }),
-  diameter: z.enum(['1.75', '2.85']),
-  price_per_kg: z.number().positive('Preço deve ser positivo').multipleOf(0.01),
-  stock_quantity: z.number().nonnegative('Estoque não pode ser negativo').optional(),
-  min_stock_alert: z.number().nonnegative('Alerta mínimo não pode ser negativo').optional(),
+  diameter: z.union([z.literal(1.75), z.literal(2.85)]),
+  price_per_kg: z.number().positive('Preço deve ser positivo'),
   description: z.string().optional(),
 })
+
+export const createFilamentSchema = filamentSchema
+export const updateFilamentSchema = filamentSchema.partial()
 
 export type FilamentFormData = z.infer<typeof filamentSchema>
 
