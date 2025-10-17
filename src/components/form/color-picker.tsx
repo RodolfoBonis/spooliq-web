@@ -9,16 +9,15 @@ import { Plus, X } from 'lucide-react'
 import type { ColorType, ColorData } from '@/types/models'
 
 interface ColorPickerProps {
-  value: {
-    type: ColorType
-    data: ColorData
-  }
-  onChange: (value: { type: ColorType; data: ColorData }) => void
+  colorType: ColorType
+  colorData: ColorData
+  onColorTypeChange: (type: ColorType) => void
+  onColorDataChange: (data: ColorData) => void
 }
 
-export function ColorPicker({ value, onChange }: ColorPickerProps) {
-  const [localType, setLocalType] = useState<ColorType>(value.type)
-  const [localData, setLocalData] = useState<ColorData>(value.data)
+export function ColorPicker({ colorType, colorData, onColorTypeChange, onColorDataChange }: ColorPickerProps) {
+  const [localType, setLocalType] = useState<ColorType>(colorType)
+  const [localData, setLocalData] = useState<ColorData>(colorData)
 
   const handleTypeChange = (type: ColorType) => {
     setLocalType(type)
@@ -40,13 +39,14 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
     }
 
     setLocalData(newData)
-    onChange({ type, data: newData })
+    onColorTypeChange(type)
+    onColorDataChange(newData)
   }
 
   const handleDataChange = (updates: Partial<ColorData>) => {
     const newData = { ...localData, ...updates }
     setLocalData(newData)
-    onChange({ type: localType, data: newData })
+    onColorDataChange(newData)
   }
 
   const addRainbowColor = () => {
