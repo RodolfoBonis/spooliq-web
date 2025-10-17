@@ -1,89 +1,50 @@
-import { User } from 'lucide-react'
-import Image from 'next/image'
-import { cn } from '@/lib/utils'
+"use client"
 
-interface AvatarProps {
-  src?: string
-  alt?: string
-  name?: string
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
-  fallback?: React.ReactNode
-  status?: 'online' | 'offline' | 'away' | 'busy'
-}
+import * as React from "react"
+import * as AvatarPrimitive from "@radix-ui/react-avatar"
 
-export const Avatar = ({
-  src,
-  alt,
-  name,
-  size = 'md',
-  fallback,
-  status,
-}: AvatarProps) => {
-  const sizeClasses = {
-    xs: 'w-6 h-6 text-xs',
-    sm: 'w-8 h-8 text-sm',
-    md: 'w-10 h-10 text-base',
-    lg: 'w-12 h-12 text-lg',
-    xl: 'w-16 h-16 text-xl',
-    '2xl': 'w-20 h-20 text-2xl',
-  }
+import { cn } from "@/lib/utils"
 
-  const statusColors = {
-    online: 'bg-success-500',
-    offline: 'bg-gray-400',
-    away: 'bg-warning-500',
-    busy: 'bg-error-500',
-  }
+const Avatar = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root>
+>(({ className, ...props }, ref) => (
+  <AvatarPrimitive.Root
+    ref={ref}
+    className={cn(
+      "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full",
+      className
+    )}
+    {...props}
+  />
+))
+Avatar.displayName = AvatarPrimitive.Root.displayName
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2)
-  }
+const AvatarImage = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Image>,
+  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
+>(({ className, ...props }, ref) => (
+  <AvatarPrimitive.Image
+    ref={ref}
+    className={cn("aspect-square h-full w-full", className)}
+    {...props}
+  />
+))
+AvatarImage.displayName = AvatarPrimitive.Image.displayName
 
-  return (
-    <div className="relative inline-block">
-      <div
-        className={cn(
-          'rounded-full overflow-hidden bg-gray-200 flex items-center justify-center relative',
-          'dark:bg-gray-700',
-          sizeClasses[size]
-        )}
-      >
-        {src ? (
-          <Image
-            src={src}
-            alt={alt || name || 'Avatar'}
-            fill
-            className="object-cover"
-          />
-        ) : fallback ? (
-          fallback
-        ) : name ? (
-          <span className="font-medium text-gray-600 dark:text-gray-300">
-            {getInitials(name)}
-          </span>
-        ) : (
-          <User className="w-1/2 h-1/2 text-gray-400 dark:text-gray-500" />
-        )}
-      </div>
+const AvatarFallback = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Fallback>,
+  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Fallback>
+>(({ className, ...props }, ref) => (
+  <AvatarPrimitive.Fallback
+    ref={ref}
+    className={cn(
+      "flex h-full w-full items-center justify-center rounded-full bg-muted",
+      className
+    )}
+    {...props}
+  />
+))
+AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
 
-      {status && (
-        <div
-          className={cn(
-            'absolute bottom-0 right-0 rounded-full border-2 border-white dark:border-gray-800',
-            statusColors[status],
-            {
-              'w-2 h-2': size === 'xs' || size === 'sm',
-              'w-3 h-3': size === 'md' || size === 'lg',
-              'w-4 h-4': size === 'xl' || size === '2xl',
-            }
-          )}
-        />
-      )}
-    </div>
-  )
-}
+export { Avatar, AvatarImage, AvatarFallback }

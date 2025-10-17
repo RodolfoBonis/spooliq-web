@@ -1,30 +1,27 @@
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { Providers } from '@/components/providers/Providers'
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import './globals.css'
+import { Toaster } from 'sonner'
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-})
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: "SpoolIQ - Gestão e Cálculo de Custos para Impressão 3D",
-  description: "Sistema completo de gestão e cálculo de custos para impressão 3D",
+  title: 'SpoolIQ - Gerenciamento de Orçamentos 3D',
+  description: 'Plataforma completa para gerenciamento de orçamentos de impressão 3D',
 }
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
-        <Providers>
-          {children}
-        </Providers>
+    <html lang="pt-BR">
+      <body className={inter.className}>
+        {children}
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   )
 }
+

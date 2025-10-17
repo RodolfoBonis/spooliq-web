@@ -1,36 +1,154 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SpoolIQ - Frontend
 
-## Getting Started
+Plataforma SaaS completa para gerenciamento de orçamentos de impressão 3D.
 
-First, run the development server:
+## 🚀 Stack Tecnológica
+
+- **Framework**: Next.js 14+ (App Router)
+- **Linguagem**: TypeScript
+- **Styling**: Tailwind CSS + shadcn/ui
+- **State Management**: Zustand + React Query
+- **Forms**: React Hook Form + Zod
+- **HTTP Client**: Axios
+- **Icons**: Lucide React
+- **Notifications**: Sonner
+- **Charts**: Recharts
+
+## 🛠️ Setup do Projeto
+
+### Pré-requisitos
+
+- Node.js 18+
+- npm ou yarn
+
+### Instalação
 
 ```bash
+# Instalar dependências
+npm install
+
+# Configurar variáveis de ambiente
+cp .env.example .env.local
+# Edite .env.local com suas configurações
+
+# Rodar em desenvolvimento
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+O aplicativo estará disponível em `http://localhost:3000`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Build para Produção
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## 📁 Estrutura do Projeto
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── (auth)/            # Rotas de autenticação (login, register)
+│   ├── (platform)/        # Rotas protegidas (dashboard, budgets, etc)
+│   ├── (admin)/           # Admin platform
+│   └── (marketing)/       # Landing page
+├── components/
+│   ├── ui/                # shadcn/ui components
+│   ├── layout/            # Sidebar, Topbar
+│   ├── auth/              # Protected route, etc
+│   └── ...                # Feature-specific components
+├── lib/
+│   ├── api/               # API client (Axios)
+│   ├── hooks/             # Custom React hooks
+│   ├── utils/             # Utility functions
+│   ├── validations/       # Zod schemas
+│   └── constants/         # Constants (roles, etc)
+├── stores/                # Zustand stores
+├── types/                 # TypeScript types
+└── services/              # Business logic / API services
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🎨 Design System
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+O projeto utiliza um design system inspirado no Airbnb, com:
 
-## Deploy on Vercel
+- **Cores Primárias**: Coral (#ff6b6b)
+- **Cores Neutras**: Cinzas profissionais (#f7f7f7 a #222222)
+- **Accent**: Teal (#26c5c5)
+- **Status Colors**: Profissionais e sutis
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Veja `DESIGN_SYSTEM_COLORS.md` para detalhes completos.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🔐 Autenticação
+
+O sistema utiliza JWT tokens com armazenamento local via Zustand persist.
+
+### Roles/Permissões
+
+- **PlatformAdmin**: Admin da plataforma
+- **Owner**: Dono da empresa
+- **OrgAdmin**: Administrador da organização
+- **User**: Usuário padrão
+
+## 📚 Documentação
+
+- `FRONTEND_SPECS.md`: Especificações completas do frontend
+- `FRONTEND_API_VALIDATION.md`: Validação de endpoints da API
+
+## 🧪 Scripts Disponíveis
+
+```bash
+npm run dev      # Desenvolvimento
+npm run build    # Build produção
+npm start        # Inicia servidor produção
+npm run lint     # Lint com ESLint
+```
+
+## 🌐 Variáveis de Ambiente
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8080/v1
+```
+
+## 📝 Convenções de Código
+
+- **TypeScript**: Tipos sempre explícitos
+- **Naming**:
+  - Arquivos: `kebab-case.tsx`
+  - Componentes: `PascalCase`
+  - Funções/variáveis: `camelCase`
+  - Constantes: `SCREAMING_SNAKE_CASE`
+- **Idioma**:
+  - UI/Textos: Português (Brasil)
+  - Código/Comentários: Inglês
+
+## 🚧 Status do Desenvolvimento
+
+### ✅ Completo
+
+- Setup inicial do projeto
+- Configuração Tailwind + shadcn/ui
+- Sistema de autenticação (login/register)
+- Layout principal (Sidebar + Topbar)
+- Protected routes
+
+### 🔄 Em Progresso
+
+- Dashboard com métricas
+- CRUD de Clientes
+- CRUD de Catálogo (Filamentos, Materiais, Marcas)
+- Sistema de Orçamentos
+- Presets
+- Branding PDF
+- User Management
+- Landing Page
+
+## 📄 Licença
+
+Proprietary - SpoolIQ
+
+---
+
+**Desenvolvido com ❤️ para revolucionar orçamentos de impressão 3D**
+

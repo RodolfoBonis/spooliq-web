@@ -1,136 +1,410 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import toast from 'react-hot-toast'
+import { Loader2, ArrowLeft, ArrowRight, Check } from 'lucide-react'
+import { toast } from 'sonner'
 
-import { Button, Input, Card } from '@/components/ui'
-import { AuthService } from '@/services/auth.service'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
+
+import { registerSchema, type RegisterFormData } from '@/lib/validations/auth'
+import { authService } from '@/services/auth-service'
 import { useAuthStore } from '@/stores/auth-store'
 
-const registerSchema = z.object({
-  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
-  password_confirmation: z.string(),
-}).refine((data) => data.password === data.password_confirmation, {
-  message: 'Senhas não coincidem',
-  path: ['password_confirmation'],
-})
-
-type RegisterFormData = z.infer<typeof registerSchema>
+const STEPS = [
+  { id: 1, name: 'Dados Pessoais', fields: ['name', 'email', 'password'] },
+  { id: 2, name: 'Dados da Empresa', fields: ['company_name', 'company_trade_name', 'company_document', 'company_phone'] },
+  { id: 3, name: 'Endereço', fields: ['address', 'address_number', 'complement', 'neighborhood', 'city', 'state', 'zip_code'] },
+]
 
 export default function RegisterPage() {
   const router = useRouter()
-  const setAuth = useAuthStore((state) => state.setAuth)
-
+  const { isAuthenticated } = useAuthStore()
+  const [currentStep, setCurrentStep] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<RegisterFormData>({
+  // Check if user is already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/dashboard')
+    } else {
+      setIsCheckingAuth(false)
+    }
+  }, [isAuthenticated, router])
+
+  const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      company_name: '',
+      company_trade_name: '',
+      company_document: '',
+      company_phone: '',
+      address: '',
+      address_number: '',
+      complement: '',
+      neighborhood: '',
+      city: '',
+      state: '',
+      zip_code: '',
+    },
   })
+
+  const nextStep = () => {
+    if (currentStep < STEPS.length) {
+      setCurrentStep(currentStep + 1)
+    }
+  }
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
+    }
+  }
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
       setIsLoading(true)
-      const response = await AuthService.register(data)
+      
+      // Remove hyphens and dots from CNPJ and CPF
+      const cleanData = {
+        ...data,
+        company_document: data.company_document.replace(/\D/g, ''),
+        zip_code: data.zip_code.replace(/\D/g, ''),
+      }
 
-      setAuth(response.user, {
-        access_token: response.access_token,
-        refresh_token: response.refresh_token,
-      })
+      const response = await authService.register(cleanData)
 
-      toast.success('Conta criada com sucesso!')
-      router.push('/dashboard')
-    } catch (error: unknown) {
-      const errorMessage = error && typeof error === 'object' && 'response' in error
-        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
-        : 'Erro ao criar conta'
-      toast.error(errorMessage || 'Erro ao criar conta')
+      toast.success('Conta criada com sucesso! Faça login para continuar.')
+      router.push('/login')
+    } catch (error: any) {
+      console.error('Register error:', error)
+      toast.error(error.response?.data?.message || 'Erro ao criar conta')
     } finally {
       setIsLoading(false)
     }
   }
 
+  // Show loading while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+      </div>
+    )
+  }
+
   return (
-    <Card variant="elevated" className="w-full max-w-md mx-auto">
-      <div className="text-center mb-8">
-        <div className="flex justify-center mb-6">
-          <div className="w-16 h-16 bg-gradient-to-r from-brand-500 to-brand-600 rounded-airbnb-lg shadow-airbnb-md flex items-center justify-center">
-            <span className="text-white font-bold text-2xl">S</span>
+    <div className="flex min-h-screen items-center justify-center px-4 py-12">
+      <Card className="w-full max-w-2xl">
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-3xl font-bold text-primary-500">
+            Criar Conta
+          </CardTitle>
+          <CardDescription>
+            Passo {currentStep} de {STEPS.length}: {STEPS[currentStep - 1].name}
+          </CardDescription>
+        </CardHeader>
+
+        {/* Progress bar */}
+        <div className="px-6">
+          <div className="flex justify-between mb-8">
+            {STEPS.map((step) => (
+              <div key={step.id} className="flex flex-col items-center flex-1">
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    step.id < currentStep
+                      ? 'bg-success text-white'
+                      : step.id === currentStep
+                      ? 'bg-primary-500 text-white'
+                      : 'bg-neutral-200 text-neutral-500'
+                  }`}
+                >
+                  {step.id < currentStep ? (
+                    <Check className="h-5 w-5" />
+                  ) : (
+                    step.id
+                  )}
+                </div>
+                <span className="text-xs mt-2 text-center">{step.name}</span>
+              </div>
+            ))}
           </div>
         </div>
-        <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Criar conta
-        </h2>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          Cadastre-se no SpoolIQ
-        </p>
-      </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <Input
-          label="Nome completo"
-          type="text"
-          {...register('name')}
-          error={errors.name?.message}
-          fullWidth
-        />
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {/* Step 1: User Data */}
+              {currentStep === 1 && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome Completo</FormLabel>
+                        <FormControl>
+                          <Input placeholder="João Silva" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="joao@empresa.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Senha</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
 
-        <Input
-          label="Email"
-          type="email"
-          {...register('email')}
-          error={errors.email?.message}
-          fullWidth
-        />
+              {/* Step 2: Company Data */}
+              {currentStep === 2 && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="company_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome da Empresa</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Minha Empresa LTDA" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="company_trade_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome Fantasia (opcional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Minha Empresa" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="company_document"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CNPJ</FormLabel>
+                        <FormControl>
+                          <Input placeholder="00000000000000" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="company_phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Telefone da Empresa</FormLabel>
+                        <FormControl>
+                          <Input placeholder="(11) 99999-9999" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
 
-        <Input
-          label="Senha"
-          type="password"
-          {...register('password')}
-          error={errors.password?.message}
-          fullWidth
-        />
+              {/* Step 3: Address */}
+              {currentStep === 3 && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="zip_code"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>CEP</FormLabel>
+                          <FormControl>
+                            <Input placeholder="00000000" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="state"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Estado (UF)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="SP" maxLength={2} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cidade</FormLabel>
+                        <FormControl>
+                          <Input placeholder="São Paulo" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="neighborhood"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bairro</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Centro" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-3 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem className="col-span-2">
+                          <FormLabel>Endereço</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Rua das Flores" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="address_number"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Número</FormLabel>
+                          <FormControl>
+                            <Input placeholder="123" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="complement"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Complemento (opcional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Apto 12" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
 
-        <Input
-          label="Confirmar senha"
-          type="password"
-          {...register('password_confirmation')}
-          error={errors.password_confirmation?.message}
-          fullWidth
-        />
+              <div className="flex justify-between pt-4">
+                {currentStep > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={prevStep}
+                    disabled={isLoading}
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Voltar
+                  </Button>
+                )}
 
-        <Button
-          type="submit"
-          isLoading={isLoading}
-          fullWidth
-          size="lg"
-          className="bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
-        >
-          Criar conta
-        </Button>
-      </form>
+                {currentStep < STEPS.length ? (
+                  <Button
+                    type="button"
+                    onClick={nextStep}
+                    className="ml-auto bg-primary-500 hover:bg-primary-600"
+                  >
+                    Próximo
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="ml-auto bg-primary-500 hover:bg-primary-600"
+                  >
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Criar Conta
+                  </Button>
+                )}
+              </div>
+            </form>
+          </Form>
+        </CardContent>
 
-      <div className="mt-6 text-center">
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Já tem uma conta?{' '}
-          <Link
-            href="/login"
-            className="font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors duration-200 hover:underline"
-          >
-            Fazer login
-          </Link>
-        </p>
-      </div>
-    </Card>
+        <CardFooter className="flex justify-center text-sm">
+          <div className="text-neutral-600">
+            Já tem uma conta?{' '}
+            <Link
+              href="/login"
+              className="font-medium text-primary-500 hover:text-primary-600 hover:underline"
+            >
+              Fazer login
+            </Link>
+          </div>
+        </CardFooter>
+      </Card>
+    </div>
   )
 }
+

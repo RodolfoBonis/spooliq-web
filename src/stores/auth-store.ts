@@ -1,79 +1,63 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import Cookies from 'js-cookie'
-import { User, TokenPair } from '@/types/api'
+import type { User } from '@/types/models'
 
 interface AuthState {
   user: User | null
-  tokens: TokenPair | null
+  token: string | null
   isAuthenticated: boolean
   isLoading: boolean
+
+  // Actions
+  setAuth: (user: User, token: string) => void
+  setUser: (user: User) => void
+  logout: () => void
+  hasRole: (roles: string | string[]) => boolean
 }
 
-interface AuthActions {
-  setAuth: (user: User, tokens: TokenPair) => void
-  clearAuth: () => void
-  setLoading: (loading: boolean) => void
-  updateUser: (user: Partial<User>) => void
-}
-
-type AuthStore = AuthState & AuthActions
-
-export const useAuthStore = create<AuthStore>()(
+export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-      // State
       user: null,
-      tokens: null,
+      token: null,
       isAuthenticated: false,
       isLoading: false,
 
-      // Actions
-      setAuth: (user: User, tokens: TokenPair) => {
-        // Set cookies
-        Cookies.set('auth-token', tokens.access_token, { expires: 7 })
-        Cookies.set('refresh-token', tokens.refresh_token, { expires: 30 })
-
+      setAuth: (user, token) => {
         set({
           user,
-          tokens,
+          token,
           isAuthenticated: true,
-          isLoading: false,
         })
       },
 
-      clearAuth: () => {
-        // Remove cookies
-        Cookies.remove('auth-token')
-        Cookies.remove('refresh-token')
+      setUser: (user) => {
+        set({ user })
+      },
 
+      logout: () => {
         set({
           user: null,
-          tokens: null,
+          token: null,
           isAuthenticated: false,
-          isLoading: false,
         })
-      },
-
-      setLoading: (loading: boolean) => {
-        set({ isLoading: loading })
-      },
-
-      updateUser: (userData: Partial<User>) => {
-        const currentUser = get().user
-        if (currentUser) {
-          set({
-            user: { ...currentUser, ...userData }
-          })
+        // Redirect to login page
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login'
         }
+      },
+
+      hasRole: (roles) => {
+        const user = get().user
+        if (!user || !user.roles) return false
+
+        const rolesToCheck = Array.isArray(roles) ? roles : [roles]
+        return user.roles.some((role) => rolesToCheck.includes(role))
       },
     }),
     {
-      name: 'spooliq-auth',
-      partialize: (state) => ({
-        user: state.user,
-        isAuthenticated: state.isAuthenticated,
-      }),
+      name: 'auth-storage',
     }
   )
 )
+

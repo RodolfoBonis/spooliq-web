@@ -1,134 +1,181 @@
 'use client'
 
-import { useState, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import toast from 'react-hot-toast'
+import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
-import { Button, Input, Card } from '@/components/ui'
-import { AuthService } from '@/services/auth.service'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
+
+import { loginSchema, type LoginFormData } from '@/lib/validations/auth'
+import { authService } from '@/services/auth-service'
+import { companyService } from '@/services/company-service'
 import { useAuthStore } from '@/stores/auth-store'
+import { useCompanyStore } from '@/stores/company-store'
+import { decodeJWT } from '@/lib/utils/jwt'
 
-const loginSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
-})
-
-type LoginFormData = z.infer<typeof loginSchema>
-
-function LoginForm() {
+export default function LoginPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirectTo') || '/dashboard'
-  const setAuth = useAuthStore((state) => state.setAuth)
-
+  const { isAuthenticated, setAuth } = useAuthStore()
+  const { setCompany } = useCompanyStore()
   const [isLoading, setIsLoading] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginFormData>({
+  // Check if user is already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/dashboard')
+    } else {
+      setIsCheckingAuth(false)
+    }
+  }, [isAuthenticated, router])
+
+  const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
   })
 
   const onSubmit = async (data: LoginFormData) => {
     try {
       setIsLoading(true)
-      const response = await AuthService.login(data)
-
-      // Decode JWT to get user info
-      const tokenPayload = JSON.parse(atob(response.accessToken.split('.')[1]))
-      const user = {
-        id: tokenPayload.sub,
-        name: tokenPayload.name || tokenPayload.preferred_username,
-        email: tokenPayload.email,
-        role: tokenPayload.realm_access?.roles?.includes('Admin') ? 'admin' : 'user'
+      
+      // Login
+      const loginResponse = await authService.login(data)
+      
+      // Decode JWT to get user information
+      const user = decodeJWT(loginResponse.accessToken)
+      
+      if (!user) {
+        throw new Error('Falha ao decodificar token de autenticação')
       }
 
-      setAuth(user, {
-        access_token: response.accessToken,
-        refresh_token: response.refreshToken,
-      })
+      // Set auth state with real user data
+      setAuth(user, loginResponse.accessToken)
+
+      // Fetch company data
+      try {
+        const company = await companyService.get()
+        setCompany(company)
+      } catch (error) {
+        console.error('Error fetching company:', error)
+        // Don't block login if company fetch fails
+      }
 
       toast.success('Login realizado com sucesso!')
-      router.push(redirectTo)
-    } catch (error: unknown) {
-      const errorMessage = error && typeof error === 'object' && 'response' in error
-        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
-        : 'Erro ao fazer login'
-      toast.error(errorMessage || 'Erro ao fazer login')
+      router.push('/dashboard')
+    } catch (error: any) {
+      console.error('Login error:', error)
+      toast.error(error.response?.data?.message || 'Erro ao fazer login')
     } finally {
       setIsLoading(false)
     }
   }
 
+  // Show loading while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+      </div>
+    )
+  }
+
   return (
-    <Card variant="elevated" className="w-full max-w-md mx-auto">
-      <div className="text-center mb-8">
-        <div className="flex justify-center mb-6">
-          <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-red-600 rounded-airbnb-lg shadow-airbnb-md flex items-center justify-center">
-            <span className="text-white font-bold text-2xl">S</span>
+    <div className="flex min-h-screen items-center justify-center px-4 py-12">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-3xl font-bold text-primary-500">
+            SpoolIQ
+          </CardTitle>
+          <CardDescription>
+            Entre com suas credenciais para acessar o sistema
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="seu@email.com"
+                        disabled={isLoading}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Senha</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="••••••••"
+                        disabled={isLoading}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button
+                type="submit"
+                className="w-full bg-primary-500 hover:bg-primary-600"
+                disabled={isLoading}
+              >
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Entrar
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+        <CardFooter className="flex flex-col space-y-2 text-center text-sm">
+          <div className="text-neutral-600">
+            Não tem uma conta?{' '}
+            <Link
+              href="/register"
+              className="font-medium text-primary-500 hover:text-primary-600 hover:underline"
+            >
+              Criar conta grátis
+            </Link>
           </div>
-        </div>
-        <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Faça seu login
-        </h2>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          Entre na sua conta do SpoolIQ
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <Input
-          label="Email"
-          type="email"
-          {...register('email')}
-          error={errors.email?.message}
-          fullWidth
-        />
-
-        <Input
-          label="Senha"
-          type="password"
-          {...register('password')}
-          error={errors.password?.message}
-          fullWidth
-        />
-
-        <Button
-          type="submit"
-          isLoading={isLoading}
-          fullWidth
-          size="lg"
-          className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
-        >
-          Entrar
-        </Button>
-      </form>
-
-      <div className="mt-6 text-center">
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Não tem uma conta?{' '}
           <Link
-            href="/register"
-            className="font-semibold text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors duration-200 hover:underline"
+            href="/forgot-password"
+            className="text-neutral-500 hover:text-neutral-600 hover:underline"
           >
-            Criar conta
+            Esqueceu sua senha?
           </Link>
-        </p>
-      </div>
-    </Card>
+        </CardFooter>
+      </Card>
+    </div>
   )
 }
 
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<div>Carregando...</div>}>
-      <LoginForm />
-    </Suspense>
-  )
-}
