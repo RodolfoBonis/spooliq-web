@@ -344,7 +344,11 @@ export default function EnergyPresetsPage() {
         open={!!deletingPreset}
         onOpenChange={(open) => !open && setDeletingPreset(null)}
         title="Deletar preset"
-        description={`Tem certeza que deseja deletar o preset de "${getLocation(deletingPreset!)}"?`}
+        description={
+          deletingPreset
+            ? `Tem certeza que deseja deletar o preset de "${getLocation(deletingPreset)}"?`
+            : 'Tem certeza que deseja deletar este preset?'
+        }
         onConfirm={handleDelete}
         confirmText="Deletar"
         variant="destructive"
