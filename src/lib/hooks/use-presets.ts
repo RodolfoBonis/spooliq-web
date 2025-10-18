@@ -22,6 +22,14 @@ export function useMachinePresets() {
   })
 }
 
+export function useMachinePreset(id: string) {
+  return useQuery({
+    queryKey: ['machine-presets', id],
+    queryFn: () => machinePresetService.getById(id),
+    enabled: !!id,
+  })
+}
+
 export function useCreateMachinePreset() {
   const queryClient = useQueryClient()
 
@@ -76,6 +84,14 @@ export function useEnergyPresets() {
   })
 }
 
+export function useEnergyPreset(id: string) {
+  return useQuery({
+    queryKey: ['energy-presets', id],
+    queryFn: () => energyPresetService.getById(id),
+    enabled: !!id,
+  })
+}
+
 export function useCreateEnergyPreset() {
   const queryClient = useQueryClient()
 
@@ -127,6 +143,14 @@ export function useCostPresets() {
   return useQuery({
     queryKey: ['cost-presets'],
     queryFn: () => costPresetService.list(),
+  })
+}
+
+export function useCostPreset(id: string) {
+  return useQuery({
+    queryKey: ['cost-presets', id],
+    queryFn: () => costPresetService.getById(id),
+    enabled: !!id,
   })
 }
 

@@ -1,20 +1,37 @@
 import { api } from '@/lib/api/client'
 import type { MachinePreset, EnergyPreset, CostPreset } from '@/types/models'
 
+// ✅ CORRECTED - Aligned with Backend
+
 // Machine Presets
 export interface CreateMachinePresetDTO {
-  name: string
-  description?: string
-  waste_percentage: number // AMS waste % (e.g., 15 for 15%)
-  is_default?: boolean
+  brand?: string
+  model?: string
+  build_volume_x: number // mm
+  build_volume_y: number // mm
+  build_volume_z: number // mm
+  nozzle_diameter: number // mm
+  layer_height_min: number // mm
+  layer_height_max: number // mm
+  print_speed_max: number // mm/s
+  power_consumption: number // Watts
+  bed_temperature_max: number // °C
+  extruder_temperature_max: number // °C
+  filament_diameter: number // mm (1.75 or 2.85)
+  cost_per_hour: number // cents
 }
 
 export interface UpdateMachinePresetDTO extends Partial<CreateMachinePresetDTO> {}
 
 export const machinePresetService = {
-  async list(): Promise<{ presets: MachinePreset[] }> {
-    const { data } = await api.get<{ data: MachinePreset[] }>('/presets/machines')
-    return { presets: data.data }
+  async list(): Promise<MachinePreset[]> {
+    const { data } = await api.get<MachinePreset[]>('/presets/machines')
+    return data
+  },
+
+  async getById(id: string): Promise<MachinePreset> {
+    const { data } = await api.get<MachinePreset>(`/presets/machines/${id}`)
+    return data
   },
 
   async create(preset: CreateMachinePresetDTO): Promise<MachinePreset> {
@@ -34,18 +51,28 @@ export const machinePresetService = {
 
 // Energy Presets
 export interface CreateEnergyPresetDTO {
-  name: string
-  kwh_cost: number // Cost per kWh in cents
-  printer_power: number // Power in Watts
-  is_default?: boolean
+  country?: string
+  state?: string
+  city?: string
+  energy_cost_per_kwh: number // cents
+  currency: string // "BRL", "USD", etc (3-letter ISO code)
+  provider?: string
+  tariff_type?: string
+  peak_hour_multiplier: number
+  off_peak_hour_multiplier: number
 }
 
 export interface UpdateEnergyPresetDTO extends Partial<CreateEnergyPresetDTO> {}
 
 export const energyPresetService = {
-  async list(): Promise<{ presets: EnergyPreset[] }> {
-    const { data } = await api.get<{ data: EnergyPreset[] }>('/presets/energy')
-    return { presets: data.data }
+  async list(): Promise<EnergyPreset[]> {
+    const { data } = await api.get<EnergyPreset[]>('/presets/energy')
+    return data
+  },
+
+  async getById(id: string): Promise<EnergyPreset> {
+    const { data } = await api.get<EnergyPreset>(`/presets/energy/${id}`)
+    return data
   },
 
   async create(preset: CreateEnergyPresetDTO): Promise<EnergyPreset> {
@@ -65,18 +92,28 @@ export const energyPresetService = {
 
 // Cost Presets
 export interface CreateCostPresetDTO {
-  name: string
-  labor_cost_per_hour: number // Labor cost per hour in cents
-  profit_margin?: number // Profit margin %
-  is_default?: boolean
+  labor_cost_per_hour: number // cents
+  packaging_cost_per_item: number // cents
+  shipping_cost_base: number // cents
+  shipping_cost_per_gram: number // cents
+  overhead_percentage: number // 0-100
+  profit_margin_percentage: number // 0-100
+  post_processing_cost_per_hour: number // cents
+  support_removal_cost_per_hour: number // cents
+  quality_control_cost_per_item: number // cents
 }
 
 export interface UpdateCostPresetDTO extends Partial<CreateCostPresetDTO> {}
 
 export const costPresetService = {
-  async list(): Promise<{ presets: CostPreset[] }> {
-    const { data } = await api.get<{ data: CostPreset[] }>('/presets/costs')
-    return { presets: data.data }
+  async list(): Promise<CostPreset[]> {
+    const { data } = await api.get<CostPreset[]>('/presets/costs')
+    return data
+  },
+
+  async getById(id: string): Promise<CostPreset> {
+    const { data } = await api.get<CostPreset>(`/presets/costs/${id}`)
+    return data
   },
 
   async create(preset: CreateCostPresetDTO): Promise<CostPreset> {

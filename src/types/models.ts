@@ -226,37 +226,59 @@ export interface Material {
   updated_at: string
 }
 
+// ✅ CORRECTED PRESET MODELS - Aligned with Backend
+
 export interface MachinePreset {
   id: string
   organization_id: string
-  name: string
-  description?: string
-  waste_percentage: number // AMS waste % (e.g., 15 for 15%)
-  is_default: boolean
-  created_at: string
-  updated_at: string
+  brand?: string
+  model?: string
+  build_volume_x: number // mm
+  build_volume_y: number // mm
+  build_volume_z: number // mm
+  nozzle_diameter: number // mm
+  layer_height_min: number // mm
+  layer_height_max: number // mm
+  print_speed_max: number // mm/s
+  power_consumption: number // Watts
+  bed_temperature_max: number // °C
+  extruder_temperature_max: number // °C
+  filament_diameter: number // mm (1.75 or 2.85)
+  cost_per_hour: number // cents
+  created_at?: string
+  updated_at?: string
 }
 
 export interface EnergyPreset {
   id: string
   organization_id: string
-  name: string
-  kwh_cost: number // Cost per kWh in cents
-  printer_power: number // Power in Watts
-  is_default: boolean
-  created_at: string
-  updated_at: string
+  country?: string
+  state?: string
+  city?: string
+  energy_cost_per_kwh: number // cents
+  currency: string // "BRL", "USD", etc (3-letter ISO code)
+  provider?: string
+  tariff_type?: string
+  peak_hour_multiplier: number
+  off_peak_hour_multiplier: number
+  created_at?: string
+  updated_at?: string
 }
 
 export interface CostPreset {
   id: string
   organization_id: string
-  name: string
-  labor_cost_per_hour: number // Labor cost per hour in cents
-  profit_margin?: number // Profit margin %
-  is_default: boolean
-  created_at: string
-  updated_at: string
+  labor_cost_per_hour: number // cents
+  packaging_cost_per_item: number // cents
+  shipping_cost_base: number // cents
+  shipping_cost_per_gram: number // cents
+  overhead_percentage: number // 0-100
+  profit_margin_percentage: number // 0-100
+  post_processing_cost_per_hour: number // cents
+  support_removal_cost_per_hour: number // cents
+  quality_control_cost_per_item: number // cents
+  created_at?: string
+  updated_at?: string
 }
 
 export interface CompanyBrandingColors {
@@ -289,4 +311,3 @@ export interface BrandingTemplate {
   description: string
   colors: CompanyBrandingEntity
 }
-
