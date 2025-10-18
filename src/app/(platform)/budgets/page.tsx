@@ -1,0 +1,187 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Card } from '@/components/ui/card'
+import { BudgetCard } from '@/components/budgets/budget-card'
+import { EmptyState } from '@/components/common/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useBudgets, useDeleteBudget, useGeneratePDF } from '@/lib/hooks/use-budgets'
+import { Plus, Search, FileText } from 'lucide-react'
+import type { BudgetStatus } from '@/types/models'
+
+export default function BudgetsPage() {
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<BudgetStatus | 'all'>('all')
+  const [page, setPage] = useState(1)
+
+  const { data, isLoading } = useBudgets({
+    search: search || undefined,
+    status: statusFilter !== 'all' ? statusFilter : undefined,
+    page,
+    pageSize: 12,
+  })
+
+  const { mutate: deleteBudget } = useDeleteBudget()
+  const { mutate: generatePDF } = useGeneratePDF()
+
+  const handleDelete = (id: string) => {
+    deleteBudget(id)
+  }
+
+  const handleGeneratePDF = (id: string, name: string) => {
+    generatePDF({ id, name })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="container py-6">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold">Orçamentos</h1>
+          <Button disabled>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Orçamento
+          </Button>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-64" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  const budgets = data?.budgets || []
+  const total = data?.total || 0
+
+  return (
+    <div className="container py-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-neutral-900">Orçamentos</h1>
+          <p className="text-neutral-600 mt-1">
+            Gerencie seus orçamentos de impressão 3D
+          </p>
+        </div>
+        <Button asChild className="bg-primary-500 hover:bg-primary-600">
+          <Link href="/budgets/new">
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Orçamento
+          </Link>
+        </Button>
+      </div>
+
+      {/* Filters */}
+      <Card className="p-4 mb-6">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+            <Input
+              placeholder="Buscar por nome ou cliente..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setPage(1)
+              }}
+              className="pl-9"
+            />
+          </div>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => {
+              setStatusFilter(value as BudgetStatus | 'all')
+              setPage(1)
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Filtrar por status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              <SelectItem value="draft">Rascunho</SelectItem>
+              <SelectItem value="sent">Enviado</SelectItem>
+              <SelectItem value="approved">Aprovado</SelectItem>
+              <SelectItem value="rejected">Rejeitado</SelectItem>
+              <SelectItem value="printing">Imprimindo</SelectItem>
+              <SelectItem value="completed">Concluído</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </Card>
+
+      {/* Empty State */}
+      {budgets.length === 0 && (
+        <EmptyState
+          icon={FileText}
+          title="Nenhum orçamento encontrado"
+          description={
+            search || statusFilter !== 'all'
+              ? 'Tente ajustar os filtros para encontrar orçamentos'
+              : 'Comece criando seu primeiro orçamento'
+          }
+          action={
+            !search && statusFilter === 'all' ? (
+              <Button asChild className="bg-primary-500 hover:bg-primary-600">
+                <Link href="/budgets/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Novo Orçamento
+                </Link>
+              </Button>
+            ) : undefined
+          }
+        />
+      )}
+
+      {/* Budget Grid */}
+      {budgets.length > 0 && (
+        <>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+            {budgets.map((budget) => (
+              <BudgetCard
+                key={budget.id}
+                budget={budget}
+                onDelete={handleDelete}
+                onGeneratePDF={handleGeneratePDF}
+              />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {total > 12 && (
+            <div className="flex items-center justify-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Anterior
+              </Button>
+              <span className="text-sm text-neutral-600">
+                Página {page} de {Math.ceil(total / 12)}
+              </span>
+              <Button
+                variant="outline"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page >= Math.ceil(total / 12)}
+              >
+                Próxima
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
