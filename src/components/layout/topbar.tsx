@@ -51,7 +51,7 @@ export function Topbar() {
             <Button variant="ghost" className="relative h-10 w-10 rounded-full">
               <Avatar>
                 <AvatarFallback className="bg-primary-100 text-primary-700">
-                  {getInitials(user?.name)}
+                  {getInitials(user?.name || '')}
                 </AvatarFallback>
               </Avatar>
             </Button>

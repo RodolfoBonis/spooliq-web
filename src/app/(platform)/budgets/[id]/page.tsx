@@ -96,6 +96,7 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
   }
 
   const handleChangeStatus = (status: BudgetStatus) => {
+    if (status === 'draft') return // Cannot change back to draft
     updateStatus({ id: params.id, data: { status } })
   }
 
