@@ -2,8 +2,6 @@
 
 import { useState } from 'react'
 import { Check, ChevronsUpDown, Plus } from 'lucide-react'
-
-import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -18,9 +16,9 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-
+import { cn } from '@/lib/utils'
 import { useCustomers } from '@/lib/hooks/use-customers'
-import { getInitials } from '@/lib/utils/format'
+import type { Customer } from '@/types/models'
 
 interface CustomerSelectProps {
   value?: string
@@ -35,10 +33,20 @@ export function CustomerSelect({
 }: CustomerSelectProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const { data } = useCustomers({ search })
 
-  const customers = data?.data || []
+  const { data, isLoading } = useCustomers({ search, pageSize: 50 })
+  const customers = data?.customers || []
+
   const selectedCustomer = customers.find((c) => c.id === value)
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase()
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -50,21 +58,21 @@ export function CustomerSelect({
           className="w-full justify-between"
         >
           {selectedCustomer ? (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2">
               <Avatar className="h-6 w-6">
-                <AvatarFallback className="bg-primary-100 text-primary-700 text-xs">
+                <AvatarFallback className="text-xs bg-primary-100 text-primary-700">
                   {getInitials(selectedCustomer.name)}
                 </AvatarFallback>
               </Avatar>
-              <span>{selectedCustomer.name}</span>
+              <span className="truncate">{selectedCustomer.name}</span>
             </div>
           ) : (
-            <span className="text-neutral-500">Selecionar cliente...</span>
+            'Selecione um cliente...'
           )}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0" align="start">
+      <PopoverContent className="w-[400px] p-0">
         <Command>
           <CommandInput
             placeholder="Buscar cliente..."
@@ -72,30 +80,43 @@ export function CustomerSelect({
             onValueChange={setSearch}
           />
           <CommandEmpty>
-            <div className="py-6 text-center text-sm">
-              <p className="text-neutral-600 mb-4">Nenhum cliente encontrado</p>
+            <div className="py-6 text-center">
+              <p className="text-sm text-neutral-500 mb-3">
+                Nenhum cliente encontrado
+              </p>
               {onCreateNew && (
                 <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => {
                     setOpen(false)
                     onCreateNew()
                   }}
-                  className="bg-primary-500 hover:bg-primary-600"
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Criar Novo Cliente
+                  Criar novo cliente
                 </Button>
               )}
             </div>
           </CommandEmpty>
           <CommandGroup>
+            {onCreateNew && (
+              <CommandItem
+                onSelect={() => {
+                  setOpen(false)
+                  onCreateNew()
+                }}
+                className="border-b"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                <span className="font-medium">Criar novo cliente</span>
+              </CommandItem>
+            )}
             {customers.map((customer) => (
               <CommandItem
                 key={customer.id}
-                value={customer.id}
-                onSelect={(currentValue) => {
-                  onValueChange(currentValue === value ? '' : currentValue)
+                onSelect={() => {
+                  onValueChange(customer.id)
                   setOpen(false)
                 }}
               >
@@ -105,41 +126,20 @@ export function CustomerSelect({
                     value === customer.id ? 'opacity-100' : 'opacity-0'
                   )}
                 />
-                <div className="flex items-center space-x-2 flex-1">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary-100 text-primary-700 text-xs">
-                      {getInitials(customer.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{customer.name}</p>
-                    <p className="text-xs text-neutral-500 truncate">{customer.email}</p>
-                  </div>
+                <Avatar className="h-6 w-6 mr-2">
+                  <AvatarFallback className="text-xs bg-primary-100 text-primary-700">
+                    {getInitials(customer.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col">
+                  <span className="font-medium">{customer.name}</span>
+                  <span className="text-xs text-neutral-500">{customer.email}</span>
                 </div>
               </CommandItem>
             ))}
           </CommandGroup>
-          {onCreateNew && customers.length > 0 && (
-            <>
-              <div className="border-t border-neutral-200 p-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start text-primary-600"
-                  onClick={() => {
-                    setOpen(false)
-                    onCreateNew()
-                  }}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Criar Novo Cliente
-                </Button>
-              </div>
-            </>
-          )}
         </Command>
       </PopoverContent>
     </Popover>
   )
 }
-
