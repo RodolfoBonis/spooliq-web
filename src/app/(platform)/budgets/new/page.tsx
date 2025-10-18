@@ -13,6 +13,9 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
 import { CustomerSelect } from '@/components/customers/customer-select'
 import { FilamentSelector } from '@/components/budgets/filament-selector'
+import { MachinePresetSelect } from '@/components/presets/machine-preset-select'
+import { EnergyPresetSelect } from '@/components/presets/energy-preset-select'
+import { CostPresetSelect } from '@/components/presets/cost-preset-select'
 import { useCreateBudget } from '@/lib/hooks/use-budgets'
 import { createBudgetSchema, type CreateBudgetFormData } from '@/lib/validations/budget'
 import { formatCurrency, getColorPreviewStyle } from '@/lib/utils/format'
@@ -189,6 +192,36 @@ export default function NewBudgetPage() {
                 {...form.register('description')}
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Presets */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Presets de Cálculo</CardTitle>
+            <CardDescription>
+              Selecione os presets para cálculo automático de custos (opcional)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <MachinePresetSelect
+                value={form.watch('machine_preset_id')}
+                onChange={(value) => form.setValue('machine_preset_id', value)}
+                label="Máquina"
+                placeholder="Selecione a máquina"
+              />
+              <EnergyPresetSelect
+                value={form.watch('energy_preset_id')}
+                onChange={(value) => form.setValue('energy_preset_id', value)}
+                label="Energia"
+                placeholder="Selecione o preset de energia"
+              />
+            </div>
+            <p className="text-xs text-neutral-500">
+              💡 Os presets são usados para calcular automaticamente custos de energia e desperdício.
+              Você pode criar novos presets em <strong>Presets</strong> no menu lateral.
+            </p>
 
             <Separator />
 
@@ -399,22 +432,34 @@ export default function NewBudgetPage() {
 
               <Separator />
 
-              {/* Additional Cost */}
-              <div>
-                <Label>Custo Adicional de Mão de Obra (R$)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0,00"
-                  onChange={(e) => {
-                    const value = parseFloat(e.target.value) || 0
-                    form.setValue(
-                      `items.${itemIndex}.additional_labor_cost`,
-                      Math.round(value * 100) // Convert to cents
-                    )
-                  }}
+              {/* Cost Preset & Additional Cost */}
+              <div className="space-y-4">
+                <CostPresetSelect
+                  value={form.watch(`items.${itemIndex}.cost_preset_id`)}
+                  onChange={(value) => form.setValue(`items.${itemIndex}.cost_preset_id`, value)}
+                  label="Preset de Custo (opcional)"
+                  placeholder="Selecione um preset"
                 />
+                
+                <div>
+                  <Label>Custo Adicional de Mão de Obra (R$)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0,00"
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value) || 0
+                      form.setValue(
+                        `items.${itemIndex}.additional_labor_cost`,
+                        Math.round(value * 100) // Convert to cents
+                      )
+                    }}
+                  />
+                  <p className="text-xs text-neutral-500 mt-1">
+                    Custos extras como pintura, acabamento, etc.
+                  </p>
+                </div>
               </div>
 
               {/* Item Total */}
