@@ -59,8 +59,12 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     title: 'Presets',
-    href: '/presets',
     icon: Sliders,
+    children: [
+      { title: 'Máquinas', href: '/presets/machines', icon: Sliders },
+      { title: 'Energia', href: '/presets/energy', icon: Sliders },
+      { title: 'Custos', href: '/presets/costs', icon: Sliders },
+    ],
   },
   {
     title: 'Configurações',
