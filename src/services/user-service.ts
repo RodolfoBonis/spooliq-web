@@ -25,18 +25,18 @@ export interface UpdateUserDTO {
 
 export const userService = {
   async list(): Promise<User[]> {
-    const { data } = await api.get<{ users: User[] }>('/users')
-    return data.users
+    const { data } = await api.get<User[]>('/users')
+    return data
   },
 
   async create(userData: CreateUserDTO): Promise<User> {
-    const { data } = await api.post<{ user: User }>('/users', userData)
-    return data.user
+    const { data } = await api.post<User>('/users', userData)
+    return data
   },
 
   async update(id: string, userData: UpdateUserDTO): Promise<User> {
-    const { data } = await api.put<{ user: User }>(`/users/${id}`, userData)
-    return data.user
+    const { data } = await api.put<User>(`/users/${id}`, userData)
+    return data
   },
 
   async delete(id: string): Promise<void> {
