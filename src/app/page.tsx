@@ -186,108 +186,108 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              {/* Starter */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Starter</CardTitle>
-                  <CardDescription>Para quem está começando</CardDescription>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold text-neutral-900">R$ 29</span>
-                    <span className="text-neutral-600">/mês</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <ul className="space-y-3">
-                    <li className="flex items-start gap-2">
-                      <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                      <span className="text-sm text-neutral-700">50 orçamentos/mês</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                      <span className="text-sm text-neutral-700">3 usuários</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                      <span className="text-sm text-neutral-700">PDF básico</span>
-                    </li>
-                  </ul>
-                  <Link href="/register" className="block">
-                    <Button variant="outline" className="w-full">
-                      Começar
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-
-              {/* Professional */}
-              <Card className="border-primary-500 border-2 relative">
-                <div className="absolute -top-4 left-0 right-0 flex justify-center">
-                  <span className="bg-primary-500 text-white px-4 py-1 rounded-full text-sm font-medium">
-                    Mais Popular
-                  </span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-center">
+            {/* Starter */}
+            <Card className="h-full">
+              <CardHeader>
+                <CardTitle>Starter</CardTitle>
+                <CardDescription>Para quem está começando</CardDescription>
+                <div className="mt-4">
+                  <span className="text-4xl font-bold text-neutral-900">R$ 29</span>
+                  <span className="text-neutral-600">/mês</span>
                 </div>
-                <CardHeader>
-                  <CardTitle>Professional</CardTitle>
-                  <CardDescription>Para negócios em crescimento</CardDescription>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold text-neutral-900">R$ 79</span>
-                    <span className="text-neutral-600">/mês</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <ul className="space-y-3">
-                    <li className="flex items-start gap-2">
-                      <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                      <span className="text-sm text-neutral-700">Orçamentos ilimitados</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                      <span className="text-sm text-neutral-700">10 usuários</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                      <span className="text-sm text-neutral-700">PDF personalizado</span>
-                    </li>
-                  </ul>
-                  <Link href="/register" className="block">
-                    <Button className="w-full bg-primary-500 hover:bg-primary-600">
-                      Começar
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-
-              {/* Enterprise */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Enterprise</CardTitle>
-                  <CardDescription>Para grandes operações</CardDescription>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold text-neutral-900">Custom</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <ul className="space-y-3">
-                    <li className="flex items-start gap-2">
-                      <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                      <span className="text-sm text-neutral-700">Tudo do Pro</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                      <span className="text-sm text-neutral-700">Usuários ilimitados</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                      <span className="text-sm text-neutral-700">API access</span>
-                    </li>
-                  </ul>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-600 mt-0.5" />
+                    <span className="text-sm text-neutral-700">50 orçamentos/mês</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-600 mt-0.5" />
+                    <span className="text-sm text-neutral-700">3 usuários</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-600 mt-0.5" />
+                    <span className="text-sm text-neutral-700">PDF básico</span>
+                  </li>
+                </ul>
+                <Link href="/register" className="block">
                   <Button variant="outline" className="w-full">
-                    Falar conosco
+                    Começar
                   </Button>
-                </CardContent>
-              </Card>
-            </div>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Professional - DESTACADO */}
+            <Card className="border-primary-500 border-2 relative shadow-2xl scale-105 md:scale-110 z-10 bg-white">
+              <div className="absolute -top-4 left-0 right-0 flex justify-center">
+                <span className="bg-primary-500 text-white px-6 py-1.5 rounded-full text-sm font-semibold shadow-lg">
+                  Mais Popular
+                </span>
+              </div>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl">Professional</CardTitle>
+                <CardDescription>Para negócios em crescimento</CardDescription>
+                <div className="mt-4">
+                  <span className="text-5xl font-bold text-primary-600">R$ 79</span>
+                  <span className="text-neutral-600 text-lg">/mês</span>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 pb-8">
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-neutral-700 font-medium">Orçamentos ilimitados</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-neutral-700 font-medium">10 usuários</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-neutral-700 font-medium">PDF personalizado</span>
+                  </li>
+                </ul>
+                <Link href="/register" className="block">
+                  <Button className="w-full bg-primary-500 hover:bg-primary-600 text-base py-6 shadow-lg">
+                    Começar Agora
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Enterprise */}
+            <Card className="h-full">
+              <CardHeader>
+                <CardTitle>Enterprise</CardTitle>
+                <CardDescription>Para grandes operações</CardDescription>
+                <div className="mt-4">
+                  <span className="text-4xl font-bold text-neutral-900">Custom</span>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-600 mt-0.5" />
+                    <span className="text-sm text-neutral-700">Tudo do Pro</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-600 mt-0.5" />
+                    <span className="text-sm text-neutral-700">Usuários ilimitados</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-green-600 mt-0.5" />
+                    <span className="text-sm text-neutral-700">API access</span>
+                  </li>
+                </ul>
+                <Button variant="outline" className="w-full">
+                  Falar conosco
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
 
             <p className="text-center mt-8 text-sm text-neutral-600">
               ✨ Todos os planos incluem 14 dias de teste grátis

@@ -58,7 +58,7 @@ export default function UsersPage() {
       name: '',
       email: '',
       password: '',
-      role: 'User',
+      user_type: 'user',
     },
   })
 
@@ -68,7 +68,7 @@ export default function UsersPage() {
       name: '',
       email: '',
       password: '',
-      role: 'User',
+      user_type: 'user',
     })
     setIsDialogOpen(true)
   }
@@ -78,15 +78,15 @@ export default function UsersPage() {
     form.reset({
       name: user.name,
       email: user.email,
-      password: '', // Password not required for update
-      role: user.roles.includes('OrgAdmin') ? 'OrgAdmin' : 'User',
+      password: '',
+      user_type: user.user_type === 'admin' ? 'admin' : 'user',
     })
     setIsDialogOpen(true)
   }
 
   const handleSubmit = (data: CreateUserFormData) => {
     if (editingUser) {
-      const { password, ...updateData } = data
+      const { password, user_type, email, ...updateData } = data
       updateUser(
         { id: editingUser.id, data: updateData },
         {
@@ -113,8 +113,8 @@ export default function UsersPage() {
     }
   }
 
-  const getRoleBadge = (roles: string[]) => {
-    if (roles.includes('Owner')) {
+  const getRoleBadge = (userType: string) => {
+    if (userType === 'owner') {
       return (
         <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">
           <Shield className="mr-1 h-3 w-3" />
@@ -122,7 +122,7 @@ export default function UsersPage() {
         </Badge>
       )
     }
-    if (roles.includes('OrgAdmin')) {
+    if (userType === 'admin') {
       return (
         <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
           <Shield className="mr-1 h-3 w-3" />
@@ -141,11 +141,11 @@ export default function UsersPage() {
   const canEditUser = (user: User) => {
     if (!currentUser) return false
     // Owner can't be edited/deleted
-    if (user.roles.includes('Owner')) return false
+    if (user.user_type === 'owner') return false
     // Current user can't delete themselves
     if (user.id === currentUser.id) return false
     // Only Owner and OrgAdmin can manage users
-    return currentUser.roles.includes('Owner') || currentUser.roles.includes('OrgAdmin')
+    return currentUser.user_type === 'owner' || currentUser.user_type === 'admin'
   }
 
   if (isLoading) {
@@ -224,7 +224,7 @@ export default function UsersPage() {
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell className="text-neutral-600">{user.email}</TableCell>
-                    <TableCell>{getRoleBadge(user.roles)}</TableCell>
+                    <TableCell>{getRoleBadge(user.user_type)}</TableCell>
                     <TableCell className="text-neutral-600">
                       {formatDate(user.created_at, 'dd/MM/yyyy')}
                     </TableCell>
@@ -319,22 +319,22 @@ export default function UsersPage() {
             )}
 
             <div>
-              <Label htmlFor="role">Papel *</Label>
+              <Label htmlFor="user_type">Papel *</Label>
               <Select
-                value={form.watch('role')}
-                onValueChange={(value) => form.setValue('role', value as 'OrgAdmin' | 'User')}
+                value={form.watch('user_type')}
+                onValueChange={(value) => form.setValue('user_type', value as 'admin' | 'user')}
               >
-                <SelectTrigger id="role">
+                <SelectTrigger id="user_type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="User">
+                  <SelectItem value="user">
                     <div className="flex items-center gap-2">
                       <UserIcon className="h-4 w-4" />
                       <span>Usuário</span>
                     </div>
                   </SelectItem>
-                  <SelectItem value="OrgAdmin">
+                  <SelectItem value="admin">
                     <div className="flex items-center gap-2">
                       <Shield className="h-4 w-4" />
                       <span>Administrador</span>
@@ -342,13 +342,13 @@ export default function UsersPage() {
                   </SelectItem>
                 </SelectContent>
               </Select>
-              {form.formState.errors.role && (
+              {form.formState.errors.user_type && (
                 <p className="text-sm text-red-600 mt-1">
-                  {form.formState.errors.role.message}
+                  {form.formState.errors.user_type.message}
                 </p>
               )}
               <p className="text-xs text-neutral-500 mt-1">
-                {form.watch('role') === 'OrgAdmin'
+                {form.watch('user_type') === 'admin'
                   ? 'Administradores podem gerenciar usuários e configurações'
                   : 'Usuários podem criar e gerenciar orçamentos'}
               </p>

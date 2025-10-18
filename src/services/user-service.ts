@@ -4,23 +4,25 @@ export interface User {
   id: string
   name: string
   email: string
-  roles: string[]
+  user_type: string // 'owner', 'admin', 'user'
   organization_id: string
+  keycloak_user_id: string
+  is_active: boolean
   created_at: string
   updated_at: string
+  deleted_at?: string
 }
 
 export interface CreateUserDTO {
   name: string
   email: string
   password: string
-  role: 'OrgAdmin' | 'User'
+  user_type: 'admin' | 'user'
 }
 
 export interface UpdateUserDTO {
   name?: string
-  email?: string
-  role?: 'OrgAdmin' | 'User'
+  is_active?: boolean
 }
 
 export const userService = {
