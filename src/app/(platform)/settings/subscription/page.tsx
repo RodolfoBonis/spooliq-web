@@ -24,7 +24,7 @@ export default function SubscriptionPage() {
   const subscription = {
     status: 'trial' as 'trial' | 'active' | 'overdue' | 'cancelled',
     plan: 'pro' as 'basic' | 'pro' | 'enterprise',
-    trialEndsAt: '2024-11-01T00:00:00Z',
+    trialEndsAt: '2025-11-01T00:00:00Z',
     nextPaymentDue: null,
   }
 
