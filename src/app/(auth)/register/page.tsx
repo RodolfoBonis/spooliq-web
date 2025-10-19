@@ -66,8 +66,12 @@ export default function RegisterPage() {
     },
   })
 
-  const nextStep = () => {
-    if (currentStep < STEPS.length) {
+  const nextStep = async () => {
+    // Validate current step fields before proceeding
+    const currentStepFields = STEPS[currentStep - 1].fields as Array<keyof RegisterFormData>
+    const isValid = await form.trigger(currentStepFields)
+    
+    if (isValid && currentStep < STEPS.length) {
       setCurrentStep(currentStep + 1)
     }
   }
@@ -82,20 +86,16 @@ export default function RegisterPage() {
     try {
       setIsLoading(true)
       
-      // Remove hyphens and dots from CNPJ and CPF
-      const cleanData = {
-        ...data,
-        company_document: data.company_document.replace(/\D/g, ''),
-        zip_code: data.zip_code.replace(/\D/g, ''),
-      }
-
-      const response = await authService.register(cleanData)
+      console.log('Submitting registration data:', data)
+      const response = await authService.register(data)
+      console.log('Registration response:', response)
 
       toast.success('Conta criada com sucesso! Faça login para continuar.')
       router.push('/login')
     } catch (error: any) {
       console.error('Register error:', error)
-      toast.error(error.response?.data?.message || 'Erro ao criar conta')
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Erro ao criar conta'
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }

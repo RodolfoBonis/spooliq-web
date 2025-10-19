@@ -34,7 +34,8 @@ export const registerSchema = z.object({
   company_document: z
     .string()
     .min(1, 'CNPJ é obrigatório')
-    .regex(/^\d{14}$/, 'CNPJ deve conter 14 dígitos'),
+    .transform((val) => val.replace(/\D/g, ''))
+    .refine((val) => val.length === 14, 'CNPJ deve conter 14 dígitos'),
   company_phone: z
     .string()
     .min(1, 'Telefone é obrigatório'),
@@ -59,7 +60,8 @@ export const registerSchema = z.object({
   zip_code: z
     .string()
     .min(1, 'CEP é obrigatório')
-    .regex(/^\d{8}$/, 'CEP deve conter 8 dígitos'),
+    .transform((val) => val.replace(/\D/g, ''))
+    .refine((val) => val.length === 8, 'CEP deve conter 8 dígitos'),
 })
 
 export type LoginFormData = z.infer<typeof loginSchema>
