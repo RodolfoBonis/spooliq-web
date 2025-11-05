@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2, Upload, Building2 } from 'lucide-react'
-import Image from 'next/image'
+import { CDNImage } from '@/components/ui/cdn-image'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -134,13 +134,23 @@ export default function CompanySettingsPage() {
           <div className="flex items-center space-x-6">
             <div className="flex h-24 w-24 items-center justify-center rounded-lg border-2 border-dashed border-neutral-300 bg-neutral-50">
               {logoPreview ? (
-                <Image
-                  src={logoPreview}
-                  alt="Logo"
-                  width={96}
-                  height={96}
-                  className="h-full w-full object-contain rounded-lg"
-                />
+                logoFile ? (
+                  <img
+                    src={logoPreview}
+                    alt="Logo"
+                    className="h-full w-full object-contain rounded-lg"
+                  />
+                ) : (
+                  <CDNImage
+                    key={`logo-preview-${logoPreview}-${Date.now()}`}
+                    src={logoPreview}
+                    alt="Logo"
+                    width={96}
+                    height={96}
+                    className="h-full w-full object-contain rounded-lg"
+                    fallback={<Building2 className="h-12 w-12 text-neutral-400" />}
+                  />
+                )
               ) : (
                 <Building2 className="h-12 w-12 text-neutral-400" />
               )}

@@ -59,12 +59,15 @@ export const authService = {
   },
 
   /**
-   * Get current user info (assuming there's a /me endpoint or similar)
-   * This is a placeholder - adjust based on actual backend endpoint
+   * Get current user info from validate token endpoint
+   * Uses the validate_token endpoint to get current user data
    */
   async getCurrentUser(): Promise<User> {
-    const { data } = await api.get<User>('/users/me')
-    return data
+    const { data } = await api.post<{ valid: boolean; user: User }>('/validate_token')
+    if (!data.valid || !data.user) {
+      throw new Error('Invalid token or user not found')
+    }
+    return data.user
   },
 }
 

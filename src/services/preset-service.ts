@@ -5,6 +5,9 @@ import type { MachinePreset, EnergyPreset, CostPreset } from '@/types/models'
 
 // Machine Presets
 export interface CreateMachinePresetDTO {
+  name: string // Required field - preset name
+  description?: string // Optional description
+  is_default?: boolean // Whether this is a default preset
   brand?: string
   model?: string
   build_volume_x: number // mm
@@ -15,10 +18,10 @@ export interface CreateMachinePresetDTO {
   layer_height_max: number // mm
   print_speed_max: number // mm/s
   power_consumption: number // Watts
-  bed_temperature_max: number // °C
-  extruder_temperature_max: number // °C
-  filament_diameter: number // mm (1.75 or 2.85)
-  cost_per_hour: number // cents
+  bed_temperature_max?: number // °C
+  extruder_temperature_max?: number // °C
+  filament_diameter?: number // mm (1.75 or 2.85)
+  cost_per_hour?: number // cents
 }
 
 export interface UpdateMachinePresetDTO extends Partial<CreateMachinePresetDTO> {}
@@ -51,6 +54,9 @@ export const machinePresetService = {
 
 // Energy Presets
 export interface CreateEnergyPresetDTO {
+  name: string // Required field - preset name
+  description?: string // Optional description
+  is_default?: boolean // Whether this is a default preset
   country?: string
   state?: string
   city?: string
@@ -58,8 +64,8 @@ export interface CreateEnergyPresetDTO {
   currency: string // "BRL", "USD", etc (3-letter ISO code)
   provider?: string
   tariff_type?: string
-  peak_hour_multiplier: number
-  off_peak_hour_multiplier: number
+  peak_hour_multiplier?: number
+  off_peak_hour_multiplier?: number
 }
 
 export interface UpdateEnergyPresetDTO extends Partial<CreateEnergyPresetDTO> {}
@@ -92,15 +98,18 @@ export const energyPresetService = {
 
 // Cost Presets
 export interface CreateCostPresetDTO {
-  labor_cost_per_hour: number // cents
-  packaging_cost_per_item: number // cents
-  shipping_cost_base: number // cents
-  shipping_cost_per_gram: number // cents
-  overhead_percentage: number // 0-100
-  profit_margin_percentage: number // 0-100
-  post_processing_cost_per_hour: number // cents
-  support_removal_cost_per_hour: number // cents
-  quality_control_cost_per_item: number // cents
+  name: string // Required field - preset name
+  description?: string // Optional description
+  is_default?: boolean // Whether this is a default preset
+  labor_cost_per_hour?: number // cents
+  packaging_cost_per_item?: number // cents
+  shipping_cost_base?: number // cents
+  shipping_cost_per_gram?: number // cents
+  overhead_percentage?: number // 0-100
+  profit_margin_percentage?: number // 0-100
+  post_processing_cost_per_hour?: number // cents
+  support_removal_cost_per_hour?: number // cents
+  quality_control_cost_per_item?: number // cents
 }
 
 export interface UpdateCostPresetDTO extends Partial<CreateCostPresetDTO> {}

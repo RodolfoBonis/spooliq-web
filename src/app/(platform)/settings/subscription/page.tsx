@@ -1,17 +1,28 @@
 'use client'
 
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { useAuthStore } from '@/stores/auth-store'
-import { CreditCard, Calendar, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
+import { CreditCard, Calendar, AlertCircle, CheckCircle, XCircle, Loader2, Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import subscriptionService from '@/services/subscription-service'
+import { usePaymentMethods } from '@/lib/hooks/use-payment-methods'
+import { PaymentMethodCard } from '@/components/subscription/PaymentMethodCard'
+import { AddPaymentMethodModal } from '@/components/subscription/AddPaymentMethodModal'
+import { PlanSelectionModal } from '@/components/subscription/PlanSelectionModal'
+import { CancelSubscriptionModal } from '@/components/subscription/CancelSubscriptionModal'
 
 export default function SubscriptionPage() {
   const { user } = useAuthStore()
   const router = useRouter()
+  const [showAddPaymentModal, setShowAddPaymentModal] = useState(false)
+  const [showPlansModal, setShowPlansModal] = useState(false)
+  const [showCancelModal, setShowCancelModal] = useState(false)
 
   // Only Owner can access this page
   useEffect(() => {
@@ -20,13 +31,26 @@ export default function SubscriptionPage() {
     }
   }, [user, router])
 
-  // Mock data - Replace with real API call
-  const subscription = {
-    status: 'trial' as 'trial' | 'active' | 'overdue' | 'cancelled',
-    plan: 'pro' as 'basic' | 'pro' | 'enterprise',
-    trialEndsAt: '2025-11-01T00:00:00Z',
-    nextPaymentDue: null,
-  }
+  // Fetch subscription data from API
+  const {
+    data: subscription,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['subscription'],
+    queryFn: () => subscriptionService.getSubscription(),
+    enabled: !!user && user.roles.includes('Owner'),
+  })
+
+  // Fetch payment history
+  const { data: paymentHistory } = useQuery({
+    queryKey: ['payment-history'],
+    queryFn: () => subscriptionService.getPaymentHistory(),
+    enabled: !!user && user.roles.includes('Owner'),
+  })
+
+  // Fetch payment methods
+  const { data: paymentMethods, isLoading: isLoadingPaymentMethods } = usePaymentMethods()
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -81,9 +105,47 @@ export default function SubscriptionPage() {
     return Math.ceil(diff / (1000 * 60 * 60 * 24))
   }
 
-  const daysRemaining = subscription.trialEndsAt
+  const daysRemaining = subscription?.trialEndsAt
     ? calculateDaysRemaining(subscription.trialEndsAt)
     : null
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="container max-w-4xl py-6 flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+          <p className="text-neutral-600">Carregando informações da assinatura...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="container max-w-4xl py-6">
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+              <div>
+                <p className="font-medium text-red-900">Erro ao carregar assinatura</p>
+                <p className="text-sm text-red-700 mt-1">
+                  Não foi possível carregar as informações da sua assinatura. Tente novamente mais tarde.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // No subscription data
+  if (!subscription) {
+    return null
+  }
 
   return (
     <div className="container max-w-4xl py-6 space-y-6">
@@ -171,13 +233,68 @@ export default function SubscriptionPage() {
           )}
 
           <div className="flex gap-2 pt-2">
-            <Button className="flex-1 bg-primary-500 hover:bg-primary-600">
+            <Button 
+              className="flex-1 bg-primary-500 hover:bg-primary-600"
+              onClick={() => setShowAddPaymentModal(true)}
+            >
               Atualizar Método de Pagamento
             </Button>
-            <Button variant="outline" className="flex-1">
+            <Button 
+              variant="outline" 
+              className="flex-1"
+              onClick={() => setShowPlansModal(true)}
+            >
               Ver Planos
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Payment Methods */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            Métodos de Pagamento
+            <Button
+              size="sm"
+              onClick={() => setShowAddPaymentModal(true)}
+              className="bg-primary-500 hover:bg-primary-600"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Adicionar
+            </Button>
+          </CardTitle>
+          <CardDescription>
+            Gerencie seus métodos de pagamento
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoadingPaymentMethods ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin" />
+            </div>
+          ) : paymentMethods && paymentMethods.payment_methods.length > 0 ? (
+            <div className="space-y-3">
+              {paymentMethods.payment_methods.map((method) => (
+                <PaymentMethodCard key={method.id} paymentMethod={method} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-neutral-500">
+              <CreditCard className="mx-auto h-12 w-12 text-neutral-300 mb-4" />
+              <p className="font-medium">Nenhum método de pagamento</p>
+              <p className="text-sm mt-1">
+                Adicione um cartão ou PIX para pagar suas faturas
+              </p>
+              <Button
+                className="mt-4 bg-primary-500 hover:bg-primary-600"
+                onClick={() => setShowAddPaymentModal(true)}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar Método
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -221,12 +338,62 @@ export default function SubscriptionPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-neutral-500">
-            <p>Nenhum pagamento realizado ainda</p>
-            <p className="text-sm mt-1">
-              Você está no período de trial gratuito
-            </p>
-          </div>
+          {paymentHistory && paymentHistory.payments.length > 0 ? (
+            <div className="space-y-3">
+              {paymentHistory.payments.map((payment) => (
+                <div
+                  key={payment.id}
+                  className="flex items-center justify-between p-3 rounded-lg border border-neutral-200"
+                >
+                  <div>
+                    <p className="font-medium text-neutral-900">
+                      R$ {(payment.amount / 100).toFixed(2)}
+                    </p>
+                    <p className="text-sm text-neutral-600">
+                      Vencimento:{' '}
+                      {new Date(payment.due_date).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <Badge
+                      className={
+                        payment.status === 'received'
+                          ? 'bg-green-100 text-green-700'
+                          : payment.status === 'overdue'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-yellow-100 text-yellow-700'
+                      }
+                    >
+                      {payment.status === 'received'
+                        ? 'Pago'
+                        : payment.status === 'overdue'
+                          ? 'Vencido'
+                          : 'Pendente'}
+                    </Badge>
+                    {payment.invoice_url && (
+                      <a
+                        href={payment.invoice_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary-500 hover:underline block mt-1"
+                      >
+                        Ver fatura
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-neutral-500">
+              <p>Nenhum pagamento realizado ainda</p>
+              <p className="text-sm mt-1">
+                {subscription.status === 'trial'
+                  ? 'Você está no período de trial gratuito'
+                  : 'Nenhuma transação encontrada'}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -246,12 +413,38 @@ export default function SubscriptionPage() {
                 Você perderá acesso a todos os recursos ao final do período pago
               </p>
             </div>
-            <Button variant="destructive">
+            <Button 
+              variant="destructive"
+              onClick={() => setShowCancelModal(true)}
+            >
               Cancelar Assinatura
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Modals */}
+      <AddPaymentMethodModal
+        open={showAddPaymentModal}
+        onOpenChange={setShowAddPaymentModal}
+      />
+      
+      <PlanSelectionModal
+        open={showPlansModal}
+        onOpenChange={setShowPlansModal}
+        currentPlan={subscription?.plan}
+        onNeedPaymentMethod={() => {
+          setShowPlansModal(false)
+          setShowAddPaymentModal(true)
+        }}
+      />
+      
+      <CancelSubscriptionModal
+        open={showCancelModal}
+        onOpenChange={setShowCancelModal}
+        currentPlan={getPlanName(subscription?.plan)}
+        nextBillingDate={subscription?.nextPaymentDue}
+      />
     </div>
   )
 }

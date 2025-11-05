@@ -126,7 +126,16 @@ export interface BudgetItemFilament {
   filament_name: string
   brand_name: string
   material_name: string
-  color: string // color name or hex
+  
+  // Legacy color field (maintained for backward compatibility)
+  color: string // color name
+  
+  // Advanced color system
+  color_type: ColorType
+  color_data: ColorData | string // Can be ColorData object or string (for backward compatibility)
+  color_hex: string
+  color_preview: string
+  
   quantity: number // grams
   cost: number // cents
   order: number // application order for AMS
@@ -231,6 +240,9 @@ export interface Material {
 export interface MachinePreset {
   id: string
   organization_id: string
+  name: string
+  description?: string
+  is_default?: boolean
   brand?: string
   model?: string
   build_volume_x: number // mm
@@ -252,6 +264,9 @@ export interface MachinePreset {
 export interface EnergyPreset {
   id: string
   organization_id: string
+  name: string
+  description?: string
+  is_default?: boolean
   country?: string
   state?: string
   city?: string
@@ -268,6 +283,9 @@ export interface EnergyPreset {
 export interface CostPreset {
   id: string
   organization_id: string
+  name: string
+  description?: string
+  is_default?: boolean
   labor_cost_per_hour: number // cents
   packaging_cost_per_item: number // cents
   shipping_cost_base: number // cents
@@ -310,4 +328,201 @@ export interface BrandingTemplate {
   display_name: string
   description: string
   colors: CompanyBrandingEntity
+}
+
+// Subscription Payment Models
+export type PaymentStatus = 'pending' | 'confirmed' | 'received' | 'overdue' | 'failed'
+
+export interface SubscriptionPayment {
+  id: string
+  organization_id: string
+  asaas_payment_id?: string
+  asaas_invoice_id?: string
+  amount: number // in cents
+  status: PaymentStatus
+  payment_date?: string // ISO 8601
+  due_date: string // ISO 8601
+  invoice_url?: string
+  created_at: string
+}
+
+// Payment Method Models
+export interface PaymentMethod {
+  id: string
+  organization_id: string
+  type: 'credit_card' | 'debit_card' | 'pix' | 'boleto'
+  last_four_digits?: string
+  card_brand?: string
+  holder_name?: string
+  expiry_month?: string
+  expiry_year?: string
+  is_primary: boolean
+  asaas_payment_method_id?: string
+  created_at: string
+  updated_at: string
+}
+
+// Subscription Models
+export interface Subscription {
+  id: string
+  organization_id: string
+  plan_id: string
+  plan?: SubscriptionPlanModel
+  status: SubscriptionStatus
+  started_at?: string
+  trial_ends_at?: string
+  current_period_start?: string
+  current_period_end?: string
+  cancelled_at?: string
+  cancel_reason?: string
+  asaas_subscription_id?: string
+  payment_method_id?: string
+  payment_method?: PaymentMethod
+  created_at: string
+  updated_at: string
+}
+
+// Subscription Plan Models
+export interface PlanFeature {
+  id: string
+  name: string
+  description: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface SubscriptionPlanModel {
+  id: string
+  name: string
+  description: string
+  price: number
+  cycle: 'MONTHLY' | 'YEARLY' | 'CUSTOM'
+  features: PlanFeature[]
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+// Plan Management Models
+export interface PlanStats {
+  plan_id: string
+  plan_name: string
+  total_companies: number
+  active_companies: number
+  trial_companies: number
+  total_active_users: number
+  monthly_revenue: number
+  annual_revenue: number
+  churn_rate: number
+  conversion_rate: number
+}
+
+export interface PlanCompany {
+  id: string
+  organization_id: string
+  name: string
+  email: string
+  subscription_status: string
+  trial_ends_at?: string
+  total_users: number
+  created_at: string
+}
+
+export interface PlanCompaniesResponse {
+  companies: PlanCompany[]
+  page: number
+  page_size: number
+  total_count: number
+  total_pages: number
+}
+
+export interface FinancialReport {
+  plan_id: string
+  plan_name: string
+  report_period: string
+  revenue: {
+    current_period: number
+    previous_period: number
+    growth_percentage: number
+    average_per_user: number
+    total_lifetime: number
+  }
+  subscriptions: {
+    new_subscriptions: number
+    cancelled_subscriptions: number
+    churn_rate: number
+    retention_rate: number
+    conversion_rate: number
+  }
+  projections: {
+    next_month: number
+    next_quarter: number
+    next_year: number
+    methodology: string
+  }
+  trends: Array<{
+    period: string
+    revenue: number
+    subscriptions: number
+  }>
+}
+
+export interface CanDeleteResponse {
+  can_delete: boolean
+  reason: string
+  active_companies: number
+  trial_companies: number
+  blocking_issues: string[]
+  recommendations: string[]
+}
+
+export interface AvailableFeature {
+  name: string
+  description: string
+  category: string
+  is_active: boolean
+}
+
+// PDF Generation Models
+export interface PDFGenerationResponse {
+  pdf_url: string
+  budget_id: string
+  budget_name: string
+  generated: boolean
+  message?: string
+}
+
+// Webhook Models
+export interface AsaasWebhookEvent {
+  event: string
+  payment?: {
+    id: string
+    customer: string
+    subscription?: string
+    value: number
+    netValue: number
+    description?: string
+    billingType: string
+    status: string
+    dueDate: string
+    paymentDate?: string
+    clientPaymentDate?: string
+    invoiceUrl: string
+    bankSlipUrl?: string
+    invoiceNumber: string
+  }
+  subscription?: {
+    id: string
+    customer: string
+    value: number
+    nextDueDate: string
+    cycle: string
+    description?: string
+    status: string
+    creditCard?: {
+      creditCardNumber: string
+      creditCardBrand: string
+    }
+  }
 }

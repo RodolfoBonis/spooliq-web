@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/auth-store'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { ShieldCheck, Building2, CreditCard, ArrowLeft } from 'lucide-react'
+import { ShieldCheck, Building2, CreditCard, ArrowLeft, Crown } from 'lucide-react'
 import { Toaster } from 'sonner'
 
 const queryClient = new QueryClient()
@@ -54,13 +54,13 @@ export default function AdminLayout({
               <Link href="/admin/companies">
                 <Button variant="ghost" size="sm">
                   <Building2 className="mr-2 h-4 w-4" />
-                  Empresas
+                  Empresas & Assinaturas
                 </Button>
               </Link>
-              <Link href="/admin/subscriptions">
+              <Link href="/admin/plans">
                 <Button variant="ghost" size="sm">
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Assinaturas
+                  <Crown className="mr-2 h-4 w-4" />
+                  Planos
                 </Button>
               </Link>
             </nav>

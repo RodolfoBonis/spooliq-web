@@ -29,7 +29,7 @@ export function EnergyPresetSelect({
 }: EnergyPresetSelectProps) {
   const { data: presets, isLoading } = useEnergyPresets()
 
-  const getLocation = (preset: typeof presets[0]) => {
+  const getLocation = (preset: NonNullable<typeof presets>[0]) => {
     if (!preset) return ''
     const parts = [preset.city, preset.state, preset.country].filter(Boolean)
     return parts.join(', ') || `Preset ${preset.id.slice(0, 8)}`

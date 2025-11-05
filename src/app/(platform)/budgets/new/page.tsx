@@ -33,6 +33,8 @@ export default function NewBudgetPage() {
       name: '',
       description: '',
       customer_id: '',
+      machine_preset_id: undefined,
+      energy_preset_id: undefined,
       include_energy_cost: true,
       include_waste_cost: true,
       items: [
@@ -43,6 +45,7 @@ export default function NewBudgetPage() {
           product_dimensions: '',
           print_time_hours: 0,
           print_time_minutes: 0,
+          cost_preset_id: undefined,
           additional_labor_cost: 0,
           additional_notes: '',
           filaments: [],
@@ -73,6 +76,7 @@ export default function NewBudgetPage() {
       product_dimensions: '',
       print_time_hours: 0,
       print_time_minutes: 0,
+      cost_preset_id: undefined,
       additional_labor_cost: 0,
       additional_notes: '',
       filaments: [],
@@ -88,7 +92,7 @@ export default function NewBudgetPage() {
     const newFilament = {
       filament_id: filament.id,
       quantity: 100, // default 100g
-      order: currentFilaments.length,
+      order: currentFilaments.length + 1,
     }
 
     form.setValue(`items.${itemIndex}.filaments`, [...currentFilaments, newFilament])
@@ -97,7 +101,9 @@ export default function NewBudgetPage() {
 
   const removeFilamentFromItem = (itemIndex: number, filamentIndex: number) => {
     const currentFilaments = form.getValues(`items.${itemIndex}.filaments`) || []
-    const updated = currentFilaments.filter((_, i) => i !== filamentIndex)
+    const updated = currentFilaments
+      .filter((_, i) => i !== filamentIndex)
+      .map((fil, i) => ({ ...fil, order: i + 1 })) // Recalculate orders starting from 1
     form.setValue(`items.${itemIndex}.filaments`, updated)
   }
 

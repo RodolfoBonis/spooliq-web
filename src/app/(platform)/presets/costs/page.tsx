@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/common/empty-state'
@@ -35,7 +36,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { costPresetSchema, type CostPresetFormData } from '@/lib/validations/preset'
 import { Plus, Edit, Trash2, DollarSign } from 'lucide-react'
 import type { CostPreset } from '@/types/models'
-import { formatCurrency } from '@/lib/utils/format'
+import { formatCurrencyFromReais } from '@/lib/utils/format'
 
 export default function CostPresetsPage() {
   const { data: presets, isLoading } = useCostPresets()
@@ -190,12 +191,12 @@ export default function CostPresetsPage() {
                 {presets.map((preset) => (
                   <TableRow key={preset.id}>
                     <TableCell className="font-medium">
-                      {formatCurrency(preset.labor_cost_per_hour)}
+                      {formatCurrencyFromReais(preset.labor_cost_per_hour)}
                     </TableCell>
                     <TableCell>{preset.overhead_percentage}%</TableCell>
                     <TableCell>{preset.profit_margin_percentage}%</TableCell>
-                    <TableCell>{formatCurrency(preset.packaging_cost_per_item)}</TableCell>
-                    <TableCell>{formatCurrency(preset.shipping_cost_base)}</TableCell>
+                    <TableCell>{formatCurrencyFromReais(preset.packaging_cost_per_item)}</TableCell>
+                    <TableCell>{formatCurrencyFromReais(preset.shipping_cost_base)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
@@ -235,54 +236,42 @@ export default function CostPresetsPage() {
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="labor_cost_per_hour">Mão de Obra/Hora (R$)</Label>
-                <Input
+                <Label htmlFor="labor_cost_per_hour">Mão de Obra/Hora</Label>
+                <CurrencyInput
                   id="labor_cost_per_hour"
-                  type="number"
-                  step="0.01"
-                  onChange={(e) => {
-                    const value = parseFloat(e.target.value) || 0
-                    form.setValue('labor_cost_per_hour', Math.round(value * 100))
-                  }}
+                  showCurrencySymbol
+                  value={form.watch('labor_cost_per_hour') || 0}
+                  onChange={(value) => form.setValue('labor_cost_per_hour', value)}
                 />
               </div>
               <div>
-                <Label htmlFor="packaging_cost_per_item">Embalagem/Item (R$)</Label>
-                <Input
+                <Label htmlFor="packaging_cost_per_item">Embalagem/Item</Label>
+                <CurrencyInput
                   id="packaging_cost_per_item"
-                  type="number"
-                  step="0.01"
-                  onChange={(e) => {
-                    const value = parseFloat(e.target.value) || 0
-                    form.setValue('packaging_cost_per_item', Math.round(value * 100))
-                  }}
+                  showCurrencySymbol
+                  value={form.watch('packaging_cost_per_item') || 0}
+                  onChange={(value) => form.setValue('packaging_cost_per_item', value)}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="shipping_cost_base">Envio Base (R$)</Label>
-                <Input
+                <Label htmlFor="shipping_cost_base">Envio Base</Label>
+                <CurrencyInput
                   id="shipping_cost_base"
-                  type="number"
-                  step="0.01"
-                  onChange={(e) => {
-                    const value = parseFloat(e.target.value) || 0
-                    form.setValue('shipping_cost_base', Math.round(value * 100))
-                  }}
+                  showCurrencySymbol
+                  value={form.watch('shipping_cost_base') || 0}
+                  onChange={(value) => form.setValue('shipping_cost_base', value)}
                 />
               </div>
               <div>
-                <Label htmlFor="shipping_cost_per_gram">Envio/Grama (R$)</Label>
-                <Input
+                <Label htmlFor="shipping_cost_per_gram">Envio/Grama</Label>
+                <CurrencyInput
                   id="shipping_cost_per_gram"
-                  type="number"
-                  step="0.001"
-                  onChange={(e) => {
-                    const value = parseFloat(e.target.value) || 0
-                    form.setValue('shipping_cost_per_gram', Math.round(value * 100))
-                  }}
+                  showCurrencySymbol
+                  value={form.watch('shipping_cost_per_gram') || 0}
+                  onChange={(value) => form.setValue('shipping_cost_per_gram', value)}
                 />
               </div>
             </div>
@@ -312,41 +301,32 @@ export default function CostPresetsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="post_processing_cost_per_hour">Pós-Processamento/Hora (R$)</Label>
-                <Input
+                <Label htmlFor="post_processing_cost_per_hour">Pós-Processamento/Hora</Label>
+                <CurrencyInput
                   id="post_processing_cost_per_hour"
-                  type="number"
-                  step="0.01"
-                  onChange={(e) => {
-                    const value = parseFloat(e.target.value) || 0
-                    form.setValue('post_processing_cost_per_hour', Math.round(value * 100))
-                  }}
+                  showCurrencySymbol
+                  value={form.watch('post_processing_cost_per_hour') || 0}
+                  onChange={(value) => form.setValue('post_processing_cost_per_hour', value)}
                 />
               </div>
               <div>
-                <Label htmlFor="support_removal_cost_per_hour">Remoção Suporte/Hora (R$)</Label>
-                <Input
+                <Label htmlFor="support_removal_cost_per_hour">Remoção Suporte/Hora</Label>
+                <CurrencyInput
                   id="support_removal_cost_per_hour"
-                  type="number"
-                  step="0.01"
-                  onChange={(e) => {
-                    const value = parseFloat(e.target.value) || 0
-                    form.setValue('support_removal_cost_per_hour', Math.round(value * 100))
-                  }}
+                  showCurrencySymbol
+                  value={form.watch('support_removal_cost_per_hour') || 0}
+                  onChange={(value) => form.setValue('support_removal_cost_per_hour', value)}
                 />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="quality_control_cost_per_item">Controle Qualidade/Item (R$)</Label>
-              <Input
+              <Label htmlFor="quality_control_cost_per_item">Controle Qualidade/Item</Label>
+              <CurrencyInput
                 id="quality_control_cost_per_item"
-                type="number"
-                step="0.01"
-                onChange={(e) => {
-                  const value = parseFloat(e.target.value) || 0
-                  form.setValue('quality_control_cost_per_item', Math.round(value * 100))
-                }}
+                showCurrencySymbol
+                value={form.watch('quality_control_cost_per_item') || 0}
+                onChange={(value) => form.setValue('quality_control_cost_per_item', value)}
               />
             </div>
 
@@ -382,4 +362,5 @@ export default function CostPresetsPage() {
     </div>
   )
 }
+
 

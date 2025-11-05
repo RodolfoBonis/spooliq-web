@@ -38,8 +38,8 @@ export default function BudgetsPage() {
     deleteBudget(id)
   }
 
-  const handleGeneratePDF = (id: string, name: string) => {
-    generatePDF({ id, name })
+  const handleGeneratePDF = (id: string, name: string, force = false) => {
+    generatePDF({ id, name, force })
   }
 
   if (isLoading) {
@@ -61,7 +61,7 @@ export default function BudgetsPage() {
     )
   }
 
-  const budgets = data?.budgets || []
+  const budgets = data?.data || []
   const total = data?.total || 0
 
   return (
@@ -74,7 +74,7 @@ export default function BudgetsPage() {
             Gerencie seus orçamentos de impressão 3D
           </p>
         </div>
-        <Button asChild className="bg-primary-500 hover:bg-primary-600">
+        <Button asChild>
           <Link href="/budgets/new">
             <Plus className="mr-2 h-4 w-4" />
             Novo Orçamento
@@ -132,7 +132,7 @@ export default function BudgetsPage() {
           }
           action={
             !search && statusFilter === 'all' ? (
-              <Button asChild className="bg-primary-500 hover:bg-primary-600">
+              <Button asChild>
                 <Link href="/budgets/new">
                   <Plus className="mr-2 h-4 w-4" />
                   Novo Orçamento
@@ -150,7 +150,10 @@ export default function BudgetsPage() {
             {budgets.map((budget) => (
               <BudgetCard
                 key={budget.id}
-                budget={budget}
+                budget={{
+                  ...budget,
+                  items_count: budget.items?.length || 0
+                }}
                 onDelete={handleDelete}
                 onGeneratePDF={handleGeneratePDF}
               />

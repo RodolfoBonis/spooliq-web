@@ -84,10 +84,54 @@ export function useDeleteBudget() {
 
 export function useGeneratePDF() {
   return useMutation({
-    mutationFn: ({ id, name }: { id: string; name: string }) =>
-      budgetService.downloadPDF(id, name),
-    onSuccess: () => {
-      toast.success('PDF gerado e baixado com sucesso!')
+    mutationFn: ({ id, name, force = false }: { id: string; name: string; force?: boolean }) =>
+      budgetService.generatePDF(id, force),
+    onSuccess: async (response, variables) => {
+      if (response && typeof response === 'object' && 'generated' in response) {
+        // New API response with metadata - trigger download with authentication
+        if (response.pdf_url) {
+          try {
+            // Fetch the PDF with authentication headers
+            const pdfResponse = await fetch(response.pdf_url, {
+              method: 'GET',
+              headers: {
+                'X-API-KEY': process.env.NEXT_PUBLIC_CDN_API_KEY || '',
+              },
+            })
+            
+            if (!pdfResponse.ok) {
+              throw new Error('Failed to fetch PDF')
+            }
+            
+            // Convert to blob and create download link
+            const blob = await pdfResponse.blob()
+            const url = URL.createObjectURL(blob)
+            
+            const link = document.createElement('a')
+            link.href = url
+            link.download = `orcamento-${variables.name.toLowerCase().replace(/\s+/g, '-')}.pdf`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            
+            // Clean up the blob URL
+            URL.revokeObjectURL(url)
+          } catch (error) {
+            console.error('Error downloading PDF:', error)
+            toast.error('Erro ao baixar PDF')
+            return
+          }
+        }
+        
+        if (response.generated) {
+          toast.success('PDF gerado e baixado com sucesso!')
+        } else {
+          toast.success('PDF baixado com sucesso!')
+        }
+      } else {
+        // Fallback message
+        toast.success('PDF baixado com sucesso!')
+      }
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Erro ao gerar PDF')

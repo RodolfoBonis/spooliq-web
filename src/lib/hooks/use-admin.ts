@@ -21,8 +21,8 @@ export function useUpdateCompanyStatus() {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: ({ organizationId, status }: { organizationId: string; status: 'active' | 'suspended' | 'cancelled' }) =>
-      adminService.updateCompanyStatus(organizationId, status),
+    mutationFn: ({ organizationId, request }: { organizationId: string; request: any }) =>
+      adminService.updateCompanyStatus(organizationId, request),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-companies'] })
       toast.success('Status da empresa atualizado com sucesso!')
@@ -33,12 +33,6 @@ export function useUpdateCompanyStatus() {
   })
 }
 
-export function useAdminSubscriptions() {
-  return useQuery({
-    queryKey: ['admin-subscriptions'],
-    queryFn: () => adminService.listSubscriptions(),
-  })
-}
 
 export function useAdminStats() {
   return useQuery({

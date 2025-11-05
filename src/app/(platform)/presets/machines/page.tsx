@@ -35,7 +35,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { machinePresetSchema, type MachinePresetFormData } from '@/lib/validations/preset'
 import { Plus, Edit, Trash2, Settings } from 'lucide-react'
 import type { MachinePreset } from '@/types/models'
-import { formatCurrency } from '@/lib/utils/format'
+import { formatCurrencyFromReais } from '@/lib/utils/format'
+import { CurrencyInput } from '@/components/ui/currency-input'
 
 export default function MachinePresetsPage() {
   const { data: presets, isLoading } = useMachinePresets()
@@ -50,6 +51,9 @@ export default function MachinePresetsPage() {
   const form = useForm<MachinePresetFormData>({
     resolver: zodResolver(machinePresetSchema),
     defaultValues: {
+      name: '',
+      description: '',
+      is_default: false,
       brand: '',
       model: '',
       build_volume_x: 256,
@@ -70,6 +74,9 @@ export default function MachinePresetsPage() {
   const handleOpenCreate = () => {
     setEditingPreset(null)
     form.reset({
+      name: '',
+      description: '',
+      is_default: false,
       brand: '',
       model: '',
       build_volume_x: 256,
@@ -91,6 +98,9 @@ export default function MachinePresetsPage() {
   const handleOpenEdit = (preset: MachinePreset) => {
     setEditingPreset(preset)
     form.reset({
+      name: preset.name || '',
+      description: preset.description || '',
+      is_default: preset.is_default || false,
       brand: preset.brand || '',
       model: preset.model || '',
       build_volume_x: preset.build_volume_x,
@@ -201,10 +211,10 @@ export default function MachinePresetsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Nome</TableHead>
                   <TableHead>Marca/Modelo</TableHead>
                   <TableHead>Volume (mm³)</TableHead>
                   <TableHead>Bico (mm)</TableHead>
-                  <TableHead>Filamento (mm)</TableHead>
                   <TableHead>Potência (W)</TableHead>
                   <TableHead>Custo/hora</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -214,6 +224,14 @@ export default function MachinePresetsPage() {
                 {presets.map((preset) => (
                   <TableRow key={preset.id}>
                     <TableCell className="font-medium">
+                      <div>
+                        <p className="font-medium">{preset.name}</p>
+                        {preset.description && (
+                          <p className="text-xs text-neutral-500">{preset.description}</p>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-neutral-600">
                       {preset.brand && preset.model
                         ? `${preset.brand} ${preset.model}`
                         : preset.brand || preset.model || '—'}
@@ -222,9 +240,8 @@ export default function MachinePresetsPage() {
                       {preset.build_volume_x}×{preset.build_volume_y}×{preset.build_volume_z}
                     </TableCell>
                     <TableCell>{preset.nozzle_diameter}</TableCell>
-                    <TableCell>{preset.filament_diameter}</TableCell>
                     <TableCell>{preset.power_consumption}</TableCell>
-                    <TableCell>{formatCurrency(preset.cost_per_hour)}</TableCell>
+                    <TableCell>{formatCurrencyFromReais(preset.cost_per_hour)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
@@ -263,6 +280,30 @@ export default function MachinePresetsPage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            {/* Name and Description */}
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="name">Nome do Preset *</Label>
+                <Input
+                  id="name"
+                  placeholder="Ex: Bambu Lab X1 Carbon"
+                  {...form.register('name')}
+                  required
+                />
+                {form.formState.errors.name && (
+                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.name.message}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="description">Descrição</Label>
+                <Input
+                  id="description"
+                  placeholder="Ex: Impressora profissional com alta precisão"
+                  {...form.register('description')}
+                />
+              </div>
+            </div>
+
             {/* Basic Info */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -406,16 +447,11 @@ export default function MachinePresetsPage() {
 
             {/* Cost */}
             <div>
-              <Label htmlFor="cost_per_hour">Custo por Hora (R$)</Label>
-              <Input
-                id="cost_per_hour"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                onChange={(e) => {
-                  const value = parseFloat(e.target.value) || 0
-                  form.setValue('cost_per_hour', Math.round(value * 100))
-                }}
+              <Label htmlFor="cost_per_hour">Custo por Hora</Label>
+              <CurrencyInput
+                value={form.watch('cost_per_hour')}
+                onChange={(value) => form.setValue('cost_per_hour', value)}
+                placeholder="R$ 0,00"
               />
               <p className="text-xs text-neutral-500 mt-1">
                 Custo operacional por hora de impressão

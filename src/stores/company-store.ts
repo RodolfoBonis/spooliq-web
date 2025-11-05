@@ -49,15 +49,11 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
   uploadLogo: async (file: File) => {
     try {
       set({ isLoading: true, error: null })
-      const { logo_url } = await companyService.uploadLogo(file)
+      await companyService.uploadLogo(file)
       
-      // Update company with new logo URL
-      const currentCompany = get().company
-      if (currentCompany) {
-        set({ company: { ...currentCompany, logo_url }, isLoading: false })
-      } else {
-        set({ isLoading: false })
-      }
+      // Fetch fresh company data from backend to ensure we have the latest info
+      const updatedCompany = await companyService.get()
+      set({ company: updatedCompany, isLoading: false })
       
       toast.success('Logo atualizado com sucesso!')
     } catch (error: any) {

@@ -7,6 +7,7 @@ import { useBrands } from '@/lib/hooks/use-brands';
 import { useMaterials } from '@/lib/hooks/use-materials';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import {
@@ -342,7 +343,6 @@ export default function FilamentsPage() {
             variant={viewMode === 'list' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('list')}
-            className={viewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-white/50'}
           >
             <List className="h-4 w-4 mr-2" />
             Lista
@@ -351,7 +351,6 @@ export default function FilamentsPage() {
             variant={viewMode === 'grid' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('grid')}
-            className={viewMode === 'grid' ? 'bg-white shadow-sm' : 'hover:bg-white/50'}
           >
             <Grid3x3 className="h-4 w-4 mr-2" />
             Grade
@@ -619,16 +618,12 @@ export default function FilamentsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="create-price">Preço por kg (R$) *</Label>
-                <Input
+                <Label htmlFor="create-price">Preço por kg *</Label>
+                <CurrencyInput
                   id="create-price"
-                  type="number"
-                  step="0.01"
-                  {...createForm.register('price_per_kg', { 
-                    valueAsNumber: true,
-                    setValueAs: (v) => Math.round(parseFloat(v) * 100) // Convert to cents
-                  })}
-                  placeholder="120.00"
+                  showCurrencySymbol
+                  onChange={(value) => createForm.setValue('price_per_kg', Math.round(value * 100))}
+                  placeholder="R$ 120,00"
                 />
                 {createForm.formState.errors.price_per_kg && (
                   <p className="text-sm text-error">{createForm.formState.errors.price_per_kg.message}</p>
@@ -755,15 +750,12 @@ export default function FilamentsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-price">Preço por kg (R$) *</Label>
-                <Input
+                <Label htmlFor="edit-price">Preço por kg *</Label>
+                <CurrencyInput
                   id="edit-price"
-                  type="number"
-                  step="0.01"
-                  {...editForm.register('price_per_kg', { 
-                    valueAsNumber: true,
-                    setValueAs: (v) => Math.round(parseFloat(v) * 100)
-                  })}
+                  showCurrencySymbol
+                  value={editingFilament?.price_per_kg ? editingFilament.price_per_kg / 100 : 0}
+                  onChange={(value) => editForm.setValue('price_per_kg', Math.round(value * 100))}
                 />
               </div>
             </div>

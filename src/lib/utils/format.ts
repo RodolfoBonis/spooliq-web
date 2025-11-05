@@ -14,20 +14,41 @@ export function formatCurrency(cents: number): string {
 }
 
 /**
+ * Format currency value (already in reais) to BRL currency
+ * @param reais Amount in reais (e.g., 79.00 = R$ 79,00)
+ */
+export function formatCurrencyFromReais(reais: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(reais)
+}
+
+/**
  * Format ISO 8601 date to Brazilian format
  * @param isoDate ISO 8601 date string
  * @param formatStr date-fns format string (default: "d 'de' MMMM 'de' yyyy")
  */
-export function formatDate(isoDate: string, formatStr = "d 'de' MMMM 'de' yyyy"): string {
-  return format(new Date(isoDate), formatStr, { locale: ptBR })
+export function formatDate(isoDate: string | null | undefined, formatStr = "d 'de' MMMM 'de' yyyy"): string {
+  if (!isoDate) return '--'
+  
+  const date = new Date(isoDate)
+  if (isNaN(date.getTime())) return '--'
+  
+  return format(date, formatStr, { locale: ptBR })
 }
 
 /**
  * Format ISO 8601 date to short Brazilian format
  * @param isoDate ISO 8601 date string
  */
-export function formatDateShort(isoDate: string): string {
-  return format(new Date(isoDate), 'dd/MM/yyyy', { locale: ptBR })
+export function formatDateShort(isoDate: string | null | undefined): string {
+  if (!isoDate) return '--'
+  
+  const date = new Date(isoDate)
+  if (isNaN(date.getTime())) return '--'
+  
+  return format(date, 'dd/MM/yyyy', { locale: ptBR })
 }
 
 /**
@@ -152,6 +173,65 @@ export function getColorPreviewStyle(colorType: ColorType, colorData: ColorData)
 export function parseCurrency(currencyStr: string): number {
   const cleanStr = currencyStr.replace(/[R$\s.]/g, '').replace(',', '.')
   return Math.round(parseFloat(cleanStr) * 100)
+}
+
+/**
+ * Parse BRL currency string to float (reais)
+ * @param currencyStr Currency string (e.g., "R$ 100,00" or "100,50")
+ * @returns Float value in reais (e.g., 100.50)
+ */
+export function parseCurrencyToFloat(currencyStr: string): number {
+  if (!currencyStr || currencyStr.trim() === '') return 0
+  
+  // Remove R$, espaços e pontos (separadores de milhares)
+  let cleanStr = currencyStr.replace(/[R$\s]/g, '')
+  
+  // Se tem vírgula, é o separador decimal brasileiro
+  if (cleanStr.includes(',')) {
+    // Remove pontos (separadores de milhares) e troca vírgula por ponto
+    cleanStr = cleanStr.replace(/\./g, '').replace(',', '.')
+  }
+  
+  const value = parseFloat(cleanStr)
+  return isNaN(value) ? 0 : value
+}
+
+/**
+ * Format float value to Brazilian currency input format
+ * @param value Float value (e.g., 100.50)
+ * @returns Formatted string (e.g., "100,50")
+ */
+export function formatFloatToCurrencyInput(value: number | string): string {
+  if (!value && value !== 0) return ''
+  
+  const numValue = typeof value === 'string' ? parseFloat(value) : value
+  if (isNaN(numValue)) return ''
+  
+  return numValue.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+
+/**
+ * Apply Brazilian currency mask to input value
+ * @param value Raw input value
+ * @returns Masked value (e.g., "1234567" -> "12.345,67")
+ */
+export function applyCurrencyMask(value: string): string {
+  // Remove tudo que não é dígito
+  const onlyNumbers = value.replace(/\D/g, '')
+  
+  if (onlyNumbers.length === 0) return ''
+  
+  // Converte para centavos e depois para reais
+  const cents = parseInt(onlyNumbers)
+  const reais = cents / 100
+  
+  return reais.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 }
 
 /**

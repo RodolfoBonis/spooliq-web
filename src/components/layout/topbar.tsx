@@ -12,37 +12,18 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useAuthStore } from '@/stores/auth-store'
-import { useCompanyStore } from '@/stores/company-store'
 import { getInitials } from '@/lib/utils/format'
 
 export function Topbar() {
   const { user, logout } = useAuthStore()
-  const { company } = useCompanyStore()
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-neutral-200 bg-white px-6">
-      {/* Left side - Company info */}
-      <div className="flex items-center space-x-4">
-        {company && (
-          <div>
-            <h2 className="text-lg font-semibold text-neutral-900">
-              {company.trade_name || company.name}
-            </h2>
-            {company.subscription_status === 'trial' && company.trial_ends_at && (
-              <p className="text-xs text-warning">
-                Trial - {Math.ceil((new Date(company.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} dias restantes
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Right side - Notifications and User menu */}
+    <header className="flex h-16 items-center justify-end border-b border-neutral-200 bg-white px-6">
+      {/* Notifications and User menu */}
       <div className="flex items-center space-x-4">
         {/* Notifications */}
         <Button variant="ghost" size="sm" className="relative" title="Notificações">
           <Bell className="h-5 w-5 text-neutral-600" />
-          {/* <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary-500" /> */}
         </Button>
 
         {/* User menu */}

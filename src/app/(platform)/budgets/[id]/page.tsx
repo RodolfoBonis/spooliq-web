@@ -56,6 +56,7 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
+    console.log('BUDGET', budget);
   if (isLoading) {
     return (
       <div className="container max-w-6xl py-6">
@@ -100,8 +101,8 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
     updateStatus({ id: params.id, data: { status } })
   }
 
-  const handleDownloadPDF = () => {
-    generatePDF({ id: params.id, name: budget.name })
+  const handleDownloadPDF = (force = false) => {
+    generatePDF({ id: params.id, name: budget.name, force })
   }
 
   const customerInitials = budget.customer.name
@@ -140,11 +141,18 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={handleDownloadPDF}
+                  onClick={() => handleDownloadPDF(false)}
                   disabled={isGeneratingPDF}
                 >
                   <Download className="mr-2 h-4 w-4" />
                   {isGeneratingPDF ? 'Gerando PDF...' : 'Baixar PDF'}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleDownloadPDF(true)}
+                  disabled={isGeneratingPDF}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  {isGeneratingPDF ? 'Gerando PDF...' : 'Gerar Novo PDF'}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -257,10 +265,6 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
                         Filamentos:
                       </p>
                       {item.filaments.map((filament) => {
-                        // Reconstruct color_data for preview
-                        const colorData = { color: filament.color }
-                        const colorType = 'solid' as const
-
                         return (
                           <div
                             key={filament.filament_id}
@@ -268,7 +272,7 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
                           >
                             <div
                               className="h-10 w-10 rounded-full border shrink-0"
-                              style={getColorPreviewStyle(colorType, colorData)}
+                              style={getColorPreviewStyle(filament.color_type, typeof filament.color_data === 'string' ? JSON.parse(filament.color_data) : filament.color_data)}
                             />
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium truncate">
@@ -346,7 +350,7 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
             </CardHeader>
             <CardContent className="space-y-2">
               <Button
-                onClick={handleDownloadPDF}
+                onClick={() => handleDownloadPDF(false)}
                 disabled={isGeneratingPDF}
                 className="w-full bg-primary-500 hover:bg-primary-600"
               >
@@ -361,21 +365,23 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56">
-                  {(Object.entries(STATUS_CONFIG) as [BudgetStatus, any][]).map(
-                    ([status, config]) => {
-                      const Icon = config.icon
-                      return (
-                        <DropdownMenuItem
-                          key={status}
-                          onClick={() => handleChangeStatus(status)}
-                          disabled={status === budget.status}
-                        >
-                          <Icon className="mr-2 h-4 w-4" />
-                          {config.label}
-                        </DropdownMenuItem>
-                      )
+                  {Object.keys(STATUS_CONFIG).map((status) => {
+                    const config = STATUS_CONFIG[status as BudgetStatus]
+                    if (!config || !config.icon) {
+                      return null
                     }
-                  )}
+                    const Icon = config.icon
+                    return (
+                      <DropdownMenuItem
+                        key={status}
+                        onClick={() => handleChangeStatus(status as BudgetStatus)}
+                        disabled={status === budget.status}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        {config.label}
+                      </DropdownMenuItem>
+                    )
+                  }).filter(Boolean)}
                 </DropdownMenuContent>
               </DropdownMenu>
             </CardContent>

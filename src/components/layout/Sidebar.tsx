@@ -16,6 +16,7 @@ import {
 
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
+import { useCompanyStore } from '@/stores/company-store'
 import { ROLES } from '@/lib/constants/roles'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,6 +24,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
+import { CDNImage } from '@/components/ui/cdn-image'
 
 interface NavItem {
   title: string
@@ -161,13 +163,41 @@ function NavItemComponent({ item }: { item: NavItem }) {
 
 export function Sidebar() {
   const { user, logout } = useAuthStore()
+  const { company } = useCompanyStore()
 
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-neutral-200 bg-white">
-      {/* Logo */}
-      <div className="flex h-16 items-center border-b border-neutral-200 px-6">
-        <Link href="/dashboard" className="flex items-center">
-          <span className="text-2xl font-bold text-primary-500">SpoolIQ</span>
+      {/* Logo and Company Info */}
+      <div className="border-b border-neutral-200 px-6 py-2">
+        <Link href="/dashboard" className="flex items-center space-x-3">
+          {company?.logo_url ? (
+            <CDNImage
+              key={`logo-${company.logo_url}-${company.updated_at || Date.now()}`}
+              src={company.logo_url}
+              alt="Logo da empresa"
+              width={32}
+              height={32}
+              className="h-12 w-12 object-contain"
+              fallback={
+                <span className="text-2xl font-bold text-primary-500">SpoolIQ</span>
+              }
+            />
+          ) : (
+            <span className="text-2xl font-bold text-primary-500">SpoolIQ</span>
+          )}
+          
+          {company && (
+            <div className="flex-1 min-w-0">
+              <h2 className="text-md font-semibold text-neutral-900 truncate">
+                {company.trade_name || company.name}
+              </h2>
+              {company.subscription_status === 'trial' && company.trial_ends_at && (
+                <p className="text-xs text-orange-600">
+                  Trial - {Math.ceil((new Date(company.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} dias restantes
+                </p>
+              )}
+            </div>
+          )}
         </Link>
       </div>
 

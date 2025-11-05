@@ -11,7 +11,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { useCostPresets } from '@/lib/hooks/use-presets'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatCurrency } from '@/lib/utils/format'
+import { formatCurrencyFromReais } from '@/lib/utils/format'
 
 interface CostPresetSelectProps {
   value?: string
@@ -56,7 +56,7 @@ export function CostPresetSelect({
           </SelectItem>
           {presets?.map((preset) => (
             <SelectItem key={preset.id} value={preset.id}>
-              Mão de obra: {formatCurrency(preset.labor_cost_per_hour)}/h | Margem: {preset.profit_margin_percentage}%
+              Mão de obra: {formatCurrencyFromReais(preset.labor_cost_per_hour)}/h | Margem: {preset.profit_margin_percentage}%
             </SelectItem>
           ))}
         </SelectContent>

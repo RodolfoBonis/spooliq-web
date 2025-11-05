@@ -27,6 +27,12 @@ api.interceptors.request.use(
     const fullUrl = `${config.baseURL}${config.url}`
     console.log('📡 API Request:', config.method?.toUpperCase(), fullUrl)
     
+    // Remove Content-Type header for FormData requests to let axios set it automatically
+    if (config.data instanceof FormData) {
+      console.log('📡 FormData detected, removing Content-Type header')
+      delete config.headers['Content-Type']
+    }
+    
     // Get token from localStorage
     if (typeof window !== 'undefined') {
       const authStore = localStorage.getItem('auth-storage')

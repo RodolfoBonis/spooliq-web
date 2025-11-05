@@ -145,7 +145,7 @@ export default function UsersPage() {
     // Current user can't delete themselves
     if (user.id === currentUser.id) return false
     // Only Owner and OrgAdmin can manage users
-    return currentUser.user_type === 'owner' || currentUser.user_type === 'admin'
+    return currentUser.roles?.includes('owner') || currentUser.roles?.includes('admin')
   }
 
   if (isLoading) {

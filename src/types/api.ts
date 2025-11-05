@@ -59,3 +59,32 @@ export interface PaginatedResponse<T> {
   totalPages: number
 }
 
+// Subscription API Types
+export interface GetSubscriptionResponse {
+  subscription_status: string
+  subscription_plan: string
+  trial_ends_at?: string
+  subscription_started_at?: string
+  next_payment_due?: string
+  asaas_customer_id?: string
+  asaas_subscription_id?: string
+}
+
+export interface PaymentHistoryResponse {
+  payments: Array<{
+    id: string
+    organization_id: string
+    asaas_payment_id?: string
+    asaas_invoice_id?: string
+    amount: number
+    status: string
+    payment_date?: string
+    due_date: string
+    invoice_url?: string
+    created_at: string
+  }>
+  total: number
+  page: number
+  page_size: number
+}
+

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Select,
   SelectContent,
@@ -28,6 +28,11 @@ export function MachinePresetSelect({
   disabled = false,
 }: MachinePresetSelectProps) {
   const { data: presets, isLoading } = useMachinePresets()
+  const [localValue, setLocalValue] = useState<string | undefined>(value)
+
+  useEffect(() => {
+    setLocalValue(value)
+  }, [value])
 
   if (isLoading) {
     return (
@@ -42,8 +47,12 @@ export function MachinePresetSelect({
     <div className="space-y-2">
       {label && <Label htmlFor="machine-preset">{label}</Label>}
       <Select
-        value={value || 'none'}
-        onValueChange={(val) => onChange(val === 'none' ? undefined : val)}
+        value={localValue || 'none'}
+        onValueChange={(val) => {
+          const newValue = val === 'none' ? undefined : val
+          setLocalValue(newValue)
+          onChange(newValue)
+        }}
         disabled={disabled}
       >
         <SelectTrigger id="machine-preset">

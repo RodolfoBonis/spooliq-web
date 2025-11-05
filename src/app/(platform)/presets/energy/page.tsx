@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/common/empty-state'
@@ -35,7 +36,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { energyPresetSchema, type EnergyPresetFormData } from '@/lib/validations/preset'
 import { Plus, Edit, Trash2, Zap } from 'lucide-react'
 import type { EnergyPreset } from '@/types/models'
-import { formatCurrency } from '@/lib/utils/format'
+import { formatCurrencyFromReais } from '@/lib/utils/format'
 
 export default function EnergyPresetsPage() {
   const { data: presets, isLoading } = useEnergyPresets()
@@ -201,7 +202,7 @@ export default function EnergyPresetsPage() {
                       {preset.provider || '—'}
                     </TableCell>
                     <TableCell>
-                      {formatCurrency(preset.energy_cost_per_kwh)} ({preset.currency})
+                      {formatCurrencyFromReais(preset.energy_cost_per_kwh)} ({preset.currency})
                     </TableCell>
                     <TableCell>{preset.peak_hour_multiplier}x</TableCell>
                     <TableCell>{preset.off_peak_hour_multiplier}x</TableCell>
@@ -259,16 +260,13 @@ export default function EnergyPresetsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="energy_cost_per_kwh">Custo por kWh (R$) *</Label>
-                <Input
+                <Label htmlFor="energy_cost_per_kwh">Custo por kWh *</Label>
+                <CurrencyInput
                   id="energy_cost_per_kwh"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.85"
-                  onChange={(e) => {
-                    const value = parseFloat(e.target.value) || 0
-                    form.setValue('energy_cost_per_kwh', Math.round(value * 100))
-                  }}
+                  showCurrencySymbol
+                  value={form.watch('energy_cost_per_kwh') || 0}
+                  onChange={(value) => form.setValue('energy_cost_per_kwh', value)}
+                  placeholder="R$ 0,85"
                 />
               </div>
               <div>

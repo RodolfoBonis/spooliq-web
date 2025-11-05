@@ -69,19 +69,27 @@ async function proxyRequest(
       if (contentType?.includes('application/json')) {
         body = JSON.stringify(await request.json())
       } else if (contentType?.includes('multipart/form-data')) {
-        body = await request.formData()
+        // For multipart data, pass the raw stream to preserve boundary
+        body = request.body
       } else {
         body = await request.text()
       }
     }
 
     // Make the proxied request (handle redirects manually to avoid leaking relative locations to the browser)
-    let response = await fetch(targetUrl, {
+    let fetchOptions: RequestInit & { duplex?: string } = {
       method,
       headers,
       body,
       redirect: 'manual',
-    })
+    }
+    
+    // Add duplex option for streaming body (required for Node.js fetch)
+    if (body && body instanceof ReadableStream) {
+      fetchOptions.duplex = 'half'
+    }
+    
+    let response = await fetch(targetUrl, fetchOptions)
 
     // If backend responds with a redirect that uses a relative Location like "/v1/...",
     // follow it server-side and return the final response to the browser
@@ -97,12 +105,19 @@ async function proxyRequest(
         } else {
           absoluteLocation = new URL(location, API_BASE_URL).toString()
         }
-        response = await fetch(absoluteLocation, {
+        let redirectOptions: RequestInit & { duplex?: string } = {
           method: method === 'GET' ? 'GET' : method,
           headers,
           body: method === 'GET' || method === 'HEAD' ? undefined : body,
           redirect: 'follow',
-        })
+        }
+        
+        // Add duplex option for redirect too if needed
+        if (body && body instanceof ReadableStream && method !== 'GET' && method !== 'HEAD') {
+          redirectOptions.duplex = 'half'
+        }
+        
+        response = await fetch(absoluteLocation, redirectOptions)
       }
     }
 

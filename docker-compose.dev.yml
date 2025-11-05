@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  web-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        - NODE_VERSION=20
+    image: spooliq-web:dev
+    container_name: spooliq-web-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount source code for hot reload
+      - ./src:/app/src:delegated
+      - ./public:/app/public:delegated
+      - ./next.config.js:/app/next.config.js:delegated
+      - ./tailwind.config.ts:/app/tailwind.config.ts:delegated
+      - ./tsconfig.json:/app/tsconfig.json:delegated
+      - ./postcss.config.js:/app/postcss.config.js:delegated
+      # Prevent node_modules from being overwritten
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8080/v1}
+      - NEXT_PUBLIC_CDN_API_KEY=${NEXT_PUBLIC_CDN_API_KEY}
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+    env_file:
+      - .env.docker
+    networks:
+      - spooliq-network
+    command: npm run dev
+
+networks:
+  spooliq-network:
+    driver: bridge
+    name: spooliq-network

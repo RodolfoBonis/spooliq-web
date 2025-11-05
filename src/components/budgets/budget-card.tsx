@@ -30,12 +30,12 @@ interface BudgetCardProps {
     customer: {
       id: string
       name: string
-      email: string
+      email?: string
     }
     items_count: number
   }
   onDelete?: (id: string) => void
-  onGeneratePDF?: (id: string, name: string) => void
+  onGeneratePDF?: (id: string, name: string, force?: boolean) => void
 }
 
 export function BudgetCard({ budget, onDelete, onGeneratePDF }: BudgetCardProps) {
@@ -90,12 +90,18 @@ export function BudgetCard({ budget, onDelete, onGeneratePDF }: BudgetCardProps)
                     Editar
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onGeneratePDF?.(budget.id, budget.name, false)}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  {budget.pdf_url ? 'Baixar PDF' : 'Gerar PDF'}
+                </DropdownMenuItem>
                 {budget.pdf_url && (
                   <DropdownMenuItem
-                    onClick={() => onGeneratePDF?.(budget.id, budget.name)}
+                    onClick={() => onGeneratePDF?.(budget.id, budget.name, true)}
                   >
                     <Download className="mr-2 h-4 w-4" />
-                    Baixar PDF
+                    Gerar Novo PDF
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
@@ -123,9 +129,11 @@ export function BudgetCard({ budget, onDelete, onGeneratePDF }: BudgetCardProps)
               <p className="text-sm font-medium text-neutral-900 truncate">
                 {budget.customer.name}
               </p>
-              <p className="text-xs text-neutral-500 truncate">
-                {budget.customer.email}
-              </p>
+              {budget.customer.email && (
+                <p className="text-xs text-neutral-500 truncate">
+                  {budget.customer.email}
+                </p>
+              )}
             </div>
           </div>
 

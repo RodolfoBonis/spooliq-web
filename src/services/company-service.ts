@@ -40,16 +40,11 @@ export const companyService = {
    */
   async uploadLogo(file: File): Promise<{ logo_url: string }> {
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('logo', file)
 
     const { data } = await api.post<{ message: string; logo_url: string }>(
       '/company/logo',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
+      formData
     )
 
     return { logo_url: data.logo_url }

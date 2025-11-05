@@ -1,5 +1,5 @@
 import { api } from '@/lib/api/client'
-import type { Budget, BudgetWithDetails } from '@/types/models'
+import type { Budget, BudgetWithDetails, PDFGenerationResponse } from '@/types/models'
 
 export interface BudgetFilters {
   page?: number
@@ -10,17 +10,24 @@ export interface BudgetFilters {
 }
 
 export interface BudgetListResponse {
-  budgets: Array<Budget & { 
+  data: Array<{
+    budget: Budget
     customer: { 
       id: string
       name: string
-      email: string
+      email?: string
+      phone?: string
+      document?: string
     }
-    items_count: number
+    items: any[]
+    total_print_time_hours: number
+    total_print_time_minutes: number
+    total_print_time_display: string
   }>
   total: number
   page: number
-  pageSize: number
+  page_size: number
+  total_pages: number
 }
 
 export interface CreateBudgetItemFilamentDTO {
@@ -102,23 +109,27 @@ export const budgetService = {
     await api.delete(`/budgets/${id}`)
   },
 
-  async generatePDF(id: string): Promise<Blob> {
-    const { data } = await api.get(`/budgets/${id}/pdf`, {
-      responseType: 'blob',
-    })
+  async generatePDF(id: string, force: boolean = false): Promise<PDFGenerationResponse> {
+    const params = force ? '?force=true' : ''
+    const { data } = await api.get<PDFGenerationResponse>(`/budgets/${id}/pdf${params}`)
     return data
   },
 
-  async downloadPDF(id: string, budgetName: string): Promise<void> {
-    const blob = await this.generatePDF(id)
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `orcamento-${budgetName.toLowerCase().replace(/\s+/g, '-')}.pdf`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
+  async downloadPDF(id: string, budgetName: string, force: boolean = false): Promise<void> {
+    const response = await this.generatePDF(id, force)
+    
+    if (response.pdf_url) {
+      // Use CDN URL for download
+      const link = document.createElement('a')
+      link.href = response.pdf_url
+      link.download = `orcamento-${budgetName.toLowerCase().replace(/\s+/g, '-')}.pdf`
+      link.target = '_blank'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } else {
+      throw new Error('PDF URL not available')
+    }
   },
 }
 

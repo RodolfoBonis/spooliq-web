@@ -4,6 +4,9 @@ import { z } from 'zod'
 
 // Machine Preset schema
 export const machinePresetSchema = z.object({
+  name: z.string().min(1, 'Nome é obrigatório').max(100),
+  description: z.string().max(500).optional(),
+  is_default: z.boolean().optional(),
   brand: z.string().min(1).max(100).optional(),
   model: z.string().min(1).max(100).optional(),
   build_volume_x: z.number().positive('Volume X deve ser maior que zero'),
@@ -24,6 +27,9 @@ export type MachinePresetFormData = z.infer<typeof machinePresetSchema>
 
 // Energy Preset schema
 export const energyPresetSchema = z.object({
+  name: z.string().min(1, 'Nome é obrigatório').max(100),
+  description: z.string().max(500).optional(),
+  is_default: z.boolean().optional(),
   country: z.string().min(1).max(100).optional(),
   state: z.string().min(1).max(100).optional(),
   city: z.string().min(1).max(100).optional(),
@@ -39,6 +45,9 @@ export type EnergyPresetFormData = z.infer<typeof energyPresetSchema>
 
 // Cost Preset schema
 export const costPresetSchema = z.object({
+  name: z.string().min(1, 'Nome é obrigatório').max(100),
+  description: z.string().max(500).optional(),
+  is_default: z.boolean().optional(),
   labor_cost_per_hour: z.number().min(0, 'Custo de mão de obra deve ser 0 ou maior'),
   packaging_cost_per_item: z.number().min(0, 'Custo de embalagem deve ser 0 ou maior'),
   shipping_cost_base: z.number().min(0, 'Custo base de envio deve ser 0 ou maior'),
