@@ -42,10 +42,9 @@ export function CDNImage({
         setLoading(true)
         setError(false)
 
-        const response = await fetch(src, {
-          headers: {
-            'X-API-KEY': process.env.NEXT_PUBLIC_CDN_API_KEY || '',
-          },
+        // Use API proxy instead of direct CDN access
+        const proxyUrl = `/api/cdn/image?url=${encodeURIComponent(src)}`
+        const response = await fetch(proxyUrl, {
           cache: 'no-cache', // Force fresh fetch when URL changes
         })
 

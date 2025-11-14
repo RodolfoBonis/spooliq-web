@@ -91,12 +91,10 @@ export function useGeneratePDF() {
         // New API response with metadata - trigger download with authentication
         if (response.pdf_url) {
           try {
-            // Fetch the PDF with authentication headers
-            const pdfResponse = await fetch(response.pdf_url, {
+            // Fetch the PDF through API proxy
+            const proxyUrl = `/api/cdn/pdf?url=${encodeURIComponent(response.pdf_url)}`
+            const pdfResponse = await fetch(proxyUrl, {
               method: 'GET',
-              headers: {
-                'X-API-KEY': process.env.NEXT_PUBLIC_CDN_API_KEY || '',
-              },
             })
             
             if (!pdfResponse.ok) {
