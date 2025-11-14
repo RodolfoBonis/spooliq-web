@@ -28,6 +28,9 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
+# Ensure public directory exists (Next.js might not create it)
+RUN mkdir -p public
+
 RUN npm run build
 
 # Stage 3: Runner (Production Image)
@@ -43,10 +46,10 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Copy necessary files from builder
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # Create .next directory and set permissions
-RUN mkdir .next && \
+RUN mkdir -p .next && \
     chown nextjs:nodejs .next
 
 # Copy standalone output
