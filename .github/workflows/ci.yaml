@@ -1,0 +1,395 @@
+name: CI - spooliq-web
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths-ignore:
+      - 'package.json'
+  pull_request:
+    branches:
+      - main
+      - develop
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+  checks: read
+  discussions: write
+  repository-projects: write
+  issues: write
+  pull-requests: write
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  lint:
+    name: Lint Code
+    runs-on: [ubuntu-latest]
+    outputs:
+      status: ${{ steps.lint.outputs.status }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        id: eslint
+        run: |
+          set +e
+          npm run lint > lint_output.txt 2>&1
+          echo "status=$?" >> $GITHUB_OUTPUT
+          set -e
+
+      - name: Run TypeScript check
+        id: typecheck
+        run: |
+          set +e
+          npx tsc --noEmit >> lint_output.txt 2>&1
+          TYPECHECK_EXIT_CODE=$?
+          if [ $TYPECHECK_EXIT_CODE -ne 0 ]; then
+            echo "status=1" >> $GITHUB_OUTPUT
+          else
+            echo "status=0" >> $GITHUB_OUTPUT
+          fi
+          set -e
+
+      - name: Set final lint status
+        id: lint
+        run: |
+          if [ "${{ steps.eslint.outputs.status }}" != "0" ] || [ "${{ steps.typecheck.outputs.status }}" != "0" ]; then
+            echo "status=1" >> $GITHUB_OUTPUT
+          else
+            echo "status=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install Python dependencies for comment
+        if: ${{ github.event_name == 'pull_request' && steps.lint.outputs.status != '0' }}
+        run: |
+          pip install openai PyGithub
+
+      - name: Comment lint issues on PR
+        if: ${{ github.event_name == 'pull_request' && steps.lint.outputs.status != '0' }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          REPO_NAME: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          python3 << 'EOF'
+          import os
+          import openai
+          from github import Github
+
+          # Read lint output
+          with open('lint_output.txt', 'r') as f:
+              lint_output = f.read()
+
+          if not lint_output.strip():
+              exit(0)
+
+          # Initialize OpenAI and GitHub
+          openai.api_key = os.environ['OPENAI_API_KEY']
+          g = Github(os.environ['GITHUB_TOKEN'])
+          repo = g.get_repo(os.environ['REPO_NAME'])
+          pr = repo.get_pull(int(os.environ['PR_NUMBER']))
+
+          # Generate comment using OpenAI
+          try:
+              response = openai.chat.completions.create(
+                  model="gpt-4o-mini",
+                  messages=[
+                      {"role": "system", "content": "You are a helpful code reviewer. Analyze the lint/TypeScript errors and provide a concise, helpful summary for the developer."},
+                      {"role": "user", "content": f"Please analyze these lint/TypeScript errors and provide suggestions:\n\n{lint_output}"}
+                  ],
+                  max_tokens=500
+              )
+              
+              comment = f"## 🔍 Lint & TypeScript Issues Found\n\n{response.choices[0].message.content}\n\n<details>\n<summary>Full Output</summary>\n\n```\n{lint_output}\n```\n</details>"
+              
+              # Post comment
+              pr.create_issue_comment(comment)
+          except Exception as e:
+              print(f"Error generating comment: {e}")
+          EOF
+
+      - name: Exit if lint failed
+        if: ${{ steps.lint.outputs.status != '0' }}
+        run: exit 1
+
+      - name: Upload lint results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-results
+          path: lint_output.txt
+
+  test:
+    name: Run Tests
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: |
+          if [ -f "jest.config.js" ] || [ -f "jest.config.ts" ] || grep -q '"test"' package.json; then
+            npm test -- --coverage --watchAll=false
+          else
+            echo "No tests configured, skipping test step"
+          fi
+
+      - name: Upload coverage artifacts
+        if: hashFiles('coverage/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+
+  build:
+    name: Build Application
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: .next/
+
+  security_check:
+    name: Security Vulnerability Check
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        id: audit
+        run: |
+          set +e
+          npm audit --audit-level=high > vulnerability_report.txt 2>&1
+          echo "status=$?" >> $GITHUB_OUTPUT
+          set -e
+
+      - name: Install Python dependencies for vulnerability comment
+        if: ${{ steps.audit.outputs.status != '0' && github.event_name == 'pull_request' }}
+        run: |
+          pip install openai PyGithub
+
+      - name: Comment vulnerability issues on PR
+        if: ${{ steps.audit.outputs.status != '0' && github.event_name == 'pull_request' }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          REPO_NAME: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          python3 << 'EOF'
+          import os
+          import openai
+          from github import Github
+
+          # Read vulnerability output
+          with open('vulnerability_report.txt', 'r') as f:
+              vuln_output = f.read()
+
+          if not vuln_output.strip():
+              exit(0)
+
+          # Initialize OpenAI and GitHub
+          openai.api_key = os.environ['OPENAI_API_KEY']
+          g = Github(os.environ['GITHUB_TOKEN'])
+          repo = g.get_repo(os.environ['REPO_NAME'])
+          pr = repo.get_pull(int(os.environ['PR_NUMBER']))
+
+          # Generate comment using OpenAI
+          try:
+              response = openai.chat.completions.create(
+                  model="gpt-4o-mini",
+                  messages=[
+                      {"role": "system", "content": "You are a security expert. Analyze npm audit results and provide actionable security recommendations."},
+                      {"role": "user", "content": f"Please analyze these security vulnerabilities and provide recommendations:\n\n{vuln_output}"}
+                  ],
+                  max_tokens=500
+              )
+              
+              comment = f"## 🔒 Security Vulnerabilities Found\n\n{response.choices[0].message.content}\n\n<details>\n<summary>Full Audit Report</summary>\n\n```\n{vuln_output}\n```\n</details>"
+              
+              # Post comment
+              pr.create_issue_comment(comment)
+          except Exception as e:
+              print(f"Error generating comment: {e}")
+          EOF
+
+      - name: Upload vulnerability artifacts
+        if: ${{ steps.audit.outputs.status != '0' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: vulnerability-report
+          path: vulnerability_report.txt
+
+      - name: Fail job if vulnerabilities found
+        if: ${{ steps.audit.outputs.status != '0' }}
+        run: exit 1
+
+  notify_success:
+    name: Notify Success
+    runs-on: [ubuntu-latest]
+    needs: [lint, test, build, security_check]
+    if: ${{ needs.lint.result == 'success' && needs.test.result == 'success' && needs.build.result == 'success' && needs.security_check.result == 'success' }}
+    steps:
+      - name: Calculate Build Duration
+        id: build-duration
+        run: |
+          START_TIME="${{ github.event.head_commit.timestamp }}"
+          if [ -z "$START_TIME" ] || [ "$START_TIME" = "null" ]; then
+            START_TIME="${{ github.event.repository.pushed_at }}"
+          fi
+          if [ -z "$START_TIME" ] || [ "$START_TIME" = "null" ]; then
+            START_TIME=$(date -u -d '2 minutes ago' +%Y-%m-%dT%H:%M:%SZ)
+          fi
+          
+          END_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          
+          START_EPOCH=$(date -d "$START_TIME" +%s)
+          END_EPOCH=$(date -d "$END_TIME" +%s)
+          DURATION_SECONDS=$((END_EPOCH - START_EPOCH))
+          
+          if [ $DURATION_SECONDS -lt 60 ]; then
+            DURATION="${DURATION_SECONDS}s"
+          elif [ $DURATION_SECONDS -lt 3600 ]; then
+            MINUTES=$((DURATION_SECONDS / 60))
+            SECONDS=$((DURATION_SECONDS % 60))
+            DURATION="${MINUTES}m ${SECONDS}s"
+          else
+            HOURS=$((DURATION_SECONDS / 3600))
+            MINUTES=$(((DURATION_SECONDS % 3600) / 60))
+            SECONDS=$((DURATION_SECONDS % 60))
+            DURATION="${HOURS}h ${MINUTES}m ${SECONDS}s"
+          fi
+          
+          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+
+      - name: Notify n8n Success
+        run: |
+          curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "event_type": "ci_success",
+              "repository": "${{ github.repository }}",
+              "workflow": "${{ github.workflow }}",
+              "commit_sha": "${{ github.sha }}",
+              "tag": null,
+              "branch": "${{ github.ref }}",
+              "actor": "${{ github.actor }}",
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "details": {
+                "build_time": "${{ steps.build-duration.outputs.duration }}",
+                "test_results": "all passed",
+                "coverage": "available in artifacts",
+                "pr_number": "${{ github.event_name == 'pull_request' && github.event.pull_request.number || null }}",
+                "pr_url": "${{ github.event_name == 'pull_request' && format('https://github.com/{0}/pull/{1}', github.repository, github.event.pull_request.number) || null }}"
+              },
+              "telegram_chat_id": "${{ secrets.CHAT_ID }}",
+              "telegram_thread_id": "${{ secrets.THREAD_ID }}"
+            }'
+
+  notify_failure:
+    name: Notify Failure
+    runs-on: ubuntu-latest
+    needs: [lint, test, build, security_check]
+    if: ${{ needs.lint.result != 'success' || needs.test.result != 'success' || needs.build.result != 'success' || needs.security_check.result != 'success' }}
+    steps:
+      - name: Determine failure type
+        id: failure-analysis
+        run: |
+          if [[ "${{ needs.lint.result }}" != "success" ]]; then
+            echo "error_type=Lint/TypeScript errors found" >> $GITHUB_OUTPUT
+          elif [[ "${{ needs.test.result }}" != "success" ]]; then
+            echo "error_type=Tests failed" >> $GITHUB_OUTPUT
+          elif [[ "${{ needs.build.result }}" != "success" ]]; then
+            echo "error_type=Build failed" >> $GITHUB_OUTPUT
+          elif [[ "${{ needs.security_check.result }}" != "success" ]]; then
+            echo "error_type=Security vulnerabilities found" >> $GITHUB_OUTPUT
+          else
+            echo "error_type=Unknown CI failure" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Notify n8n Failure
+        run: |
+          curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "event_type": "ci_failure",
+              "repository": "${{ github.repository }}",
+              "workflow": "${{ github.workflow }}",
+              "commit_sha": "${{ github.sha }}",
+              "tag": null,
+              "branch": "${{ github.ref }}",
+              "actor": "${{ github.actor }}",
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "details": {
+                "error_message": "${{ steps.failure-analysis.outputs.error_type }}",
+                "logs_url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                "failed_jobs": {
+                  "lint": "${{ needs.lint.result }}",
+                  "test": "${{ needs.test.result }}",
+                  "build": "${{ needs.build.result }}",
+                  "security": "${{ needs.security_check.result }}"
+                },
+                "pr_number": "${{ github.event_name == 'pull_request' && github.event.pull_request.number || null }}",
+                "pr_url": "${{ github.event_name == 'pull_request' && format('https://github.com/{0}/pull/{1}', github.repository, github.event.pull_request.number) || null }}"
+              },
+              "telegram_chat_id": "${{ secrets.CHAT_ID }}",
+              "telegram_thread_id": "${{ secrets.THREAD_ID }}"
+            }'

@@ -1,0 +1,138 @@
+name: Auto Merge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_review:
+    types: [submitted]
+  check_suite:
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  dependabot-auto-merge:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto-approve and enable auto-merge for minor and patch updates
+        if: steps.metadata.outputs.update-type == 'version-update:semver-minor' || steps.metadata.outputs.update-type == 'version-update:semver-patch'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh pr review --approve "$PR_URL"
+          gh pr merge --auto --squash "$PR_URL"
+
+      - name: Comment on major updates
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh pr comment "$PR_URL" --body "⚠️ This is a **major version update** and requires manual review before merging."
+
+  backport-auto-merge:
+    runs-on: ubuntu-latest
+    if: startsWith(github.head_ref, 'backport/')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check PR status and auto-merge
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          # Get PR state
+          PR_STATE=$(gh pr view $PR_NUMBER --json state --jq '.state')
+
+          if [ "$PR_STATE" != "OPEN" ]; then
+            echo "PR is not open, skipping auto-merge"
+            exit 0
+          fi
+
+          # Check if PR is mergeable
+          MERGEABLE=$(gh pr view $PR_NUMBER --json mergeable --jq '.mergeable')
+
+          if [ "$MERGEABLE" != "MERGEABLE" ]; then
+            echo "PR is not mergeable yet, skipping auto-merge"
+            exit 0
+          fi
+
+          # Check if all checks have passed
+          CHECKS_STATUS=$(gh pr view $PR_NUMBER --json statusCheckRollup --jq '[.statusCheckRollup[] | select(.conclusion != null)] | all(.conclusion == "SUCCESS" or .conclusion == "SKIPPED")')
+
+          if [ "$CHECKS_STATUS" != "true" ]; then
+            echo "Not all checks have passed yet, skipping auto-merge"
+            exit 0
+          fi
+
+          # Auto-approve and merge
+          gh pr review --approve $PR_NUMBER --body "🤖 Auto-approving backport PR"
+          gh pr merge --auto --squash $PR_NUMBER
+
+  release-auto-merge:
+    runs-on: ubuntu-latest
+    if: startsWith(github.head_ref, 'release/') && github.base_ref == 'main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check approvals and auto-merge
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          # Check if PR has at least one approval
+          APPROVALS=$(gh pr view $PR_NUMBER --json reviews --jq '[.reviews[] | select(.state == "APPROVED")] | length')
+
+          if [ "$APPROVALS" -lt 1 ]; then
+            echo "PR needs at least one approval before auto-merge"
+            exit 0
+          fi
+
+          # Check if all checks have completed successfully
+          CHECKS_STATUS=$(gh pr view $PR_NUMBER --json statusCheckRollup --jq '[.statusCheckRollup[] | select(.conclusion != null)] | all(.conclusion == "SUCCESS" or .conclusion == "SKIPPED")')
+
+          if [ "$CHECKS_STATUS" != "true" ]; then
+            echo "Not all checks have passed yet"
+            exit 0
+          fi
+
+          # Enable auto-merge
+          gh pr merge --auto --squash $PR_NUMBER
+          gh pr comment $PR_NUMBER --body "✅ Auto-merge enabled - PR will merge when all conditions are met"
+
+  cleanup-branches:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    steps:
+      - name: Delete merged branch
+        env:
+          BRANCH_NAME: ${{ github.head_ref }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          # Don't delete main or develop branches
+          if [ "$BRANCH_NAME" == "main" ] || [ "$BRANCH_NAME" == "develop" ]; then
+            echo "Skipping deletion of protected branch: $BRANCH_NAME"
+            exit 0
+          fi
+
+          # Delete the branch
+          if git ls-remote --exit-code --heads origin "$BRANCH_NAME" > /dev/null 2>&1; then
+            git push origin --delete "$BRANCH_NAME" || echo "Branch already deleted or protected"
+          else
+            echo "Branch $BRANCH_NAME does not exist on remote"
+          fi

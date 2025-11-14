@@ -1,0 +1,235 @@
+name: Release with Docker - spooliq-web
+
+permissions:
+  contents: write
+
+on:
+  workflow_run:
+    workflows: ["CI - spooliq-web"]
+    types:
+      - completed
+    branches: [main]
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  release:
+    runs-on: [ubuntu-latest]
+    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Determine Version Strategy
+        id: version-strategy
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "strategy=tag" >> $GITHUB_OUTPUT
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "strategy=auto" >> $GITHUB_OUTPUT
+            if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+              # Get current version from package.json
+              CURRENT_VERSION=$(node -p "require('./package.json').version")
+              # Increment patch version
+              NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
+              echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+              echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
+              # Update package.json
+              npm version $NEW_VERSION --no-git-tag-version
+            else
+              echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+              echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Set lowercase repository owner
+        id: repo-owner
+        run: |
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "lowercase=$REPO_OWNER" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq-web:latest
+            ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq-web:${{ steps.version-strategy.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_VERSION=${{ env.NODE_VERSION }}
+
+      - name: Add, commit and push version increment
+        if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: "GitHub Actions"
+          author_email: "actions@github.com"
+          message: "chore: bump version to ${{ steps.version-strategy.outputs.version }}"
+          add: "package.json"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Create Tag (if auto-increment)
+        if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'
+        run: |
+          git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}.git
+          git tag ${{ steps.version-strategy.outputs.tag }}
+          git push origin ${{ steps.version-strategy.outputs.tag }}
+
+      - name: Create GitHub Release
+        if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          tag_name: ${{ steps.version-strategy.outputs.tag }}
+          release_name: Release ${{ steps.version-strategy.outputs.tag }}
+          body: |
+            ## Changes in this Release
+            - Docker image: `${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq-web:${{ steps.version-strategy.outputs.version }}`
+            - Automated release from CI pipeline
+            
+            ### Docker Run Command
+            ```bash
+            docker run -p 3000:3000 \
+              -e NEXT_PUBLIC_API_URL=your_api_url \
+              -e NEXT_PUBLIC_CDN_API_KEY=your_cdn_key \
+              ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq-web:${{ steps.version-strategy.outputs.version }}
+            ```
+          draft: false
+          prerelease: false
+
+      - name: Checkout k3s manifest repository
+        uses: actions/checkout@master
+        with:
+          repository: RodolfoBonis/k3s-apps
+          ref: main
+          path: k3s-manifest
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Update K3s Manifests
+        env:
+          VERSION: ${{ steps.version-strategy.outputs.version }}
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          REPOSITORY_OWNER: ${{ steps.repo-owner.outputs.lowercase }}
+        run: |
+          cd k3s-manifest
+
+          # Install yq if not available
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+          # Update the image tag in the production values file
+          yq e ".image.tag = \"${VERSION}\"" -i ./apps/spooliq-web/app/chart/values-prod.yaml
+
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add ./apps/spooliq-web/app/chart/values-prod.yaml
+          git commit -m "chore(spooliq-web): update production image to ${VERSION}" || echo "No changes to commit"
+          git push || echo "No changes to push"
+
+      - name: Setup ArgoCD CLI
+        uses: imajeetyadav/argocd-cli@v1
+
+      - name: Sync ArgoCD
+        run: |
+          argocd app sync spooliq-web-prod \
+            --grpc-web \
+            --server ${{ secrets.ARGOCD_SERVER }} \
+            --auth-token ${{ secrets.ARGOCD_TOKEN }}
+
+          argocd app wait spooliq-web-prod \
+            --server ${{ secrets.ARGOCD_SERVER }} \
+            --auth-token ${{ secrets.ARGOCD_TOKEN }} \
+            --grpc-web \
+            --timeout 300
+
+      - name: Calculate Build Duration
+        id: build-duration
+        run: |
+          START_TIME="${{ github.event.head_commit.timestamp }}"
+          if [ -z "$START_TIME" ] || [ "$START_TIME" = "null" ]; then
+            START_TIME="${{ github.event.repository.pushed_at }}"
+          fi
+          if [ -z "$START_TIME" ] || [ "$START_TIME" = "null" ]; then
+            START_TIME=$(date -u -d '5 minutes ago' +%Y-%m-%dT%H:%M:%SZ)
+          fi
+          
+          END_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          
+          START_EPOCH=$(date -d "$START_TIME" +%s)
+          END_EPOCH=$(date -d "$END_TIME" +%s)
+          DURATION_SECONDS=$((END_EPOCH - START_EPOCH))
+          
+          if [ $DURATION_SECONDS -lt 60 ]; then
+            DURATION="${DURATION_SECONDS}s"
+          elif [ $DURATION_SECONDS -lt 3600 ]; then
+            MINUTES=$((DURATION_SECONDS / 60))
+            SECONDS=$((DURATION_SECONDS % 60))
+            DURATION="${MINUTES}m ${SECONDS}s"
+          else
+            HOURS=$((DURATION_SECONDS / 3600))
+            MINUTES=$(((DURATION_SECONDS % 3600) / 60))
+            SECONDS=$((DURATION_SECONDS % 60))
+            DURATION="${HOURS}h ${MINUTES}m ${SECONDS}s"
+          fi
+          
+          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+
+      - name: Notify n8n Success
+        if: success()
+        run: |
+          curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
+            -d "{
+              \"chatId\": \"${{ secrets.CHAT_ID }}\",
+              \"threadId\": \"${{ secrets.THREAD_ID }}\",
+              \"message\": \"✅ Spooliq Web Production Deploy Success\n\n🚀 Version: ${{ steps.version-strategy.outputs.version }}\n📦 Tag: ${{ steps.version-strategy.outputs.tag }}\n👤 Author: ${{ github.actor }}\n🌐 URL: https://spooliq.rodolfodebonis.com.br\n⏱️ Duration: ${{ steps.build-duration.outputs.duration }}\n🔗 Release: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version-strategy.outputs.tag }}\"
+            }"
+
+      - name: Notify n8n Failure
+        if: failure()
+        run: |
+          curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
+            -d "{
+              \"chatId\": \"${{ secrets.CHAT_ID }}\",
+              \"threadId\": \"${{ secrets.THREAD_ID }}\",
+              \"message\": \"❌ Spooliq Web Production Deploy Failed\n\n🚀 Version: ${{ steps.version-strategy.outputs.version }}\n📦 Tag: ${{ steps.version-strategy.outputs.tag }}\n👤 Author: ${{ github.actor }}\n⏱️ Duration: ${{ steps.build-duration.outputs.duration }}\n\n🔗 Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+            }"

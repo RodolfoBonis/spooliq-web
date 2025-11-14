@@ -1,0 +1,233 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (leave empty for auto-increment)'
+        required: false
+        type: string
+      increment_type:
+        description: 'Version increment type'
+        required: false
+        type: choice
+        default: 'minor'
+        options:
+          - major
+          - minor
+          - patch
+      from_branch:
+        description: 'Branch to create release from'
+        required: false
+        type: choice
+        default: 'develop'
+        options:
+          - develop
+          - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  prepare-release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release_branch: ${{ steps.create_branch.outputs.branch }}
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.from_branch }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            # Get current version from package.json
+            CURRENT_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "")
+
+            # If no version in package.json, try getting from last tag
+            if [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" == "undefined" ]; then
+              CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0")
+            fi
+
+            # Parse version components
+            MAJOR=$(echo $CURRENT_VERSION | cut -d. -f1)
+            MINOR=$(echo $CURRENT_VERSION | cut -d. -f2)
+            PATCH=$(echo $CURRENT_VERSION | cut -d. -f3)
+
+            # Increment based on type
+            case "${{ inputs.increment_type }}" in
+              major)
+                MAJOR=$((MAJOR + 1))
+                MINOR=0
+                PATCH=0
+                ;;
+              minor)
+                MINOR=$((MINOR + 1))
+                PATCH=0
+                ;;
+              patch)
+                PATCH=$((PATCH + 1))
+                ;;
+            esac
+
+            VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          fi
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "New release version: ${VERSION}"
+
+      - name: Create release branch
+        id: create_branch
+        run: |
+          BRANCH="release/v${{ steps.version.outputs.version }}"
+          git checkout -b $BRANCH
+          echo "branch=${BRANCH}" >> $GITHUB_OUTPUT
+
+      - name: Update package.json version
+        run: |
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+
+      - name: Commit version change
+        run: |
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to ${{ steps.version.outputs.version }}"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get the last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          # Generate commit list
+          if [ -z "$LAST_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges)
+          else
+            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          fi
+
+          # Create changelog entry
+          CHANGELOG_ENTRY="## [v${{ steps.version.outputs.version }}] - $(date +%Y-%m-%d)
+
+          ${COMMITS}
+
+          "
+
+          # Save to temp file for later use
+          echo "$CHANGELOG_ENTRY" > /tmp/changelog_entry.md
+
+          # Prepend to CHANGELOG.md if it exists, otherwise create it
+          if [ -f CHANGELOG.md ]; then
+            # Insert after the header
+            sed -i '1,/^## /!b; /^## /i\
+          '"$CHANGELOG_ENTRY" CHANGELOG.md
+          else
+            cat > CHANGELOG.md <<EOF
+          # Changelog
+
+          All notable changes to Spooliq Web will be documented in this file.
+
+          The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+          $CHANGELOG_ENTRY
+          EOF
+          fi
+
+          # Store changelog for PR body (escape for JSON)
+          CHANGELOG_FOR_PR=$(cat /tmp/changelog_entry.md | sed 's/$/\\n/' | tr -d '\n')
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG_FOR_PR" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Commit changelog
+        run: |
+          git add CHANGELOG.md
+          git commit -m "docs: update CHANGELOG for v${{ steps.version.outputs.version }}"
+
+      - name: Push release branch
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          git push origin ${{ steps.create_branch.outputs.branch }}
+
+      - name: Create PR to main
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh pr create \
+            --base main \
+            --head ${{ steps.create_branch.outputs.branch }} \
+            --title "🚀 Release v${{ steps.version.outputs.version }}" \
+            --label "release,automated" \
+            --body "$(cat <<'EOF'
+          ## 🚀 Release v${{ steps.version.outputs.version }}
+
+          ### Changelog
+
+          $(cat /tmp/changelog_entry.md)
+
+          ### Release Checklist
+          - [ ] All features tested and working
+          - [ ] Documentation updated
+          - [ ] Breaking changes documented (if any)
+          - [ ] Migration guide provided (if needed)
+          - [ ] Performance tested
+          - [ ] Security reviewed
+
+          ### Deployment Process
+          1. ✅ Merge this PR to \`main\`
+          2. 🚀 Automatic deployment to **production**
+          3. 🏷️ Git tag will be created automatically
+          4. 📦 GitHub release will be published
+          5. 🔄 Changes will be backported to \`develop\`
+
+          ### Post-Merge Actions
+          - Production deployment via ArgoCD
+          - GitHub release creation
+          - Automatic backport to develop
+          - Notification via n8n/Telegram
+
+          ---
+          🤖 _This release PR was created automatically by the prepare-release workflow_
+          EOF
+          )"
+
+      - name: Create draft backport PR preview
+        if: inputs.from_branch == 'develop'
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          # This creates a preview of what will be backported
+          # The actual backport will happen after release is merged
+          echo "Backport to develop will be created automatically after release merge"
+
+          gh pr comment $(gh pr list --head ${{ steps.create_branch.outputs.branch }} --json number -q '.[0].number') \
+            --body "ℹ️ After this release is merged to main, a backport PR to \`develop\` will be created automatically."
+
+      - name: Notify release prepared
+        env:
+          N8N_WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
+          N8N_API_TOKEN: ${{ secrets.N8N_API_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          THREAD_ID: ${{ secrets.THREAD_ID }}
+        run: |
+          curl -X POST "$N8N_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $N8N_API_TOKEN" \
+            -d "{
+              \"chatId\": \"$CHAT_ID\",
+              \"threadId\": \"$THREAD_ID\",
+              \"message\": \"🚀 Release v${{ steps.version.outputs.version }} Prepared\n\n🌿 Branch: ${{ steps.create_branch.outputs.branch }}\n📋 Increment: ${{ inputs.increment_type }}\n📦 From: ${{ inputs.from_branch }}\n👤 Created by: ${{ github.actor }}\n🔗 PR: https://github.com/${{ github.repository }}/pulls\n\n✅ Ready for review and approval\"
+            }"
