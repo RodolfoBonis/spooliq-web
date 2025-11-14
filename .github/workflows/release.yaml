@@ -85,8 +85,8 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq-web:latest
-            ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq-web:${{ steps.version-strategy.outputs.version }}
+            ${{ steps.ecr.outputs.registry }}/rodolfobonis/spooliq-web:latest
+            ${{ steps.ecr.outputs.registry }}/rodolfobonis/spooliq-web:${{ steps.version-strategy.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -120,15 +120,15 @@ jobs:
           release_name: Release ${{ steps.version-strategy.outputs.tag }}
           body: |
             ## Changes in this Release
-            - Docker image: `${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq-web:${{ steps.version-strategy.outputs.version }}`
+            - Docker image: `${{ steps.ecr.outputs.registry }}/rodolfobonis/spooliq-web:${{ steps.version-strategy.outputs.version }}`
             - Automated release from CI pipeline
-            
+
             ### Docker Run Command
             ```bash
             docker run -p 3000:3000 \
               -e NEXT_PUBLIC_API_URL=your_api_url \
               -e NEXT_PUBLIC_CDN_API_KEY=your_cdn_key \
-              ${{ steps.ecr.outputs.registry }}/${{ steps.repo-owner.outputs.lowercase }}/spooliq-web:${{ steps.version-strategy.outputs.version }}
+              ${{ steps.ecr.outputs.registry }}/rodolfobonis/spooliq-web:${{ steps.version-strategy.outputs.version }}
             ```
           draft: false
           prerelease: false

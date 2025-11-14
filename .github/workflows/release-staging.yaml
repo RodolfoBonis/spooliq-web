@@ -12,8 +12,8 @@ on:
 
 env:
   NODE_VERSION: '20'
-  AWS_REGION: 'us-east-1'
-  ECR_REPOSITORY: 'spooliq-web'
+  AWS_REGION: 'sa-east-1'
+  ECR_REPOSITORY: 'rodolfobonis/spooliq-web'
 
 jobs:
   release-staging:
