@@ -126,7 +126,7 @@ jobs:
             ### Docker Run Command
             ```bash
             docker run -p 3000:3000 \
-              -e NEXT_PUBLIC_API_URL=your_api_url \
+              -e API_URL=your_api_url \
               -e NEXT_PUBLIC_CDN_API_KEY=your_cdn_key \
               ${{ steps.ecr.outputs.registry }}/rodolfobonis/spooliq-web:${{ steps.version-strategy.outputs.version }}
             ```

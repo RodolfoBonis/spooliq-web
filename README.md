@@ -108,7 +108,7 @@ npm run lint     # Lint com ESLint
 ## 🌐 Variáveis de Ambiente
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:8080/v1
+API_URL=http://localhost:8080/v1
 ```
 
 ## 📝 Convenções de Código

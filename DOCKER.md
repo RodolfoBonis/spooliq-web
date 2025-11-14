@@ -26,7 +26,7 @@ cp .env.docker.example .env.docker
 ```
 
 2. Update `.env.docker` with your actual values:
-   - `NEXT_PUBLIC_API_URL`: Your API endpoint
+   - `API_URL`: Your API endpoint
    - `NEXT_PUBLIC_CDN_API_KEY`: Your CDN API key
 
 ## Running the Application
@@ -92,7 +92,7 @@ docker run -p 3000:3000 --env-file .env.docker spooliq-web:latest
 
 # Run with custom environment variables
 docker run -p 3000:3000 \
-  -e NEXT_PUBLIC_API_URL=http://your-api:8080/v1 \
+  -e API_URL=http://your-api:8080/v1 \
   -e NODE_ENV=production \
   spooliq-web:latest
 
@@ -139,7 +139,7 @@ docker image prune -a
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `NEXT_PUBLIC_API_URL` | Backend API endpoint | `http://localhost:8080/v1` |
+| `API_URL` | Backend API endpoint | `http://localhost:8080/v1` |
 | `NEXT_PUBLIC_CDN_API_KEY` | CDN API key for image uploads | - |
 | `NODE_ENV` | Node environment | `production` |
 | `PORT` | Application port | `3000` |
@@ -170,7 +170,7 @@ docker-compose logs web
 
 If your API is running on the host machine:
 - Use `host.docker.internal` instead of `localhost` in the API URL
-- Example: `NEXT_PUBLIC_API_URL=http://host.docker.internal:8080/v1`
+- Example: `API_URL=http://host.docker.internal:8080/v1`
 
 ### Hot reload not working in development
 

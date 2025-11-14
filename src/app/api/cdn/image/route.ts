@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateOrigin, unauthorizedOriginResponse } from '@/lib/api/origin-validator'
 
 export async function GET(request: NextRequest) {
+  // Validate request origin in production
+  if (!validateOrigin(request)) {
+    return unauthorizedOriginResponse()
+  }
+
   try {
+
     const url = request.nextUrl.searchParams.get('url')
 
     if (!url) {
@@ -25,12 +32,15 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    console.log('CDN API KEY', process.env.CDN_API_KEY);
     // Fetch image from CDN with API key
     const response = await fetch(url, {
       headers: {
         'X-API-KEY': process.env.CDN_API_KEY || '',
       },
     })
+
+    console.log(response.body);
 
     if (!response.ok) {
       return NextResponse.json(

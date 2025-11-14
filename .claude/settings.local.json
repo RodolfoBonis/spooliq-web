@@ -133,7 +133,8 @@
       "Read(/Users/rodolfodebonis/Documents/projects/spooliq copy/**)",
       "Bash(test -f:*)",
       "Bash(git mv:*)",
-      "Bash(git grep:*)"
+      "Bash(git grep:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []

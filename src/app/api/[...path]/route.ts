@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateOrigin, unauthorizedOriginResponse } from '@/lib/api/origin-validator'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/v1'
+const API_BASE_URL = process.env.API_URL || 'http://localhost:8080/v1'
 const API_BASE = new URL(API_BASE_URL)
 const API_ORIGIN = `${API_BASE.protocol}//${API_BASE.host}`
 
@@ -44,6 +45,11 @@ async function proxyRequest(
   pathSegments: string[],
   method: string
 ) {
+  // Validate request origin in production
+  if (!validateOrigin(request)) {
+    return unauthorizedOriginResponse()
+  }
+
   try {
     // Reconstruct the path with trailing slash preserved
     const path = pathSegments.join('/')

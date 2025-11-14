@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateOrigin, unauthorizedOriginResponse } from '@/lib/api/origin-validator'
 
 export async function GET(request: NextRequest) {
+  // Validate request origin in production
+  if (!validateOrigin(request)) {
+    return unauthorizedOriginResponse()
+  }
+
   try {
+
     const url = request.nextUrl.searchParams.get('url')
 
     if (!url) {
