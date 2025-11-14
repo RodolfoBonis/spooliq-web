@@ -9,21 +9,22 @@ export interface BudgetFilters {
   search?: string
 }
 
+export interface BudgetListItem extends Budget {
+  customer: {
+    id: string
+    name: string
+    email?: string
+    phone?: string
+    document?: string
+  }
+  items: any[]
+  total_print_time_hours: number
+  total_print_time_minutes: number
+  total_print_time_display: string
+}
+
 export interface BudgetListResponse {
-  data: Array<{
-    budget: Budget
-    customer: { 
-      id: string
-      name: string
-      email?: string
-      phone?: string
-      document?: string
-    }
-    items: any[]
-    total_print_time_hours: number
-    total_print_time_minutes: number
-    total_print_time_display: string
-  }>
+  data: BudgetListItem[]
   total: number
   page: number
   page_size: number
