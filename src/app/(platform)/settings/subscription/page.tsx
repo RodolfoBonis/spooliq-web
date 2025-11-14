@@ -12,10 +12,10 @@ import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import subscriptionService from '@/services/subscription-service'
 import { usePaymentMethods } from '@/lib/hooks/use-payment-methods'
-import { PaymentMethodCard } from '@/components/subscription/PaymentMethodCard'
-import { AddPaymentMethodModal } from '@/components/subscription/AddPaymentMethodModal'
-import { PlanSelectionModal } from '@/components/subscription/PlanSelectionModal'
-import { CancelSubscriptionModal } from '@/components/subscription/CancelSubscriptionModal'
+import { PaymentMethodCard } from '@/components/subscription/payment-method-card'
+import { AddPaymentMethodModal } from '@/components/subscription/add-payment-method-modal'
+import { PlanSelectionModal } from '@/components/subscription/plan-selection-modal'
+import { CancelSubscriptionModal } from '@/components/subscription/cancel-subscription-modal'
 
 export default function SubscriptionPage() {
   const { user } = useAuthStore()

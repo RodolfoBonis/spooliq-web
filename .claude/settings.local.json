@@ -131,7 +131,9 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Read(/Users/rodolfodebonis/Documents/projects/spooliq copy/**)",
-      "Bash(test -f:*)"
+      "Bash(test -f:*)",
+      "Bash(git mv:*)",
+      "Bash(git grep:*)"
     ],
     "deny": [],
     "ask": []
