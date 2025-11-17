@@ -18,6 +18,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge, STATUS_CONFIG } from '@/components/budgets/status-badge'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import { EmptyState } from '@/components/common/empty-state'
+import { CostBreakdownBar } from '@/components/budgets/cost-breakdown-bar'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   useBudget,
   useDeleteBudget,
@@ -257,7 +260,50 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
                           {formatCurrency(item.unit_price)}
                         </p>
                       </div>
+                      {item.setup_time_minutes > 0 && (
+                        <div>
+                          <p className="text-neutral-500">Tempo de Setup</p>
+                          <p className="font-medium">{item.setup_time_minutes} min</p>
+                        </div>
+                      )}
+                      {item.manual_labor_minutes_total > 0 && (
+                        <div>
+                          <p className="text-neutral-500">Mão de Obra Manual</p>
+                          <p className="font-medium">
+                            {item.manual_labor_minutes_total} min (total)
+                          </p>
+                        </div>
+                      )}
                     </div>
+
+                    {/* Labor Cost Breakdown */}
+                    {(item.setup_cost > 0 || item.manual_labor_cost > 0) && (
+                      <div className="mt-3 p-3 bg-neutral-50 rounded-lg space-y-2">
+                        <p className="text-xs font-medium text-neutral-700">
+                          Custos de Mão de Obra:
+                        </p>
+                        {item.setup_cost > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-neutral-600">
+                              Setup ({item.setup_time_minutes} min)
+                            </span>
+                            <span className="font-medium">
+                              {formatCurrency(item.setup_cost)}
+                            </span>
+                          </div>
+                        )}
+                        {item.manual_labor_cost > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-neutral-600">
+                              Trabalho Manual ({item.manual_labor_minutes_total} min total)
+                            </span>
+                            <span className="font-medium">
+                              {formatCurrency(item.manual_labor_cost)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Filaments */}
                     <div className="space-y-2">
@@ -390,43 +436,124 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
           {/* Cost Breakdown */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <DollarSign className="h-5 w-5" />
-                Custos
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <DollarSign className="h-5 w-5" />
+                  Custos
+                </CardTitle>
+                {/* Legacy calculation badge */}
+                {budget.items.some((item: any) =>
+                  item.setup_time_minutes === undefined ||
+                  item.manual_labor_minutes_total === undefined
+                ) && (
+                  <Badge variant="outline" className="bg-yellow-50 border-yellow-300 text-yellow-700">
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    Cálculo Antigo
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
+              {/* Legacy calculation warning */}
+              {budget.items.some((item: any) =>
+                item.setup_time_minutes === undefined ||
+                item.manual_labor_minutes_total === undefined
+              ) && (
+                <Alert className="bg-yellow-50 border-yellow-200">
+                  <AlertCircle className="h-4 w-4 text-yellow-600" />
+                  <AlertTitle className="text-yellow-800">
+                    Este orçamento usa cálculo antigo
+                  </AlertTitle>
+                  <AlertDescription className="text-yellow-700 text-sm">
+                    Recomendamos duplicar e recalcular para usar o novo modelo de custos com breakdown detalhado de mão de obra.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Direct Costs */}
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                  Custos Diretos
+                </p>
+                <CostBreakdownBar
+                  label="Filamentos"
+                  amount={budget.filament_cost}
+                  total={budget.total_cost}
+                  color="blue"
+                />
+                {budget.include_waste_cost && budget.waste_cost > 0 && (
+                  <CostBreakdownBar
+                    label="Desperdício (AMS)"
+                    amount={budget.waste_cost}
+                    total={budget.total_cost}
+                    color="red"
+                  />
+                )}
+                {budget.include_energy_cost && budget.energy_cost > 0 && (
+                  <CostBreakdownBar
+                    label="Energia"
+                    amount={budget.energy_cost}
+                    total={budget.total_cost}
+                    color="yellow"
+                  />
+                )}
+                {budget.setup_cost > 0 && (
+                  <CostBreakdownBar
+                    label="Setup"
+                    amount={budget.setup_cost}
+                    total={budget.total_cost}
+                    color="orange"
+                  />
+                )}
+                {budget.labor_cost > 0 && (
+                  <CostBreakdownBar
+                    label="Mão de Obra Manual"
+                    amount={budget.labor_cost}
+                    total={budget.total_cost}
+                    color="purple"
+                  />
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Subtotal */}
               <div className="flex items-center justify-between text-sm">
-                <span className="text-neutral-600">Filamentos</span>
-                <span className="font-medium">
-                  {formatCurrency(budget.filament_cost)}
+                <span className="text-neutral-700 font-medium">Subtotal</span>
+                <span className="font-semibold">
+                  {formatCurrency(
+                    budget.filament_cost +
+                    budget.waste_cost +
+                    budget.energy_cost +
+                    (budget.setup_cost || 0) +
+                    budget.labor_cost
+                  )}
                 </span>
               </div>
-              {budget.include_waste_cost && budget.waste_cost > 0 && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-neutral-600">Desperdício (AMS)</span>
-                  <span className="font-medium">
-                    {formatCurrency(budget.waste_cost)}
-                  </span>
-                </div>
+
+              {/* Overhead */}
+              {budget.overhead_cost > 0 && (
+                <CostBreakdownBar
+                  label="Overhead"
+                  amount={budget.overhead_cost}
+                  total={budget.total_cost}
+                  color="yellow"
+                />
               )}
-              {budget.include_energy_cost && budget.energy_cost > 0 && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-neutral-600">Energia</span>
-                  <span className="font-medium">
-                    {formatCurrency(budget.energy_cost)}
-                  </span>
-                </div>
+
+              {/* Profit */}
+              {budget.profit_amount > 0 && (
+                <CostBreakdownBar
+                  label="Margem de Lucro"
+                  amount={budget.profit_amount}
+                  total={budget.total_cost}
+                  color="green"
+                />
               )}
-              {budget.labor_cost > 0 && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-neutral-600">Mão de Obra</span>
-                  <span className="font-medium">
-                    {formatCurrency(budget.labor_cost)}
-                  </span>
-                </div>
-              )}
+
               <Separator />
+
+              {/* Total */}
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-neutral-900">Total</span>
                 <span className="text-2xl font-bold text-primary-600">

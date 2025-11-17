@@ -45,7 +45,8 @@ export interface CreateBudgetItemDTO {
   print_time_hours: number
   print_time_minutes: number
   cost_preset_id?: string
-  additional_labor_cost?: number // cents
+  setup_time_minutes: number // Setup time in minutes (one-time)
+  manual_labor_minutes_total: number // Total manual labor for all units
   additional_notes?: string
   filaments: CreateBudgetItemFilamentDTO[]
   order: number

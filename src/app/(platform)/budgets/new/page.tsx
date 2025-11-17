@@ -19,8 +19,14 @@ import { CostPresetSelect } from '@/components/presets/cost-preset-select'
 import { useCreateBudget } from '@/lib/hooks/use-budgets'
 import { createBudgetSchema, type CreateBudgetFormData } from '@/lib/validations/budget'
 import { formatCurrency, getColorPreviewStyle } from '@/lib/utils/format'
-import { Plus, Trash2, Save, ArrowLeft } from 'lucide-react'
+import { Plus, Trash2, Save, ArrowLeft, Settings, Users, Info, Clock } from 'lucide-react'
 import type { Filament } from '@/types/models'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 export default function NewBudgetPage() {
   const router = useRouter()
@@ -46,7 +52,8 @@ export default function NewBudgetPage() {
           print_time_hours: 0,
           print_time_minutes: 0,
           cost_preset_id: undefined,
-          additional_labor_cost: 0,
+          setup_time_minutes: 0,
+          manual_labor_minutes_total: 0,
           additional_notes: '',
           filaments: [],
           order: 0,
@@ -77,7 +84,8 @@ export default function NewBudgetPage() {
       print_time_hours: 0,
       print_time_minutes: 0,
       cost_preset_id: undefined,
-      additional_labor_cost: 0,
+      setup_time_minutes: 0,
+      manual_labor_minutes_total: 0,
       additional_notes: '',
       filaments: [],
       order: items.length,
@@ -126,7 +134,9 @@ export default function NewBudgetPage() {
       return sum + calculateFilamentCost(f.filament_id, f.quantity)
     }, 0)
 
-    return filamentCost + (item.additional_labor_cost || 0)
+    // Note: Setup and labor costs will be calculated by backend
+    // This is just a preview of filament costs
+    return filamentCost
   }
 
   const calculateBudgetTotal = (): number => {
@@ -447,25 +457,95 @@ export default function NewBudgetPage() {
                   placeholder="Selecione um preset"
                 />
                 
-                <div>
-                  <Label>Custo Adicional de Mão de Obra (R$)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0,00"
-                    onChange={(e) => {
-                      const value = parseFloat(e.target.value) || 0
-                      form.setValue(
-                        `items.${itemIndex}.additional_labor_cost`,
-                        Math.round(value * 100) // Convert to cents
-                      )
-                    }}
-                  />
-                  <p className="text-xs text-neutral-500 mt-1">
-                    Custos extras como pintura, acabamento, etc.
-                  </p>
-                </div>
+                {/* Labor Time Card */}
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Tempo de Trabalho Manual
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {/* Setup Time */}
+                      <div className="bg-white p-3 rounded-lg border">
+                        <TooltipProvider>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Label className="flex items-center gap-2">
+                              <Settings className="h-3 w-3" />
+                              Setup (uma vez)
+                            </Label>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Info className="h-3 w-3 text-neutral-400" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p className="text-xs">
+                                  O tempo de setup é cobrado UMA VEZ por produto, independente da quantidade.
+                                  Inclui: preparação da impressora, troca de filamento, calibração, etc.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
+                        <Input
+                          type="number"
+                          min="0"
+                          placeholder="Ex: 15"
+                          {...form.register(`items.${itemIndex}.setup_time_minutes`, {
+                            valueAsNumber: true,
+                          })}
+                        />
+                        <p className="text-xs text-neutral-500 mt-1">
+                          Minutos para preparar a máquina
+                        </p>
+                      </div>
+
+                      {/* Manual Labor */}
+                      <div className="bg-white p-3 rounded-lg border">
+                        <TooltipProvider>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Label className="flex items-center gap-2">
+                              <Users className="h-3 w-3" />
+                              Trabalho Manual (total)
+                            </Label>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Info className="h-3 w-3 text-neutral-400" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p className="text-xs">
+                                  Tempo total de trabalho manual para TODAS as {form.watch(`items.${itemIndex}.product_quantity`)} unidades.
+                                  Inclui: pintura, lixamento, acabamento, embalagem, controle de qualidade, etc.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
+                        <Input
+                          type="number"
+                          min="0"
+                          placeholder="Ex: 60"
+                          {...form.register(`items.${itemIndex}.manual_labor_minutes_total`, {
+                            valueAsNumber: true,
+                          })}
+                        />
+                        <p className="text-xs text-neutral-500 mt-1">
+                          Minutos de trabalho para todas as unidades
+                        </p>
+                        {form.watch(`items.${itemIndex}.product_quantity`) > 1 &&
+                         form.watch(`items.${itemIndex}.manual_labor_minutes_total`) > 0 && (
+                          <p className="text-xs text-primary-600 mt-1 font-medium">
+                            ≈ {Math.round(
+                              form.watch(`items.${itemIndex}.manual_labor_minutes_total`) /
+                              form.watch(`items.${itemIndex}.product_quantity`)
+                            )} min/unidade
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Item Total */}
