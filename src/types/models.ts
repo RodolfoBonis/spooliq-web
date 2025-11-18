@@ -168,8 +168,16 @@ export interface Customer {
   notes?: string
   budgets_count?: number
   total_spent?: number // cents
+  budgets?: CustomerBudget[]
   created_at: string
   updated_at: string
+}
+
+export interface CustomerBudget {
+    id: string
+    name: string
+    status: BudgetStatus
+    total_cost: number
 }
 
 export type ColorType = 'solid' | 'gradient' | 'duo' | 'rainbow'
