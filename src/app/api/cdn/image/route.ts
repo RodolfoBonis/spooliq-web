@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log('CDN API KEY', process.env.CDN_API_KEY);
     // Fetch image from CDN with API key
     const response = await fetch(url, {
       headers: {

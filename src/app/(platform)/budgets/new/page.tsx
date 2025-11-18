@@ -21,6 +21,7 @@ import { useMachinePreset, useEnergyPreset, useCostPreset } from '@/lib/hooks/us
 import { createBudgetSchema, type CreateBudgetFormData } from '@/lib/validations/budget'
 import { formatCurrency, getColorPreviewStyle } from '@/lib/utils/format'
 import {
+  calculateSingleFilamentCost,
   calculateFilamentCost,
   calculateWasteCost,
   calculateEnergyCost,
@@ -472,7 +473,7 @@ export default function NewBudgetPage() {
                 <div className="space-y-3">
                   {(form.watch(`items.${itemIndex}.filaments`) || []).map((f, fIndex) => {
                     const filament = getFilament(f.filament_id)
-                    const cost = calculateFilamentCost(f.filament_id, f.quantity)
+                    const cost = calculateSingleFilamentCost(filament, f.quantity)
 
                     return (
                       <div
@@ -651,7 +652,7 @@ export default function NewBudgetPage() {
                   Total do Item:
                 </span>
                 <span className="text-lg font-bold text-primary-600">
-                  {formatCurrency(calculateItemTotal(itemIndex))}
+                  {formatCurrency(calculateItemTotalCost(itemIndex))}
                 </span>
               </div>
             </CardContent>
@@ -881,7 +882,7 @@ export default function NewBudgetPage() {
               <div>
                 <p className="text-sm text-neutral-600">Total do Orçamento:</p>
                 <p className="text-3xl font-bold text-primary-600">
-                  {formatCurrency(calculateBudgetTotal())}
+                  {formatCurrency(calculateBudgetTotalCost())}
                 </p>
                 <p className="text-xs text-neutral-500 mt-1">
                   * Valores de energia e desperdício serão calculados no backend
