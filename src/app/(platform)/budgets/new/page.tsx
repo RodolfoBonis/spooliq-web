@@ -17,10 +17,24 @@ import { MachinePresetSelect } from '@/components/presets/machine-preset-select'
 import { EnergyPresetSelect } from '@/components/presets/energy-preset-select'
 import { CostPresetSelect } from '@/components/presets/cost-preset-select'
 import { useCreateBudget } from '@/lib/hooks/use-budgets'
+import { useMachinePreset, useEnergyPreset, useCostPreset } from '@/lib/hooks/use-presets'
 import { createBudgetSchema, type CreateBudgetFormData } from '@/lib/validations/budget'
 import { formatCurrency, getColorPreviewStyle } from '@/lib/utils/format'
-import { Plus, Trash2, Save, ArrowLeft, Settings, Users, Info, Clock } from 'lucide-react'
-import type { Filament } from '@/types/models'
+import {
+  calculateFilamentCost,
+  calculateWasteCost,
+  calculateEnergyCost,
+  calculateSetupCost,
+  calculateManualLaborCost,
+  calculateItemTotal,
+  calculateBudgetSubtotal,
+  calculateOverheadCost,
+  calculateProfitAmount,
+  calculateBudgetTotal,
+} from '@/lib/utils/budget-calculations'
+import { Plus, Trash2, Save, ArrowLeft, Settings, Users, Info, Clock, DollarSign } from 'lucide-react'
+import type { Filament, MachinePreset, EnergyPreset, CostPreset } from '@/types/models'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Tooltip,
   TooltipContent,
@@ -66,6 +80,20 @@ export default function NewBudgetPage() {
     control: form.control,
     name: 'items',
   })
+
+  // Fetch preset data for calculations
+  const machinePresetId = form.watch('machine_preset_id')
+  const energyPresetId = form.watch('energy_preset_id')
+
+  const { data: machinePreset } = useMachinePreset(machinePresetId || '')
+  const { data: energyPreset } = useEnergyPreset(energyPresetId || '')
+
+  // Track cost presets for each item (using first item's preset for budget-level calculations)
+  const [itemCostPresets, setItemCostPresets] = useState<Record<number, CostPreset | undefined>>({})
+
+  // Fetch cost preset for first item (used for budget-level overhead/profit)
+  const firstItemCostPresetId = form.watch('items.0.cost_preset_id')
+  const { data: firstItemCostPreset } = useCostPreset(firstItemCostPresetId || '')
 
   const onSubmit = (data: CreateBudgetFormData) => {
     createBudget(data, {
@@ -119,28 +147,97 @@ export default function NewBudgetPage() {
     return selectedFilaments[filamentId]
   }
 
-  const calculateFilamentCost = (filamentId: string, grams: number): number => {
-    const filament = getFilament(filamentId)
-    if (!filament) return 0
-    // price_per_kg is in cents, so: (cents / 1000g) * grams
-    return Math.round((filament.price_per_kg / 1000) * grams)
+  // Helper to get cost preset for an item
+  const getCostPresetForItem = (itemIndex: number): CostPreset | undefined => {
+    const itemCostPresetId = form.watch(`items.${itemIndex}.cost_preset_id`)
+    // For simplicity, we'll use firstItemCostPreset for all items in preview
+    // This matches backend behavior which uses first available cost preset
+    return itemCostPresetId ? firstItemCostPreset : undefined
   }
 
-  const calculateItemTotal = (itemIndex: number): number => {
+  // Calculate individual item costs using imported functions
+  const calculateItemFilamentCost = (itemIndex: number): number => {
+    const item = form.getValues(`items.${itemIndex}`)
+    if (!item) return 0
+    return calculateFilamentCost(item, getFilament)
+  }
+
+  const calculateItemWasteCost = (itemIndex: number): number => {
+    const item = form.getValues(`items.${itemIndex}`)
+    if (!item) return 0
+    return calculateWasteCost(item, form.watch('include_waste_cost'), getFilament)
+  }
+
+  const calculateItemEnergyCost = (itemIndex: number): number => {
+    const item = form.getValues(`items.${itemIndex}`)
+    if (!item) return 0
+    return calculateEnergyCost(item, form.watch('include_energy_cost'), machinePreset, energyPreset)
+  }
+
+  const calculateItemSetupCost = (itemIndex: number): number => {
+    const item = form.getValues(`items.${itemIndex}`)
+    if (!item) return 0
+    return calculateSetupCost(item, getCostPresetForItem(itemIndex))
+  }
+
+  const calculateItemManualLaborCost = (itemIndex: number): number => {
+    const item = form.getValues(`items.${itemIndex}`)
+    if (!item) return 0
+    return calculateManualLaborCost(item, getCostPresetForItem(itemIndex))
+  }
+
+  const calculateItemTotalCost = (itemIndex: number): number => {
     const item = form.getValues(`items.${itemIndex}`)
     if (!item) return 0
 
-    const filamentCost = (item.filaments || []).reduce((sum, f) => {
-      return sum + calculateFilamentCost(f.filament_id, f.quantity)
-    }, 0)
+    const budget = {
+      include_energy_cost: form.watch('include_energy_cost'),
+      include_waste_cost: form.watch('include_waste_cost'),
+      items: form.getValues('items'),
+    }
 
-    // Note: Setup and labor costs will be calculated by backend
-    // This is just a preview of filament costs
-    return filamentCost
+    return calculateItemTotal(
+      item,
+      budget,
+      getFilament,
+      machinePreset,
+      energyPreset,
+      getCostPresetForItem(itemIndex)
+    )
   }
 
-  const calculateBudgetTotal = (): number => {
-    return items.reduce((sum, _, index) => sum + calculateItemTotal(index), 0)
+  const calculateBudgetSubtotalCost = (): number => {
+    const budget = {
+      include_energy_cost: form.watch('include_energy_cost'),
+      include_waste_cost: form.watch('include_waste_cost'),
+      items: form.getValues('items'),
+    }
+
+    return calculateBudgetSubtotal(
+      budget,
+      getFilament,
+      machinePreset,
+      energyPreset,
+      getCostPresetForItem
+    )
+  }
+
+  const calculateBudgetOverheadCost = (): number => {
+    const subtotal = calculateBudgetSubtotalCost()
+    return calculateOverheadCost(subtotal, firstItemCostPreset)
+  }
+
+  const calculateBudgetProfitAmount = (): number => {
+    const subtotal = calculateBudgetSubtotalCost()
+    const overhead = calculateBudgetOverheadCost()
+    return calculateProfitAmount(subtotal, overhead, firstItemCostPreset)
+  }
+
+  const calculateBudgetTotalCost = (): number => {
+    const subtotal = calculateBudgetSubtotalCost()
+    const overhead = calculateBudgetOverheadCost()
+    const profit = calculateBudgetProfitAmount()
+    return subtotal + overhead + profit
   }
 
   return (
@@ -571,6 +668,170 @@ export default function NewBudgetPage() {
           <Plus className="mr-2 h-4 w-4" />
           Adicionar Item
         </Button>
+
+        {/* Cost Preview Card */}
+        <Card className="bg-gradient-to-br from-primary-50 to-blue-50 border-primary-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-primary-600" />
+              Prévia de Custos
+            </CardTitle>
+            <CardDescription>
+              Estimativa calculada com base nos dados e presets selecionados
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Preset Status Indicators */}
+            <div className="flex flex-wrap gap-2">
+              {machinePreset && (
+                <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
+                  ✓ Máquina
+                </span>
+              )}
+              {energyPreset && (
+                <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
+                  ✓ Energia
+                </span>
+              )}
+              {firstItemCostPreset && (
+                <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
+                  ✓ Custo
+                </span>
+              )}
+              {(!machinePreset || !energyPreset) && (
+                <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">
+                  Configure presets para estimativa completa
+                </span>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Per-Item Breakdown */}
+            {items.length > 0 && (
+              <div className="space-y-3">
+                {items.map((item, idx) => {
+                  const itemName = form.watch(`items.${idx}.product_name`) || `Item #${idx + 1}`
+                  const filamentCost = calculateItemFilamentCost(idx)
+                  const wasteCost = calculateItemWasteCost(idx)
+                  const energyCost = calculateItemEnergyCost(idx)
+                  const setupCost = calculateItemSetupCost(idx)
+                  const laborCost = calculateItemManualLaborCost(idx)
+                  const itemTotal = calculateItemTotalCost(idx)
+
+                  return (
+                    <div key={item.id} className="border-b border-primary-200 pb-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="font-medium text-sm text-neutral-900">{itemName}</p>
+                        <p className="font-semibold text-primary-600">
+                          {formatCurrency(itemTotal)}
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                        {filamentCost > 0 && (
+                          <>
+                            <span className="text-neutral-600">Filamento:</span>
+                            <span className="text-right text-neutral-900">
+                              {formatCurrency(filamentCost)}
+                            </span>
+                          </>
+                        )}
+                        {wasteCost > 0 && (
+                          <>
+                            <span className="text-neutral-600">Desperdício:</span>
+                            <span className="text-right text-neutral-900">
+                              {formatCurrency(wasteCost)}
+                            </span>
+                          </>
+                        )}
+                        {energyCost > 0 && (
+                          <>
+                            <span className="text-neutral-600">Energia:</span>
+                            <span className="text-right text-neutral-900">
+                              {formatCurrency(energyCost)}
+                            </span>
+                          </>
+                        )}
+                        {setupCost > 0 && (
+                          <>
+                            <span className="text-neutral-600">Setup:</span>
+                            <span className="text-right text-neutral-900">
+                              {formatCurrency(setupCost)}
+                            </span>
+                          </>
+                        )}
+                        {laborCost > 0 && (
+                          <>
+                            <span className="text-neutral-600">Mão de Obra:</span>
+                            <span className="text-right text-neutral-900">
+                              {formatCurrency(laborCost)}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            <Separator />
+
+            {/* Budget Totals */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-neutral-700 font-medium">Subtotal:</span>
+                <span className="font-semibold">
+                  {formatCurrency(calculateBudgetSubtotalCost())}
+                </span>
+              </div>
+
+              {firstItemCostPreset?.overhead_percentage && firstItemCostPreset.overhead_percentage > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-neutral-600">
+                    Overhead ({firstItemCostPreset.overhead_percentage}%):
+                  </span>
+                  <span className="text-neutral-900">
+                    {formatCurrency(calculateBudgetOverheadCost())}
+                  </span>
+                </div>
+              )}
+
+              {firstItemCostPreset?.profit_margin_percentage && firstItemCostPreset.profit_margin_percentage > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-neutral-600">
+                    Lucro ({firstItemCostPreset.profit_margin_percentage}%):
+                  </span>
+                  <span className="text-green-700">
+                    {formatCurrency(calculateBudgetProfitAmount())}
+                  </span>
+                </div>
+              )}
+
+              <Separator />
+
+              <div className="flex items-center justify-between pt-1">
+                <span className="font-bold text-neutral-900">Total Estimado:</span>
+                <span className="text-2xl font-bold text-primary-600">
+                  {formatCurrency(calculateBudgetTotalCost())}
+                </span>
+              </div>
+            </div>
+
+            {/* Disclaimer */}
+            <Alert className="bg-blue-50 border-blue-200">
+              <Info className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-xs text-blue-900">
+                <strong>Esta é uma estimativa.</strong> O custo final será recalculado pelo
+                sistema ao salvar o orçamento.
+                {(!machinePreset || !energyPreset) && (
+                  <> Configure os presets de máquina e energia para uma estimativa mais
+                  precisa.</>
+                )}
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
 
         {/* Commercial Info */}
         <Card>
