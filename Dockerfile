@@ -5,6 +5,9 @@ FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
+# Declare build arg for Verdaccio token
+ARG VERDACCIO_TOKEN
+
 # Copy package files
 COPY package.json package-lock.json* ./
 
@@ -20,6 +23,9 @@ RUN --mount=type=cache,target=/root/.npm \
 # Stage 2: Builder
 FROM node:20-alpine AS builder
 WORKDIR /app
+
+# Declare build arg for Verdaccio token
+ARG VERDACCIO_TOKEN
 
 # Copy package files and install all dependencies (including dev)
 COPY package.json package-lock.json* ./
