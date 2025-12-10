@@ -7,12 +7,8 @@ const nextConfig = {
   skipTrailingSlashRedirect: true,
   // Enable standalone output for Docker optimization
   output: 'standalone',
-  // ESLint configuration for build
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
-  },
+  // Note: Next.js v16 no longer runs ESLint during builds
+  // Run 'npm run lint' separately before building if needed
 }
 
 module.exports = nextConfig
