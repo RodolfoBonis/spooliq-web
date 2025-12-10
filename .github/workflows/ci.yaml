@@ -183,6 +183,12 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
+      - name: Configure Verdaccio Registry 🔐
+        run: |
+          echo "@rblab:registry=https://npm.rodolfodebonis.com.br" > .npmrc
+          echo "//npm.rodolfodebonis.com.br/:_authToken=${{ secrets.VERDACCIO_TOKEN }}" >> .npmrc
+          echo "registry=https://registry.npmjs.org/" >> .npmrc
+
       - name: Install dependencies
         run: npm ci
 
@@ -207,6 +213,12 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+
+      - name: Configure Verdaccio Registry 🔐
+        run: |
+          echo "@rblab:registry=https://npm.rodolfodebonis.com.br" > .npmrc
+          echo "//npm.rodolfodebonis.com.br/:_authToken=${{ secrets.VERDACCIO_TOKEN }}" >> .npmrc
+          echo "registry=https://registry.npmjs.org/" >> .npmrc
 
       - name: Install dependencies
         run: npm ci

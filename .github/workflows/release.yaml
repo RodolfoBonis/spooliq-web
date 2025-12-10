@@ -91,6 +91,7 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             NODE_VERSION=${{ env.NODE_VERSION }}
+            VERDACCIO_TOKEN=${{ secrets.VERDACCIO_TOKEN }}
 
       - name: Add, commit and push version increment
         if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'

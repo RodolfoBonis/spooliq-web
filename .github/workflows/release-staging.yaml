@@ -79,6 +79,7 @@ jobs:
             VERSION=${{ steps.version.outputs.version }}
             COMMIT=${{ github.sha }}
             BUILD_TIME=${{ steps.version.outputs.timestamp }}
+            VERDACCIO_TOKEN=${{ secrets.VERDACCIO_TOKEN }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
