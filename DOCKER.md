@@ -4,7 +4,8 @@ This application has been dockerized with optimization for minimal image size an
 
 ## Image Optimization Details
 
-The production Docker image uses a multi-stage build process that reduces the final image size by approximately **85%** compared to a standard approach:
+The production Docker image uses a multi-stage build process that reduces the final image size by approximately **85%**
+compared to a standard approach:
 
 - **Base image**: Node 20 Alpine (5MB vs 90MB for Debian)
 - **Multi-stage build**: Separates dependencies, building, and runtime
@@ -21,13 +22,15 @@ The production Docker image uses a multi-stage build process that reduces the fi
 ### Initial Setup
 
 1. Create the Docker environment file:
+
 ```bash
 cp .env.docker.example .env.docker
 ```
 
 2. Update `.env.docker` with your actual values:
-   - `NEXT_PUBLIC_API_URL`: Your API endpoint
-   - `NEXT_PUBLIC_CDN_API_KEY`: Your CDN API key
+    - `API_URL`: Your API endpoint
+    - `NEXT_PUBLIC_CLIENT_ID`: Your CDN Client ID
+    - `NEXT_PUBLIC_CLIENT_SECRET`: Your CDN Client Secret
 
 ## Running the Application
 
@@ -92,7 +95,7 @@ docker run -p 3000:3000 --env-file .env.docker spooliq-web:latest
 
 # Run with custom environment variables
 docker run -p 3000:3000 \
-  -e NEXT_PUBLIC_API_URL=http://your-api:8080/v1 \
+  -e API_URL=http://your-api:8080/v1 \
   -e NODE_ENV=production \
   spooliq-web:latest
 
@@ -137,13 +140,14 @@ docker image prune -a
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `NEXT_PUBLIC_API_URL` | Backend API endpoint | `http://localhost:8080/v1` |
-| `NEXT_PUBLIC_CDN_API_KEY` | CDN API key for image uploads | - |
-| `NODE_ENV` | Node environment | `production` |
-| `PORT` | Application port | `3000` |
-| `HOSTNAME` | Hostname for container | `0.0.0.0` |
+| Variable                    | Description                         | Default                    |
+|-----------------------------|-------------------------------------|----------------------------|
+| `API_URL`                   | Backend API endpoint                | `http://localhost:8080/v1` |
+| `NEXT_PUBLIC_CLIENT_ID`     | CDN Client ID for image uploads     | -                          |
+| `NEXT_PUBLIC_CLIENT_SECRET` | CDN Client Secret for image uploads | -                          |
+| `NODE_ENV`                  | Node environment                    | `production`               |
+| `PORT`                      | Application port                    | `3000`                     |
+| `HOSTNAME`                  | Hostname for container              | `0.0.0.0`                  |
 
 ## Health Checks
 
@@ -162,6 +166,7 @@ curl http://localhost:3000/api/health
 ### Container won't start
 
 Check logs for errors:
+
 ```bash
 docker-compose logs web
 ```
@@ -169,12 +174,14 @@ docker-compose logs web
 ### Application can't connect to backend API
 
 If your API is running on the host machine:
+
 - Use `host.docker.internal` instead of `localhost` in the API URL
-- Example: `NEXT_PUBLIC_API_URL=http://host.docker.internal:8080/v1`
+- Example: `API_URL=http://host.docker.internal:8080/v1`
 
 ### Hot reload not working in development
 
 Ensure volumes are mounted correctly:
+
 ```bash
 docker-compose -f docker-compose.dev.yml config
 ```
@@ -182,6 +189,7 @@ docker-compose -f docker-compose.dev.yml config
 ### Permission issues
 
 If you encounter permission errors, ensure the files have correct ownership:
+
 ```bash
 # Fix permissions
 sudo chown -R $(whoami):$(whoami) .
@@ -241,6 +249,7 @@ The Docker setup includes several optimizations:
 ## Monitoring
 
 Monitor container metrics:
+
 ```bash
 # CPU and memory usage
 docker stats spooliq-web

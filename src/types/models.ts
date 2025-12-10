@@ -74,7 +74,10 @@ export interface Budget {
   filament_cost: number
   waste_cost: number
   energy_cost: number
-  labor_cost: number
+  setup_cost: number // Sum of all items setup costs
+  labor_cost: number // Sum of all items manual labor costs
+  overhead_cost: number // Overhead from CostPreset
+  profit_amount: number // Profit margin from CostPreset
   total_cost: number
 
   // Commercial info
@@ -103,16 +106,18 @@ export interface BudgetItem {
   print_time_minutes: number
   print_time_display: string // "5h30m"
 
-  // Additional costs
+  // Labor time inputs
   cost_preset_id?: string
-  additional_labor_cost?: number // cents
+  setup_time_minutes: number // Setup time in minutes (one-time per product)
+  manual_labor_minutes_total: number // Total manual labor time for ALL units
   additional_notes?: string
 
   // Calculated costs (in cents)
   filament_cost: number
   waste_cost: number
   energy_cost: number
-  labor_cost: number
+  setup_cost: number // Calculated setup cost
+  manual_labor_cost: number // Calculated manual labor cost
   item_total_cost: number
   unit_price: number // item_total_cost / product_quantity
 
@@ -163,8 +168,16 @@ export interface Customer {
   notes?: string
   budgets_count?: number
   total_spent?: number // cents
+  budgets?: CustomerBudget[]
   created_at: string
   updated_at: string
+}
+
+export interface CustomerBudget {
+    id: string
+    name: string
+    status: BudgetStatus
+    total_cost: number
 }
 
 export type ColorType = 'solid' | 'gradient' | 'duo' | 'rainbow'

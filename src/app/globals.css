@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 @layer base {
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  }
+
   :root {
     --background: 0 0% 100%;
     --foreground: 0 0% 13%;
@@ -33,6 +37,13 @@
     --ring: 0 59% 71%;
 
     --radius: 0.5rem;
+
+    /* Chart colors */
+    --chart-1: 221 83% 53%;
+    --chart-2: 262 83% 58%;
+    --chart-3: 142 76% 36%;
+    --chart-4: 25 95% 53%;
+    --chart-5: 340 82% 52%;
   }
 
   .dark {
@@ -63,6 +74,13 @@
     --border: 0 0% 18%;
     --input: 0 0% 18%;
     --ring: 0 59% 71%;
+
+    /* Chart colors - lighter for dark mode */
+    --chart-1: 217 91% 60%;
+    --chart-2: 262 90% 65%;
+    --chart-3: 142 71% 45%;
+    --chart-4: 25 95% 58%;
+    --chart-5: 340 75% 58%;
   }
 }
 

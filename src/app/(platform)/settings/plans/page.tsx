@@ -25,7 +25,7 @@ import { useSubscribeToPlan } from '@/lib/hooks/use-subscription-management'
 import { useHasPaymentMethods } from '@/lib/hooks/use-payment-methods'
 import { useQuery } from '@tanstack/react-query'
 import subscriptionService from '@/services/subscription-service'
-import { AddPaymentMethodModal } from '@/components/subscription/AddPaymentMethodModal'
+import { AddPaymentMethodModal } from '@/components/subscription/add-payment-method-modal'
 
 export default function PlansPage() {
   const router = useRouter()
