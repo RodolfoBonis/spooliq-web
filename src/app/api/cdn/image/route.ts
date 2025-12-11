@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
         // Fetch image from CDN with API key
         const response = await fetch(url, {
             headers: {
-                Authentication: `Bearer ${token}`
+                Authorization: `Bearer ${token}`
             },
         })
 
