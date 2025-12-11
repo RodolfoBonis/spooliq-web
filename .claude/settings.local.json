@@ -141,7 +141,10 @@
       "WebFetch(domain:www.openproject.org)",
       "Bash(for id in 44 45 50 54 56 57)",
       "Bash(do echo \"--- Work Package $id ---\" curl -s -u \"apikey:2440d3878cc02f2f1277bedf844bf5548974dca5223b93017654ccea2e24f640\" \"https://projects.rodolfodebonis.com.br/api/v3/work_packages/$id\")",
-      "Bash(jq:*)"
+      "Bash(jq:*)",
+      "Bash(npm audit fix:*)",
+      "Bash(npm audit:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []
