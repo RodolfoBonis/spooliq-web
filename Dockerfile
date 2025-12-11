@@ -8,6 +8,9 @@ WORKDIR /app
 # Copy package files
 COPY package.json package-lock.json* ./
 
+# Declare build argument for Verdaccio authentication
+ARG VERDACCIO_TOKEN
+
 # Configure Verdaccio registry authentication
 RUN echo "@rblab:registry=https://npm.rodolfodebonis.com.br" > .npmrc && \
     echo "//npm.rodolfodebonis.com.br/:_authToken=${VERDACCIO_TOKEN}" >> .npmrc && \
@@ -23,6 +26,9 @@ WORKDIR /app
 
 # Copy package files and install all dependencies (including dev)
 COPY package.json package-lock.json* ./
+
+# Declare build argument for Verdaccio authentication
+ARG VERDACCIO_TOKEN
 
 # Configure Verdaccio registry authentication
 RUN echo "@rblab:registry=https://npm.rodolfodebonis.com.br" > .npmrc && \
