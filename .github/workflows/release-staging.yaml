@@ -80,6 +80,9 @@ jobs:
             COMMIT=${{ github.sha }}
             BUILD_TIME=${{ steps.version.outputs.timestamp }}
             VERDACCIO_TOKEN=${{ secrets.VERDACCIO_TOKEN }}
+            NEXT_PUBLIC_API_URL=https://api.spooliq.stg.rb.lab/v1
+            NEXT_PUBLIC_CLIENT_ID=${{ secrets.SPOOLIQ_CLIENT_ID }}
+            NEXT_PUBLIC_CLIENT_SECRET=${{ secrets.SPOOLIQ_CLIENT_SECRET }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -98,10 +101,10 @@ jobs:
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
 
-          # Update the image tag in the staging values file
-          yq e ".image.tag = \"${{ steps.version.outputs.version }}\"" -i ./apps/spooliq-web/app/chart/values-stg.yaml
+          # Update the image tag in the staging values file (rb-stack format)
+          yq e ".web-server.image.tag = \"${{ steps.version.outputs.version }}\"" -i ./apps/spooliq-web/values-stg.yaml
 
-          git add ./apps/spooliq-web/app/chart/values-stg.yaml
+          git add ./apps/spooliq-web/values-stg.yaml
           git commit -m "chore(spooliq-web): update staging image to ${{ steps.version.outputs.version }}"
           git push
 
@@ -116,12 +119,12 @@ jobs:
           ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
           ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_TOKEN }}
         run: |
-          argocd app sync spooliq-web-stg \
+          argocd app sync spooliq-stg \
             --server ${ARGOCD_SERVER} \
             --auth-token ${ARGOCD_AUTH_TOKEN} \
             --grpc-web
 
-          argocd app wait spooliq-web-stg \
+          argocd app wait spooliq-stg \
             --server ${ARGOCD_SERVER} \
             --auth-token ${ARGOCD_AUTH_TOKEN} \
             --grpc-web \

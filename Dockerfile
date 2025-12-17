@@ -11,6 +11,9 @@ ARG VERDACCIO_TOKEN
 # Copy package files
 COPY package.json package-lock.json* ./
 
+# Declare build argument for Verdaccio authentication
+ARG VERDACCIO_TOKEN
+
 # Configure Verdaccio registry authentication
 RUN echo "@rblab:registry=https://npm.rodolfodebonis.com.br" > .npmrc && \
     echo "//npm.rodolfodebonis.com.br/:_authToken=${VERDACCIO_TOKEN}" >> .npmrc && \
@@ -30,6 +33,9 @@ ARG VERDACCIO_TOKEN
 # Copy package files and install all dependencies (including dev)
 COPY package.json package-lock.json* ./
 
+# Declare build argument for Verdaccio authentication
+ARG VERDACCIO_TOKEN
+
 # Configure Verdaccio registry authentication
 RUN echo "@rblab:registry=https://npm.rodolfodebonis.com.br" > .npmrc && \
     echo "//npm.rodolfodebonis.com.br/:_authToken=${VERDACCIO_TOKEN}" >> .npmrc && \
@@ -40,6 +46,16 @@ RUN --mount=type=cache,target=/root/.npm \
 
 # Copy source files
 COPY . .
+
+# Declare build arguments for Next.js public environment variables
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_CLIENT_ID
+ARG NEXT_PUBLIC_CLIENT_SECRET
+
+# Set environment variables for build (NEXT_PUBLIC_* are inlined at build time)
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_CLIENT_ID=$NEXT_PUBLIC_CLIENT_ID
+ENV NEXT_PUBLIC_CLIENT_SECRET=$NEXT_PUBLIC_CLIENT_SECRET
 
 # Build the application with standalone output
 ENV NEXT_TELEMETRY_DISABLED=1

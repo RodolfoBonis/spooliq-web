@@ -92,6 +92,9 @@ jobs:
           build-args: |
             NODE_VERSION=${{ env.NODE_VERSION }}
             VERDACCIO_TOKEN=${{ secrets.VERDACCIO_TOKEN }}
+            NEXT_PUBLIC_API_URL=https://api.spooliq.rodolfodebonis.com.br/v1
+            NEXT_PUBLIC_CLIENT_ID=${{ secrets.SPOOLIQ_CLIENT_ID }}
+            NEXT_PUBLIC_CLIENT_SECRET=${{ secrets.SPOOLIQ_CLIENT_SECRET }}
 
       - name: Add, commit and push version increment
         if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'
@@ -155,12 +158,12 @@ jobs:
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
 
-          # Update the image tag in the production values file
-          yq e ".image.tag = \"${VERSION}\"" -i ./apps/spooliq-web/app/chart/values-prod.yaml
+          # Update the image tag in the production values file (rb-stack format)
+          yq e ".web-server.image.tag = \"${VERSION}\"" -i ./apps/spooliq-web/values-prod.yaml
 
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git add ./apps/spooliq-web/app/chart/values-prod.yaml
+          git add ./apps/spooliq-web/values-prod.yaml
           git commit -m "chore(spooliq-web): update production image to ${VERSION}" || echo "No changes to commit"
           git push || echo "No changes to push"
 
@@ -169,12 +172,12 @@ jobs:
 
       - name: Sync ArgoCD
         run: |
-          argocd app sync spooliq-web-prod \
+          argocd app sync spooliq-prod \
             --grpc-web \
             --server ${{ secrets.ARGOCD_SERVER }} \
             --auth-token ${{ secrets.ARGOCD_TOKEN }}
 
-          argocd app wait spooliq-web-prod \
+          argocd app wait spooliq-prod \
             --server ${{ secrets.ARGOCD_SERVER }} \
             --auth-token ${{ secrets.ARGOCD_TOKEN }} \
             --grpc-web \
