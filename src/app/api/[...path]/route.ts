@@ -143,9 +143,28 @@ async function proxyRequest(
       responseHeaders.set(key, value)
     })
 
-    // Return response
+    // Check if response is binary based on content-type
+    const contentType = response.headers.get('content-type') || ''
+    const isBinary =
+      contentType.includes('application/pdf') ||
+      contentType.includes('application/octet-stream') ||
+      contentType.includes('image/') ||
+      contentType.includes('audio/') ||
+      contentType.includes('video/') ||
+      contentType.includes('application/zip') ||
+      contentType.includes('application/gzip')
+
+    // Return response - use arrayBuffer for binary, text for others
+    if (isBinary) {
+      const responseBody = await response.arrayBuffer()
+      return new NextResponse(responseBody, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: responseHeaders,
+      })
+    }
+
     const responseBody = await response.text()
-    
     return new NextResponse(responseBody, {
       status: response.status,
       statusText: response.statusText,
