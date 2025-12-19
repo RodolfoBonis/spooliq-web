@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 // Allowed origins for production environments
 export const ALLOWED_ORIGINS = [
-  'https://spooliq.stg.rodolfodebonis.com.br',
-  'https://spooliq.rodolfodebonis.com.br',
+  'https://spooliq.com',
+  'https://spooliq.stg.rb.lab',
   'http://localhost:3000',
   'http://localhost:3001',
 ]
