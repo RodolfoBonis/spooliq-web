@@ -92,7 +92,7 @@ jobs:
           build-args: |
             NODE_VERSION=${{ env.NODE_VERSION }}
             VERDACCIO_TOKEN=${{ secrets.VERDACCIO_TOKEN }}
-            NEXT_PUBLIC_API_URL=https://api.spooliq.rodolfodebonis.com.br/v1
+            NEXT_PUBLIC_API_URL=https://api.spooliq.com/v1
             NEXT_PUBLIC_CLIENT_ID=${{ secrets.SPOOLIQ_CLIENT_ID }}
             NEXT_PUBLIC_CLIENT_SECRET=${{ secrets.SPOOLIQ_CLIENT_SECRET }}
 
@@ -224,7 +224,7 @@ jobs:
             -d "{
               \"chatId\": \"${{ secrets.CHAT_ID }}\",
               \"threadId\": \"${{ secrets.THREAD_ID }}\",
-              \"message\": \"✅ Spooliq Web Production Deploy Success\n\n🚀 Version: ${{ steps.version-strategy.outputs.version }}\n📦 Tag: ${{ steps.version-strategy.outputs.tag }}\n👤 Author: ${{ github.actor }}\n🌐 URL: https://spooliq.rodolfodebonis.com.br\n⏱️ Duration: ${{ steps.build-duration.outputs.duration }}\n🔗 Release: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version-strategy.outputs.tag }}\"
+              \"message\": \"✅ Spooliq Web Production Deploy Success\n\n🚀 Version: ${{ steps.version-strategy.outputs.version }}\n📦 Tag: ${{ steps.version-strategy.outputs.tag }}\n👤 Author: ${{ github.actor }}\n🌐 URL: https://spooliq.com\n⏱️ Duration: ${{ steps.build-duration.outputs.duration }}\n🔗 Release: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version-strategy.outputs.tag }}\"
             }"
 
       - name: Notify n8n Failure

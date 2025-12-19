@@ -141,7 +141,7 @@ jobs:
             -d "{
               \"chatId\": \"${{ secrets.CHAT_ID }}\",
               \"threadId\": \"${{ secrets.THREAD_ID }}\",
-              \"message\": \"✅ Spooliq Web Staging Deploy Success\n\n🚀 Version: ${{ steps.version.outputs.version }}\n📦 Commit: ${{ steps.version.outputs.short_sha }}\n👤 Author: ${{ github.actor }}\n🌐 URL: https://spooliq.stg.rodolfodebonis.com.br\n⏱️ Duration: ${DURATION}s\n📝 Message: ${{ github.event.head_commit.message }}\"
+              \"message\": \"✅ Spooliq Web Staging Deploy Success\n\n🚀 Version: ${{ steps.version.outputs.version }}\n📦 Commit: ${{ steps.version.outputs.short_sha }}\n👤 Author: ${{ github.actor }}\n🌐 URL: https://spooliq.stg.rb.lab\n⏱️ Duration: ${DURATION}s\n📝 Message: ${{ github.event.head_commit.message }}\"
             }"
 
       - name: Notify failure
