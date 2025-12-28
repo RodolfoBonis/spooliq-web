@@ -1,5 +1,5 @@
 import { api } from '@/lib/api/client'
-import type { Budget, BudgetWithDetails, PDFGenerationResponse } from '@/types/models'
+import type { Budget, BudgetWithDetails } from '@/types/models'
 
 export interface BudgetFilters {
   page?: number
@@ -111,27 +111,12 @@ export const budgetService = {
     await api.delete(`/budgets/${id}`)
   },
 
-  async generatePDF(id: string, force: boolean = false): Promise<PDFGenerationResponse> {
+  async generatePDF(id: string, force: boolean = false): Promise<Blob> {
     const params = force ? '?force=true' : ''
-    const { data } = await api.get<PDFGenerationResponse>(`/budgets/${id}/pdf${params}`)
+    const { data } = await api.get(`/budgets/${id}/pdf${params}`, {
+      responseType: 'blob'
+    })
     return data
-  },
-
-  async downloadPDF(id: string, budgetName: string, force: boolean = false): Promise<void> {
-    const response = await this.generatePDF(id, force)
-    
-    if (response.pdf_url) {
-      // Use CDN URL for download
-      const link = document.createElement('a')
-      link.href = response.pdf_url
-      link.download = `orcamento-${budgetName.toLowerCase().replace(/\s+/g, '-')}.pdf`
-      link.target = '_blank'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-    } else {
-      throw new Error('PDF URL not available')
-    }
   },
 }
 
