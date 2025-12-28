@@ -84,52 +84,21 @@ export function useDeleteBudget() {
 
 export function useGeneratePDF() {
   return useMutation({
-    mutationFn: ({ id, name, force = false }: { id: string; name: string; force?: boolean }) =>
-      budgetService.generatePDF(id, force),
-    onSuccess: async (response, variables) => {
-      if (response && typeof response === 'object' && 'generated' in response) {
-        // New API response with metadata - trigger download with authentication
-        if (response.pdf_url) {
-          try {
-            // Fetch the PDF through API proxy
-            const proxyUrl = `/api/cdn/pdf?url=${encodeURIComponent(response.pdf_url)}`
-            const pdfResponse = await fetch(proxyUrl, {
-              method: 'GET',
-            })
-            
-            if (!pdfResponse.ok) {
-              throw new Error('Failed to fetch PDF')
-            }
-            
-            // Convert to blob and create download link
-            const blob = await pdfResponse.blob()
-            const url = URL.createObjectURL(blob)
-            
-            const link = document.createElement('a')
-            link.href = url
-            link.download = `orcamento-${variables.name.toLowerCase().replace(/\s+/g, '-')}.pdf`
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
-            
-            // Clean up the blob URL
-            URL.revokeObjectURL(url)
-          } catch (error) {
-            console.error('Error downloading PDF:', error)
-            toast.error('Erro ao baixar PDF')
-            return
-          }
-        }
-        
-        if (response.generated) {
-          toast.success('PDF gerado e baixado com sucesso!')
-        } else {
-          toast.success('PDF baixado com sucesso!')
-        }
-      } else {
-        // Fallback message
-        toast.success('PDF baixado com sucesso!')
-      }
+    mutationFn: async ({ id, name, force = false }: { id: string; name: string; force?: boolean }) => {
+      const blob = await budgetService.generatePDF(id, force)
+      return { blob, name }
+    },
+    onSuccess: ({ blob, name }) => {
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `orcamento-${name.toLowerCase().replace(/\s+/g, '-')}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toast.success('PDF baixado com sucesso!')
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Erro ao gerar PDF')
