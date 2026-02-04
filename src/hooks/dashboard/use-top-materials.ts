@@ -1,11 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { mockDashboardApi } from '@/services/dashboard/mock-data';
+import { dashboardApi } from '@/services/dashboard/api';
+import { useDashboardStore } from '@/stores/dashboard-store';
 import type { TopMaterialsData } from '@/types/dashboard';
 
-export function useTopMaterials() {
+export function useTopMaterials(limit: number = 5) {
+  const period = useDashboardStore((state) => state.period);
+
   return useQuery<TopMaterialsData>({
-    queryKey: ['dashboard', 'top-materials'],
-    queryFn: () => mockDashboardApi.getTopMaterials(),
+    queryKey: ['dashboard', 'top-materials', period, limit],
+    queryFn: () => dashboardApi.getTopMaterials(period, limit),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }

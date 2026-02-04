@@ -19,10 +19,19 @@ export function TrendIndicator({
   const color = getTrendColor(value, isPositiveGood);
   const icon = getTrendIcon(value);
 
+  const trendDirection = value > 0 ? 'aumento' : value < 0 ? 'diminuição' : 'sem variação';
+  const ariaLabel = `${trendDirection} de ${formatPercentage(Math.abs(value), { showSign: false })}`;
+
   return (
-    <span className={cn('inline-flex items-center gap-1 text-sm font-medium', color, className)}>
-      <span>{icon}</span>
-      {showPercentage && <span>{formatPercentage(Math.abs(value), { showSign: false })}</span>}
+    <span
+      className={cn('inline-flex items-center gap-1 text-sm font-medium', color, className)}
+      aria-label={ariaLabel}
+      role="status"
+    >
+      <span aria-hidden="true">{icon}</span>
+      {showPercentage && (
+        <span>{formatPercentage(Math.abs(value), { showSign: false })}</span>
+      )}
     </span>
   );
 }
