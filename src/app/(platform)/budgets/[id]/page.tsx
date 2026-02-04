@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { use, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -50,9 +50,10 @@ import {
 } from 'lucide-react'
 import type { BudgetStatus } from '@/types/models'
 
-export default function BudgetDetailPage({ params }: { params: { id: string } }) {
+export default function BudgetDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const router = useRouter()
-  const { data: budget, isLoading, error } = useBudget(params.id)
+  const { data: budget, isLoading, error } = useBudget(id)
   const { mutate: deleteBudget } = useDeleteBudget()
   const { mutate: updateStatus } = useUpdateBudgetStatus()
   const { mutate: generatePDF, isPending: isGeneratingPDF } = useGeneratePDF()
@@ -92,7 +93,7 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
   }
 
   const handleDelete = () => {
-    deleteBudget(params.id, {
+    deleteBudget(id, {
       onSuccess: () => {
         router.push('/budgets')
       },
@@ -101,11 +102,11 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
 
   const handleChangeStatus = (status: BudgetStatus) => {
     if (status === 'draft') return // Cannot change back to draft
-    updateStatus({ id: params.id, data: { status } })
+    updateStatus({ id: id, data: { status } })
   }
 
   const handleDownloadPDF = (force = false) => {
-    generatePDF({ id: params.id, name: budget.name, force })
+    generatePDF({ id: id, name: budget.name, force })
   }
 
   const customerInitials = budget.customer.name
@@ -138,7 +139,7 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link href={`/budgets/${params.id}/edit`}>
+                  <Link href={`/budgets/${id}/edit`}>
                     <Edit className="mr-2 h-4 w-4" />
                     Editar
                   </Link>

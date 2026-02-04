@@ -1,17 +1,20 @@
 'use client';
 
-import { DollarSign, TrendingUp, FileText, Users } from 'lucide-react';
+import { TrendingUp, FileText, Users, Percent } from 'lucide-react';
 import { StatCard } from './stat-card';
 import { MetricSkeleton } from './metric-skeleton';
+import { DashboardErrorState } from './error-state';
+import { DashboardEmptyState } from './empty-state';
 import { useDashboardOverview } from '@/hooks/dashboard/use-dashboard-overview';
-import { formatCurrency } from '@/lib/dashboard/formatters';
+import { useDashboardStore } from '@/stores/dashboard-store';
 
 export function OverviewMetrics() {
-  const { data, isLoading } = useDashboardOverview();
+  const period = useDashboardStore((state) => state.period);
+  const { data, isLoading, error, refetch } = useDashboardOverview();
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2">
         {[...Array(4)].map((_, i) => (
           <MetricSkeleton key={i} />
         ))}
@@ -19,44 +22,82 @@ export function OverviewMetrics() {
     );
   }
 
-  if (!data) return null;
+  if (error) {
+    return (
+      <DashboardErrorState
+        title="Erro ao carregar métricas"
+        message="Não foi possível carregar as métricas do dashboard."
+        onRetry={() => refetch()}
+        compact
+      />
+    );
+  }
 
-  const activeBudgets =
-    data.budgets_by_status.sent +
-    data.budgets_by_status.approved +
-    data.budgets_by_status.printing;
+  if (!data) {
+    return (
+      <DashboardEmptyState
+        type="budgets"
+        title="Sem dados para exibir"
+        description="Crie orçamentos para começar a ver suas métricas."
+        compact
+      />
+    );
+  }
+
+  // Find budget counts by status
+  const getStatusCount = (status: string) => {
+    const found = data.budgets_by_status.find((s) => s.status === status);
+    return found?.count ?? 0;
+  };
+
+  const sentCount = getStatusCount('sent');
+  const approvedCount = getStatusCount('approved');
+  const printingCount = getStatusCount('printing');
+  const activeBudgets = sentCount + approvedCount + printingCount;
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div
+      className="grid gap-4 grid-cols-2"
+      role="region"
+      aria-label="Métricas principais"
+    >
       <StatCard
-        title="Receita do Mês"
-        value={formatCurrency(data.current_month_revenue)}
-        change={data.revenue_change_percentage}
-        changeLabel="vs mês anterior"
-        icon={DollarSign}
+        title="Margem Lucro"
+        value={`${data.avg_profit_margin.toFixed(1)}%`}
+        change={data.profit_margin_change}
+        changeLabel="vs anterior"
+        icon={Percent}
+        variant="profit"
+        href={`/budgets?status=approved&period=${period}`}
       />
 
       <StatCard
-        title="Taxa de Conversão"
-        value={`${data.conversion_rate.toFixed(1)}%`}
-        change={data.conversion_rate_change}
-        changeLabel="vs mês anterior"
+        title="Aprovação"
+        value={`${data.approval_rate.toFixed(1)}%`}
+        change={data.approval_rate_change}
+        changeLabel="vs anterior"
         icon={TrendingUp}
+        variant="approval"
+        href={`/budgets?view=funnel&period=${period}`}
       />
 
       <StatCard
         title="Orçamentos Ativos"
         value={activeBudgets}
-        subtitle={`${data.budgets_by_status.sent} enviados, ${data.budgets_by_status.printing} imprimindo`}
+        subtitle="em andamento"
         icon={FileText}
+        variant="budgets"
+        href="/budgets?status=sent,approved,printing"
       />
 
       <StatCard
         title="Novos Clientes"
-        value={data.new_customers_count}
+        value={data.new_customers}
         change={data.new_customers_change}
-        changeLabel="este mês"
+        changeLabel="no período"
         icon={Users}
+        variant="customers"
+        href="/customers?sort=created_at&order=desc"
       />
     </div>
   );

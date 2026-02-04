@@ -4,176 +4,184 @@ export type PeriodFilter = '7d' | '30d' | '3m' | '6m' | '1y' | 'all';
 
 export type BudgetStatus = 'draft' | 'sent' | 'approved' | 'rejected' | 'printing' | 'completed';
 
-export type ActivityType =
-  | 'budget_created'
-  | 'budget_sent'
-  | 'budget_approved'
-  | 'budget_rejected'
-  | 'budget_printing'
-  | 'budget_completed'
-  | 'customer_created';
+// ============================================================================
+// TIER 1: Overview Metrics (matches backend entities.OverviewResponse)
+// ============================================================================
 
-// ============================================================================
-// TIER 1: Overview Metrics
-// ============================================================================
+export interface BudgetStatusCount {
+  status: string;
+  count: number;
+}
 
 export interface DashboardOverview {
-  current_month_revenue: number; // in cents
-  revenue_change_percentage: number;
-  conversion_rate: number;
-  conversion_rate_change: number;
-  budgets_by_status: Record<BudgetStatus, number>;
-  new_customers_count: number;
+  total_revenue: number; // in cents
+  revenue_change: number;
+  total_budgets: number;
+  budgets_change: number;
+  avg_ticket: number; // in cents
+  avg_ticket_change: number;
+  approval_rate: number;
+  approval_rate_change: number;
+  avg_profit_margin: number;
+  profit_margin_change: number;
+  new_customers: number;
   new_customers_change: number;
+  budgets_by_status: BudgetStatusCount[];
+  period: string;
 }
 
 // ============================================================================
-// Revenue Trend
+// Revenue Trend (matches backend entities.RevenueTrendResponse)
 // ============================================================================
 
-export interface RevenueTrendDataPoint {
-  month: string; // "2025-01" or date
+export interface RevenueTrendPoint {
+  date: string;
   revenue: number; // in cents
-  pipeline: number; // sent budgets value in cents
-  count: number; // number of budgets
+  cost: number; // in cents
+  profit: number; // in cents
+  budget_count: number;
 }
 
 export interface RevenueTrendData {
-  data: RevenueTrendDataPoint[];
-  total_revenue: number;
-  total_pipeline: number;
-  period: PeriodFilter;
+  points: RevenueTrendPoint[];
+  period: string;
 }
 
 // ============================================================================
-// Conversion Funnel
+// Conversion Funnel (matches backend entities.ConversionFunnelResponse)
 // ============================================================================
 
-export interface ConversionFunnelStage {
-  status: BudgetStatus;
+export interface FunnelStep {
+  status: string;
   count: number;
-  total_value: number; // in cents
-  conversion_rate: number; // percentage to next stage
-  average_time_in_stage: number; // in hours
+  conversion_rate: number;
 }
 
 export interface ConversionFunnelData {
-  stages: ConversionFunnelStage[];
-  overall_conversion_rate: number;
+  steps: FunnelStep[];
+  total_budgets: number;
+  overall_conversion: number;
+  period: string;
 }
 
 // ============================================================================
-// Recent Activity
+// Recent Activity (matches backend entities.RecentActivityResponse)
 // ============================================================================
 
 export interface RecentActivity {
   id: string;
-  type: ActivityType;
-  description: string;
-  timestamp: string; // ISO date
-  related_entity_id: string; // budget or customer ID
-  related_entity_name: string; // budget title or customer name
-  value?: number; // budget value in cents (optional)
+  user_id: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  entity_name: string;
+  description?: string;
+  metadata?: Record<string, unknown>;
+  created_at: string; // ISO date
 }
 
 export interface RecentActivityData {
   activities: RecentActivity[];
+  total: number;
 }
 
 // ============================================================================
-// TIER 2: Top Customers
+// TIER 2: Top Customers (matches backend entities.TopCustomersResponse)
 // ============================================================================
 
 export interface TopCustomer {
   id: string;
   name: string;
+  email?: string;
   total_revenue: number; // in cents
   budget_count: number;
-  average_ticket: number; // in cents
-  last_budget_date: string; // ISO date
-  status: 'active' | 'inactive'; // active if budget in last 30 days
+  avg_ticket: number; // in cents
 }
 
 export interface TopCustomersData {
   customers: TopCustomer[];
-  total_customers: number;
+  period: string;
 }
 
 // ============================================================================
-// Operational Insights
+// Operational Insights (matches backend entities.OperationalInsightsResponse)
 // ============================================================================
+
+export interface CostBreakdown {
+  filament_pct: number;
+  waste_pct: number;
+  energy_pct: number;
+  setup_pct: number;
+  labor_pct: number;
+  overhead_pct: number;
+}
 
 export interface OperationalInsights {
-  average_ticket: number; // in cents
-  average_ticket_change: number; // percentage
-  average_profit_margin: number; // percentage
-  profit_margin_change: number; // percentage
-  total_print_time_hours: number; // hours
-  print_time_change: number; // percentage
-  rejection_rate: number; // percentage
-  rejection_rate_change: number; // percentage
+  avg_ticket: number; // in cents
+  avg_ticket_change: number;
+  avg_profit_margin: number;
+  profit_margin_change: number;
+  total_print_time_hours: number;
+  print_time_change: number;
+  rejection_rate: number;
+  rejection_rate_change: number;
+  cost_breakdown: CostBreakdown;
+  period: string;
 }
 
 // ============================================================================
-// TIER 3: Top Filaments
+// TIER 3: Top Filaments (matches backend entities.TopFilamentsResponse)
 // ============================================================================
 
 export interface TopFilament {
   id: string;
   name: string;
-  brand: string;
-  color: string;
-  color_preview: string; // hex or gradient CSS
+  brand_name: string;
+  material_name: string;
+  color_hex?: string;
   total_grams: number;
-  total_value: number; // in cents
-  usage_count: number; // how many times used
+  usage_count: number;
 }
 
 export interface TopFilamentsData {
   filaments: TopFilament[];
-  total_filament_cost: number; // in cents
+  period: string;
 }
 
 // ============================================================================
-// Top Materials (by material type: PLA, ABS, PETG, etc)
+// Top Materials (matches backend entities.TopMaterialsResponse)
 // ============================================================================
 
 export interface TopMaterial {
-  material_type: string; // 'PLA', 'ABS', 'PETG', 'TPU', etc
+  id: string;
+  name: string;
   total_grams: number;
-  total_value: number; // in cents
-  percentage: number; // percentage of total usage
-  filament_count: number; // how many different filaments of this type
-  color: string; // standardized color for this material type
+  usage_count: number;
 }
 
 export interface TopMaterialsData {
   materials: TopMaterial[];
-  total_usage: number; // total grams across all materials
+  period: string;
 }
 
 // ============================================================================
-// Goals and Alerts
+// Goals and Alerts (matches backend entities.GoalsAlertsResponse)
 // ============================================================================
 
 export interface Goal {
-  id: string;
-  type: 'revenue' | 'customers' | 'conversion';
-  title: string;
-  target: number;
+  name: string;
   current: number;
-  progress: number; // percentage
-  status: 'on_track' | 'at_risk' | 'behind';
+  target: number;
+  progress: number;
+  unit: string;
 }
 
 export interface Alert {
-  id: string;
-  type: 'warning' | 'danger' | 'info';
-  title: string;
-  description: string;
+  type: string;
+  severity: 'warning' | 'danger' | 'info';
+  message: string;
   count?: number;
-  action_url?: string;
-  timestamp: string;
+  entity_type?: string;
 }
 
 export interface GoalsAlertsData {
