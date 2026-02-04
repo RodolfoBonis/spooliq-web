@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { use, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
@@ -26,9 +26,10 @@ import { customerSchema, type CustomerFormData } from '@/lib/validations/custome
 import { useCustomer, useUpdateCustomer } from '@/lib/hooks/use-customers'
 import { LoadingSkeleton } from '@/components/common/loading-skeleton'
 
-export default function EditCustomerPage({ params }: { params: { id: string } }) {
+export default function EditCustomerPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const router = useRouter()
-  const { data: customer, isLoading: isLoadingCustomer } = useCustomer(params.id)
+  const { data: customer, isLoading: isLoadingCustomer } = useCustomer(id)
   const { mutate: updateCustomer, isPending } = useUpdateCustomer()
 
   const form = useForm<CustomerFormData>({
@@ -65,11 +66,11 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
 
   const onSubmit = async (data: CustomerFormData) => {
     updateCustomer(
-      { id: params.id, data },
+      { id: id, data },
       {
         onSuccess: () => {
           toast.success('Cliente atualizado com sucesso!')
-          router.push(`/customers/${params.id}`)
+          router.push(`/customers/${id}`)
         },
         onError: (error: any) => {
           toast.error(error.response?.data?.message || 'Erro ao atualizar cliente')
@@ -109,7 +110,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
       {/* Header */}
       <div className="flex items-center space-x-4">
         <Button variant="ghost" size="sm" asChild>
-          <Link href={`/customers/${params.id}`}>
+          <Link href={`/customers/${id}`}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
@@ -296,7 +297,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.push(`/customers/${params.id}`)}
+              onClick={() => router.push(`/customers/${id}`)}
               disabled={isPending}
             >
               Cancelar
