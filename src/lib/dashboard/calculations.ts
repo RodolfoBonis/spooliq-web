@@ -1,4 +1,4 @@
-import type { ConversionFunnelStage } from '@/types/dashboard';
+import type { FunnelStep } from '@/types/dashboard';
 
 /**
  * Calculate percentage change between two values
@@ -43,8 +43,8 @@ export function calculateAverage(values: number[]): number {
  * @returns Conversion rate as percentage
  */
 export function calculateStageConversionRate(
-  currentStage: ConversionFunnelStage,
-  nextStage: ConversionFunnelStage | null
+  currentStage: FunnelStep,
+  nextStage: FunnelStep | null
 ): number {
   if (!nextStage || currentStage.count === 0) return 0;
   return (nextStage.count / currentStage.count) * 100;
@@ -55,7 +55,7 @@ export function calculateStageConversionRate(
  * @param stages - All funnel stages
  * @returns Overall conversion rate from first to last stage
  */
-export function calculateOverallConversionRate(stages: ConversionFunnelStage[]): number {
+export function calculateOverallConversionRate(stages: FunnelStep[]): number {
   if (stages.length < 2) return 0;
 
   const firstStage = stages[0];

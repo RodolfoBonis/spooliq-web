@@ -8,9 +8,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useDashboardStore } from '@/stores/dashboard-store';
-import type { PeriodFilter } from '@/types/dashboard';
+import { Calendar } from 'lucide-react';
+import type { PeriodFilter as PeriodFilterType } from '@/types/dashboard';
 
-const PERIOD_OPTIONS: { value: PeriodFilter; label: string }[] = [
+const PERIOD_OPTIONS: { value: PeriodFilterType; label: string }[] = [
   { value: '7d', label: 'Últimos 7 dias' },
   { value: '30d', label: 'Últimos 30 dias' },
   { value: '3m', label: 'Últimos 3 meses' },
@@ -23,17 +24,26 @@ export function PeriodFilter() {
   const { period, setPeriod } = useDashboardStore();
 
   return (
-    <Select value={period} onValueChange={(value) => setPeriod(value as PeriodFilter)}>
-      <SelectTrigger className="w-[180px]">
-        <SelectValue placeholder="Selecionar período" />
-      </SelectTrigger>
-      <SelectContent>
-        {PERIOD_OPTIONS.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className="flex items-center gap-2">
+      <Calendar className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+      <Select
+        value={period}
+        onValueChange={(value) => setPeriod(value as PeriodFilterType)}
+      >
+        <SelectTrigger
+          className="w-[180px]"
+          aria-label="Selecionar período de análise"
+        >
+          <SelectValue placeholder="Selecionar período" />
+        </SelectTrigger>
+        <SelectContent>
+          {PERIOD_OPTIONS.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }

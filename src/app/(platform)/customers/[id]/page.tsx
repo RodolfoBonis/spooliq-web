@@ -1,6 +1,6 @@
 'use client'
 
-import {useState} from 'react'
+import {use, useState} from 'react'
 import Link from 'next/link'
 import {ArrowLeft, Edit, Trash2, Mail, Phone, MapPin, FileText, DollarSign, AlertTriangle} from 'lucide-react'
 
@@ -18,9 +18,10 @@ import {useRouter} from 'next/navigation'
 import {BudgetCard} from "@/components/budgets/budget-card"
 import {CustomerBudgetTable} from '@/components/customers/customer-budget-table'
 
-export default function CustomerDetailPage({params}: { params: { id: string } }) {
+export default function CustomerDetailPage({params}: { params: Promise<{ id: string }> }) {
+    const {id} = use(params)
     const router = useRouter()
-    const {data: customer, isLoading} = useCustomer(params.id)
+    const {data: customer, isLoading} = useCustomer(id)
     const {mutate: deleteCustomer, isPending: isDeleting} = useDeleteCustomer()
     const {mutate: deleteBudget} = useDeleteBudget()
     const {mutate: generatePDF} = useGeneratePDF()

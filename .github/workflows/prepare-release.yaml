@@ -130,9 +130,13 @@ jobs:
 
           # Prepend to CHANGELOG.md if it exists, otherwise create it
           if [ -f CHANGELOG.md ]; then
-            # Insert after the header
-            sed -i '1,/^## /!b; /^## /i\
-          '"$CHANGELOG_ENTRY" CHANGELOG.md
+            FIRST_ENTRY=$(grep -n '^## ' CHANGELOG.md | head -1 | cut -d: -f1)
+            if [ -n "$FIRST_ENTRY" ]; then
+              { head -n $((FIRST_ENTRY - 1)) CHANGELOG.md; printf '%s\n' "$CHANGELOG_ENTRY"; tail -n +"$FIRST_ENTRY" CHANGELOG.md; } > CHANGELOG.tmp
+            else
+              { cat CHANGELOG.md; echo ""; printf '%s\n' "$CHANGELOG_ENTRY"; } > CHANGELOG.tmp
+            fi
+            mv CHANGELOG.tmp CHANGELOG.md
           else
             cat > CHANGELOG.md <<EOF
           # Changelog
@@ -161,6 +165,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           git push origin ${{ steps.create_branch.outputs.branch }}
+
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh label create "release" --color "0E8A16" --description "Release PR" --force
+          gh label create "automated" --color "BFD4F2" --description "Created by automation" --force
 
       - name: Create PR to main
         env:

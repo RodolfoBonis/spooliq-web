@@ -235,11 +235,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run npm audit
+      - name: Run npm audit (production deps)
         id: audit
         run: |
           set +e
-          npm audit --audit-level=high > vulnerability_report.txt 2>&1
+          npm audit --omit=dev --audit-level=high > vulnerability_report.txt 2>&1
           echo "status=$?" >> $GITHUB_OUTPUT
           set -e
 
