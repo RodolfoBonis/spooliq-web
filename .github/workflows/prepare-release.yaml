@@ -166,6 +166,13 @@ jobs:
         run: |
           git push origin ${{ steps.create_branch.outputs.branch }}
 
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh label create "release" --color "0E8A16" --description "Release PR" --force
+          gh label create "automated" --color "BFD4F2" --description "Created by automation" --force
+
       - name: Create PR to main
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
