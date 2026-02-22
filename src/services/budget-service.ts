@@ -38,6 +38,7 @@ export interface CreateBudgetItemFilamentDTO {
 }
 
 export interface CreateBudgetItemDTO {
+  model_3d_id?: string
   product_name: string
   product_description?: string
   product_quantity: number

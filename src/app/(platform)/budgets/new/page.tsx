@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
 import { CustomerSelect } from '@/components/customers/customer-select'
 import { FilamentSelector } from '@/components/budgets/filament-selector'
+import { Model3DCombobox, Model3DBudgetItem } from '@/components/models3d'
 import { MachinePresetSelect } from '@/components/presets/machine-preset-select'
 import { EnergyPresetSelect } from '@/components/presets/energy-preset-select'
 import { CostPresetSelect } from '@/components/presets/cost-preset-select'
@@ -60,6 +61,7 @@ export default function NewBudgetPage() {
       include_waste_cost: true,
       items: [
         {
+          model_3d_id: undefined,
           product_name: '',
           product_description: '',
           product_quantity: 1,
@@ -106,6 +108,7 @@ export default function NewBudgetPage() {
 
   const addItem = () => {
     appendItem({
+      model_3d_id: undefined,
       product_name: '',
       product_description: '',
       product_quantity: 1,
@@ -534,6 +537,18 @@ export default function NewBudgetPage() {
                         (f) => f.filament_id
                       )
                     }
+                  />
+                </div>
+
+                {/* Model 3D selector (optional) */}
+                <div className="mt-3 space-y-1">
+                  <label className="text-sm font-medium text-neutral-700">
+                    Modelo 3D <span className="text-neutral-400 font-normal">(opcional)</span>
+                  </label>
+                  <Model3DCombobox
+                    value={form.watch(`items.${itemIndex}.model_3d_id`)}
+                    onChange={(id) => form.setValue(`items.${itemIndex}.model_3d_id`, id)}
+                    customerId={form.watch('customer_id')}
                   />
                 </div>
 
