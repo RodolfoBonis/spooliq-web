@@ -28,7 +28,6 @@ import {
   Model3DUploadDialog,
   Model3DEditDialog,
   Model3DViewer,
-  Model3DThumbnail,
 } from '@/components/models3d'
 import { formatFileSize } from '@/lib/utils/cdn-model'
 import { toast } from 'sonner'
