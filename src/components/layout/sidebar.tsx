@@ -12,6 +12,7 @@ import {
   LogOut,
   Sliders,
   ShieldCheck,
+  Box,
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -57,6 +58,7 @@ const NAV_ITEMS: NavItem[] = [
       { title: 'Filamentos', href: '/catalog/filaments', icon: Package },
       { title: 'Materiais', href: '/catalog/materials', icon: Package },
       { title: 'Marcas', href: '/catalog/brands', icon: Package },
+      { title: 'Modelos 3D', href: '/catalog/models', icon: Box },
     ],
   },
   {

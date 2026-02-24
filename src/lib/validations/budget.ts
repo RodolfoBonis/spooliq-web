@@ -9,6 +9,7 @@ export const budgetItemFilamentSchema = z.object({
 
 // Budget Item schema
 export const budgetItemSchema = z.object({
+  model_3d_id: z.string().uuid().optional(),
   product_name: z.string().min(3, 'Nome do produto deve ter no mínimo 3 caracteres'),
   product_description: z.string().optional(),
   product_quantity: z.number().positive('Quantidade deve ser maior que zero'),
