@@ -3,7 +3,7 @@ const nextConfig = {
   images: {
     remotePatterns: [
       { hostname: 'localhost' },
-      { hostname: 'rb-cdn.rodolfodebonis.com.br' },
+      { hostname: 'assets.spooliq.com' },
       { hostname: 'api.spooliq.com.br' },
       { hostname: 'api.spooliq.stg.rb.lab' },
     ],
