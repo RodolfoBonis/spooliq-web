@@ -20,3 +20,5 @@ const nextConfig = {
 
 module.exports = nextConfig
 
+
+// cdn migration: images served by the public cdn edge (assets.spooliq.com)
