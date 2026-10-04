@@ -48,7 +48,8 @@ export const machinePresetService = {
   },
 
   async delete(id: string): Promise<void> {
-    await api.delete(`/presets/machines/${id}`)
+    // The API exposes a single delete route for every preset type
+    await api.delete(`/presets/${id}`)
   },
 }
 
@@ -92,7 +93,8 @@ export const energyPresetService = {
   },
 
   async delete(id: string): Promise<void> {
-    await api.delete(`/presets/energy/${id}`)
+    // The API exposes a single delete route for every preset type
+    await api.delete(`/presets/${id}`)
   },
 }
 
@@ -136,7 +138,8 @@ export const costPresetService = {
   },
 
   async delete(id: string): Promise<void> {
-    await api.delete(`/presets/costs/${id}`)
+    // The API exposes a single delete route for every preset type
+    await api.delete(`/presets/${id}`)
   },
 }
 
