@@ -13,6 +13,7 @@ import type {
   UpdateCostPresetDTO,
 } from '@/services/preset-service'
 import { toast } from 'sonner'
+import { getApiErrorMessage } from '@/lib/api/errors'
 
 // Machine Presets
 export function useMachinePresets() {
@@ -39,8 +40,8 @@ export function useCreateMachinePreset() {
       queryClient.invalidateQueries({ queryKey: ['machine-presets'] })
       toast.success('Preset de máquina criado com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Erro ao criar preset')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao criar preset'))
     },
   })
 }
@@ -55,8 +56,8 @@ export function useUpdateMachinePreset() {
       queryClient.invalidateQueries({ queryKey: ['machine-presets'] })
       toast.success('Preset de máquina atualizado com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Erro ao atualizar preset')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao atualizar preset'))
     },
   })
 }
@@ -70,8 +71,8 @@ export function useDeleteMachinePreset() {
       queryClient.invalidateQueries({ queryKey: ['machine-presets'] })
       toast.success('Preset de máquina deletado com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Erro ao deletar preset')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao deletar preset'))
     },
   })
 }
@@ -101,8 +102,8 @@ export function useCreateEnergyPreset() {
       queryClient.invalidateQueries({ queryKey: ['energy-presets'] })
       toast.success('Preset de energia criado com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Erro ao criar preset')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao criar preset'))
     },
   })
 }
@@ -117,8 +118,8 @@ export function useUpdateEnergyPreset() {
       queryClient.invalidateQueries({ queryKey: ['energy-presets'] })
       toast.success('Preset de energia atualizado com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Erro ao atualizar preset')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao atualizar preset'))
     },
   })
 }
@@ -132,8 +133,8 @@ export function useDeleteEnergyPreset() {
       queryClient.invalidateQueries({ queryKey: ['energy-presets'] })
       toast.success('Preset de energia deletado com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Erro ao deletar preset')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao deletar preset'))
     },
   })
 }
@@ -163,8 +164,8 @@ export function useCreateCostPreset() {
       queryClient.invalidateQueries({ queryKey: ['cost-presets'] })
       toast.success('Preset de custo criado com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Erro ao criar preset')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao criar preset'))
     },
   })
 }
@@ -179,8 +180,8 @@ export function useUpdateCostPreset() {
       queryClient.invalidateQueries({ queryKey: ['cost-presets'] })
       toast.success('Preset de custo atualizado com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Erro ao atualizar preset')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao atualizar preset'))
     },
   })
 }
@@ -194,8 +195,8 @@ export function useDeleteCostPreset() {
       queryClient.invalidateQueries({ queryKey: ['cost-presets'] })
       toast.success('Preset de custo deletado com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Erro ao deletar preset')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao deletar preset'))
     },
   })
 }

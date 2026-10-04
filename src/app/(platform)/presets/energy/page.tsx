@@ -219,6 +219,9 @@ export default function EnergyPresetsPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => setDeletingPreset(preset)}
+                          disabled={preset.is_default}
+                          title={preset.is_default ? 'O preset padrão não pode ser excluído' : 'Excluir preset'}
+                          aria-label={preset.is_default ? 'O preset padrão não pode ser excluído' : 'Excluir preset'}
                         >
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </Button>
