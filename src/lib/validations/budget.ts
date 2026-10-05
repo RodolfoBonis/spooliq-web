@@ -28,8 +28,10 @@ export const createBudgetSchema = z.object({
   name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
   description: z.string().optional(),
   customer_id: z.string().uuid('Cliente inválido'),
+  profile_id: z.string().uuid().optional(),
   machine_preset_id: z.string().uuid().optional(),
   energy_preset_id: z.string().uuid().optional(),
+  cost_preset_id: z.string().uuid().optional(), // budget-level (overhead/margin)
   include_energy_cost: z.boolean(),
   include_waste_cost: z.boolean(),
   delivery_days: z.number().positive().optional(),
