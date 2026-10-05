@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { budgetService } from '@/services/budget-service'
-import type { BudgetFilters, CreateBudgetDTO, UpdateBudgetDTO, UpdateBudgetStatusDTO } from '@/services/budget-service'
+import type { BudgetFilters, BudgetPreview, CreateBudgetDTO, PreviewBudgetDTO, UpdateBudgetDTO, UpdateBudgetStatusDTO } from '@/services/budget-service'
 import { toast } from 'sonner'
 import { getApiErrorMessage } from '@/lib/api/errors'
 
@@ -16,6 +16,24 @@ export function useBudget(id: string) {
     queryKey: ['budgets', id],
     queryFn: () => budgetService.getById(id),
     enabled: !!id,
+  })
+}
+
+/**
+ * Server-side cost preview (`POST /budgets/preview`), the single source of truth for
+ * budget math. Pass `null` while the form isn't ready; debounce the payload upstream.
+ */
+export function useBudgetPreview(payload: PreviewBudgetDTO | null) {
+  return useQuery({
+    queryKey: ['budget-preview', payload],
+    queryFn: ({ signal }) => {
+      if (!payload) return Promise.reject<BudgetPreview>(new Error('Preview payload is not ready'))
+      return budgetService.preview(payload, signal)
+    },
+    enabled: payload !== null,
+    placeholderData: keepPreviousData,
+    retry: false,
+    staleTime: 30 * 1000,
   })
 }
 

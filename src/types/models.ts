@@ -65,6 +65,12 @@ export interface Budget {
   // Presets
   machine_preset_id?: string
   energy_preset_id?: string
+  cost_preset_id?: string // Budget-level cost preset (overhead/margin)
+  profile_id?: string
+  machine_preset?: PresetRef | null
+  energy_preset?: PresetRef | null
+  cost_preset?: PresetRef | null
+  profile?: PresetRef | null
 
   // Flags
   include_energy_cost: boolean
@@ -119,7 +125,10 @@ export interface BudgetItem {
   setup_cost: number // Calculated setup cost
   manual_labor_cost: number // Calculated manual labor cost
   item_total_cost: number
-  unit_price: number // item_total_cost / product_quantity
+  unit_price: number // COST per unit (no markup), cents
+  sale_unit_price?: number // SALE price per unit (cost + share of overhead/profit), cents
+  sale_total?: number // SALE total for the item, cents (sums exactly to budget total)
+  cost_preset?: PresetRef | null
 
   order: number
   created_at: string
@@ -249,6 +258,52 @@ export interface Material {
 }
 
 // ✅ CORRECTED PRESET MODELS - Aligned with Backend
+// Preset monetary rates (cost_per_hour, energy_cost_per_kwh, labor_cost_per_hour, ...) are in REAIS.
+
+export type PresetType = 'machine' | 'energy' | 'cost'
+
+/** Lightweight `{id, name}` reference embedded in API responses. */
+export interface PresetRef {
+  id: string
+  name: string
+}
+
+export interface PresetTemplate {
+  key: string
+  name: string
+  description?: string
+  type: PresetType
+  machine?: Partial<
+    Pick<
+      MachinePreset,
+      | 'brand'
+      | 'model'
+      | 'build_volume_x'
+      | 'build_volume_y'
+      | 'build_volume_z'
+      | 'nozzle_diameter'
+      | 'filament_diameter'
+      | 'power_consumption'
+    >
+  >
+  energy?: Partial<Pick<EnergyPreset, 'country' | 'currency' | 'energy_cost_per_kwh'>>
+  cost?: Partial<
+    Pick<CostPreset, 'labor_cost_per_hour' | 'overhead_percentage' | 'profit_margin_percentage'>
+  >
+}
+
+export interface PrintProfile {
+  id: string
+  name: string
+  description?: string
+  is_default: boolean
+  machine_preset: PresetRef
+  energy_preset: PresetRef
+  cost_preset?: PresetRef | null
+  created_by?: string
+  created_at: string
+  updated_at: string
+}
 
 export interface MachinePreset {
   id: string
@@ -269,7 +324,7 @@ export interface MachinePreset {
   bed_temperature_max: number // °C
   extruder_temperature_max: number // °C
   filament_diameter: number // mm (1.75 or 2.85)
-  cost_per_hour: number // cents
+  cost_per_hour: number // reais
   created_at?: string
   updated_at?: string
 }
@@ -283,12 +338,12 @@ export interface EnergyPreset {
   country?: string
   state?: string
   city?: string
-  energy_cost_per_kwh: number // cents
+  energy_cost_per_kwh: number // reais
   currency: string // "BRL", "USD", etc (3-letter ISO code)
   provider?: string
   tariff_type?: string
-  peak_hour_multiplier: number
-  off_peak_hour_multiplier: number
+  peak_hour_multiplier?: number // 0/absent = not set
+  off_peak_hour_multiplier?: number
   created_at?: string
   updated_at?: string
 }
@@ -299,15 +354,15 @@ export interface CostPreset {
   name: string
   description?: string
   is_default?: boolean
-  labor_cost_per_hour: number // cents
-  packaging_cost_per_item: number // cents
-  shipping_cost_base: number // cents
-  shipping_cost_per_gram: number // cents
+  labor_cost_per_hour: number // reais
+  packaging_cost_per_item: number // reais
+  shipping_cost_base: number // reais
+  shipping_cost_per_gram: number // reais
   overhead_percentage: number // 0-100
-  profit_margin_percentage: number // 0-100
-  post_processing_cost_per_hour: number // cents
-  support_removal_cost_per_hour: number // cents
-  quality_control_cost_per_item: number // cents
+  profit_margin_percentage: number // 0-1000
+  post_processing_cost_per_hour: number // reais
+  support_removal_cost_per_hour: number // reais
+  quality_control_cost_per_item: number // reais
   created_at?: string
   updated_at?: string
 }

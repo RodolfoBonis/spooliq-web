@@ -1,5 +1,5 @@
 import { api } from '@/lib/api/client'
-import type { Budget, BudgetWithDetails } from '@/types/models'
+import type { Budget, BudgetItem, BudgetItemFilament, BudgetWithDetails } from '@/types/models'
 
 export interface BudgetFilters {
   page?: number
@@ -17,7 +17,7 @@ export interface BudgetListItem extends Budget {
     phone?: string
     document?: string
   }
-  items: any[]
+  items: BudgetItem[]
   total_print_time_hours: number
   total_print_time_minutes: number
   total_print_time_display: string
@@ -56,8 +56,10 @@ export interface CreateBudgetDTO {
   name: string
   description?: string
   customer_id: string
+  profile_id?: string // Print profile; the API resolves omitted presets from it
   machine_preset_id?: string
   energy_preset_id?: string
+  cost_preset_id?: string // Budget-level cost preset (overhead/margin)
   include_energy_cost: boolean
   include_waste_cost: boolean
   delivery_days?: number
@@ -66,7 +68,21 @@ export interface CreateBudgetDTO {
   items: CreateBudgetItemDTO[]
 }
 
-export interface UpdateBudgetDTO extends Partial<CreateBudgetDTO> {}
+export type UpdateBudgetDTO = Partial<CreateBudgetDTO>
+
+/** Same body as create, but customer and name are optional (nothing is persisted). */
+export type PreviewBudgetDTO = Omit<CreateBudgetDTO, 'customer_id' | 'name'> & {
+  customer_id?: string
+  name?: string
+}
+
+/** Full budget breakdown computed by `POST /budgets/preview` (all money in cents). */
+export type BudgetPreview = Omit<
+  BudgetWithDetails,
+  'id' | 'organization_id' | 'customer' | 'customer_id' | 'status' | 'owner_user_id' | 'created_at' | 'updated_at' | 'items'
+> & {
+  items: Array<Omit<BudgetItem, 'id' | 'budget_id' | 'created_at' | 'updated_at'> & { filaments?: BudgetItemFilament[] }>
+}
 
 export interface UpdateBudgetStatusDTO {
   status: 'sent' | 'approved' | 'rejected' | 'printing' | 'completed'
@@ -94,6 +110,11 @@ export const budgetService = {
 
   async create(budgetData: CreateBudgetDTO): Promise<Budget> {
     const { data } = await api.post<Budget>('/budgets', budgetData)
+    return data
+  },
+
+  async preview(budgetData: PreviewBudgetDTO, signal?: AbortSignal): Promise<BudgetPreview> {
+    const { data } = await api.post<BudgetPreview>('/budgets/preview', budgetData, { signal })
     return data
   },
 
