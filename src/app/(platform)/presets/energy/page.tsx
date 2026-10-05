@@ -30,58 +30,77 @@ import {
   useCreateEnergyPreset,
   useUpdateEnergyPreset,
   useDeleteEnergyPreset,
+  useSetDefaultPreset,
+  useDuplicatePreset,
+  useSuggestPresetName,
 } from '@/lib/hooks/use-presets'
-import { useForm } from 'react-hook-form'
+import { useCanManageDefaults } from '@/lib/hooks/use-can-manage-defaults'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { energyPresetSchema, type EnergyPresetFormData } from '@/lib/validations/preset'
-import { Plus, Edit, Trash2, Zap } from 'lucide-react'
+import {
+  energyPresetSchema,
+  normalizeOptionalName,
+  optionalNumber,
+  type EnergyPresetFormData,
+} from '@/lib/validations/preset'
+import { Plus, Zap, LayoutTemplate } from 'lucide-react'
 import type { EnergyPreset } from '@/types/models'
 import { formatCurrencyFromReais } from '@/lib/utils/format'
+import { DefaultBadge } from '@/components/presets/default-badge'
+import { PresetNameField } from '@/components/presets/preset-name-field'
+import { PresetRowActions } from '@/components/presets/preset-row-actions'
+import { PresetTemplateDialog } from '@/components/presets/preset-template-dialog'
+import { energyPresetLabel } from '@/components/presets/energy-preset-select'
+
+const EMPTY_FORM: EnergyPresetFormData = {
+  name: '',
+  description: '',
+  country: 'Brasil',
+  state: '',
+  city: '',
+  energy_cost_per_kwh: 0,
+  currency: 'BRL',
+  provider: '',
+  tariff_type: '',
+  peak_hour_multiplier: undefined,
+  off_peak_hour_multiplier: undefined,
+}
+
+/** Multipliers are optional; the API returns 0 when they are not set. */
+function formatMultiplier(value: number | undefined): string {
+  return value ? `${value}x` : '—'
+}
 
 export default function EnergyPresetsPage() {
   const { data: presets, isLoading } = useEnergyPresets()
   const { mutate: createPreset, isPending: isCreating } = useCreateEnergyPreset()
   const { mutate: updatePreset, isPending: isUpdating } = useUpdateEnergyPreset()
   const { mutate: deletePreset } = useDeleteEnergyPreset()
+  const { mutate: setDefaultPreset, isPending: isSettingDefault } = useSetDefaultPreset('energy')
+  const { mutate: duplicatePreset, isPending: isDuplicating } = useDuplicatePreset('energy')
+  const canManageDefaults = useCanManageDefaults()
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false)
   const [editingPreset, setEditingPreset] = useState<EnergyPreset | null>(null)
   const [deletingPreset, setDeletingPreset] = useState<EnergyPreset | null>(null)
 
   const form = useForm<EnergyPresetFormData>({
     resolver: zodResolver(energyPresetSchema),
-    defaultValues: {
-      country: 'Brasil',
-      state: '',
-      city: '',
-      energy_cost_per_kwh: 0,
-      currency: 'BRL',
-      provider: '',
-      tariff_type: '',
-      peak_hour_multiplier: 1.5,
-      off_peak_hour_multiplier: 0.8,
-    },
+    defaultValues: EMPTY_FORM,
   })
 
   const handleOpenCreate = () => {
     setEditingPreset(null)
-    form.reset({
-      country: 'Brasil',
-      state: '',
-      city: '',
-      energy_cost_per_kwh: 0,
-      currency: 'BRL',
-      provider: '',
-      tariff_type: '',
-      peak_hour_multiplier: 1.5,
-      off_peak_hour_multiplier: 0.8,
-    })
+    form.reset(EMPTY_FORM)
     setIsDialogOpen(true)
   }
 
   const handleOpenEdit = (preset: EnergyPreset) => {
     setEditingPreset(preset)
     form.reset({
+      name: preset.name || '',
+      description: preset.description || '',
       country: preset.country || '',
       state: preset.state || '',
       city: preset.city || '',
@@ -89,13 +108,31 @@ export default function EnergyPresetsPage() {
       currency: preset.currency,
       provider: preset.provider || '',
       tariff_type: preset.tariff_type || '',
-      peak_hour_multiplier: preset.peak_hour_multiplier,
-      off_peak_hour_multiplier: preset.off_peak_hour_multiplier,
+      peak_hour_multiplier: preset.peak_hour_multiplier || undefined,
+      off_peak_hour_multiplier: preset.off_peak_hour_multiplier || undefined,
     })
     setIsDialogOpen(true)
   }
 
-  const handleSubmit = (data: EnergyPresetFormData) => {
+  // Name suggestion (only while the name field is empty)
+  const [nameValue, provider, city, state, energyCost] = useWatch({
+    control: form.control,
+    name: ['name', 'provider', 'city', 'state', 'energy_cost_per_kwh'],
+  })
+  const isNameEmpty = !nameValue?.trim()
+  const { data: suggestedName, isFetching: isSuggesting } = useSuggestPresetName(
+    {
+      type: 'energy',
+      provider: provider || undefined,
+      city: city || undefined,
+      state: state || undefined,
+      energy_cost_per_kwh: energyCost || undefined,
+    },
+    isDialogOpen && isNameEmpty
+  )
+
+  const handleSubmit = (formData: EnergyPresetFormData) => {
+    const data = { ...formData, name: normalizeOptionalName(formData.name) }
     if (editingPreset) {
       updatePreset(
         { id: editingPreset.id, data },
@@ -152,13 +189,19 @@ export default function EnergyPresetsPage() {
             Configure os custos de energia por localização e tarifa
           </p>
         </div>
-        <Button
-          onClick={handleOpenCreate}
-          className="bg-primary-500 hover:bg-primary-600"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Preset
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setIsTemplateDialogOpen(true)}>
+            <LayoutTemplate className="mr-2 h-4 w-4" />
+            Criar a partir de modelo
+          </Button>
+          <Button
+            onClick={handleOpenCreate}
+            className="bg-primary-500 hover:bg-primary-600"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Preset
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -184,6 +227,7 @@ export default function EnergyPresetsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Nome</TableHead>
                   <TableHead>Localização</TableHead>
                   <TableHead>Fornecedor</TableHead>
                   <TableHead>Custo/kWh</TableHead>
@@ -195,37 +239,35 @@ export default function EnergyPresetsPage() {
               <TableBody>
                 {presets.map((preset) => (
                   <TableRow key={preset.id}>
-                    <TableCell className="font-medium">
-                      {getLocation(preset)}
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{energyPresetLabel(preset)}</p>
+                        {preset.is_default && <DefaultBadge />}
+                      </div>
+                      {preset.description && (
+                        <p className="text-xs text-neutral-500">{preset.description}</p>
+                      )}
                     </TableCell>
+                    <TableCell className="text-neutral-600">{getLocation(preset)}</TableCell>
                     <TableCell className="text-neutral-600">
                       {preset.provider || '—'}
                     </TableCell>
                     <TableCell>
                       {formatCurrencyFromReais(preset.energy_cost_per_kwh)} ({preset.currency})
                     </TableCell>
-                    <TableCell>{preset.peak_hour_multiplier}x</TableCell>
-                    <TableCell>{preset.off_peak_hour_multiplier}x</TableCell>
+                    <TableCell>{formatMultiplier(preset.peak_hour_multiplier)}</TableCell>
+                    <TableCell>{formatMultiplier(preset.off_peak_hour_multiplier)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleOpenEdit(preset)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeletingPreset(preset)}
-                          disabled={preset.is_default}
-                          title={preset.is_default ? 'O preset padrão não pode ser excluído' : 'Excluir preset'}
-                          aria-label={preset.is_default ? 'O preset padrão não pode ser excluído' : 'Excluir preset'}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
-                      </div>
+                      <PresetRowActions
+                        itemLabel={energyPresetLabel(preset)}
+                        isDefault={!!preset.is_default}
+                        canManageDefaults={canManageDefaults}
+                        onEdit={() => handleOpenEdit(preset)}
+                        onDuplicate={() => duplicatePreset(preset.id)}
+                        onSetDefault={() => setDefaultPreset(preset.id)}
+                        onDelete={() => setDeletingPreset(preset)}
+                        isBusy={isSettingDefault || isDuplicating}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -236,7 +278,7 @@ export default function EnergyPresetsPage() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingPreset ? 'Editar Preset' : 'Novo Preset'}
@@ -246,6 +288,29 @@ export default function EnergyPresetsPage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <Controller
+              control={form.control}
+              name="name"
+              render={({ field, fieldState }) => (
+                <PresetNameField
+                  label="Nome do Preset"
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  suggestion={isNameEmpty ? suggestedName : undefined}
+                  isSuggesting={isSuggesting}
+                  error={fieldState.error?.message}
+                />
+              )}
+            />
+            <div>
+              <Label htmlFor="description">Descrição</Label>
+              <Input
+                id="description"
+                placeholder="Ex: Tarifa residencial convencional"
+                {...form.register('description')}
+              />
+            </div>
+
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="country">País</Label>
@@ -264,12 +329,24 @@ export default function EnergyPresetsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="energy_cost_per_kwh">Custo por kWh *</Label>
-                <CurrencyInput
-                  id="energy_cost_per_kwh"
-                  showCurrencySymbol
-                  value={form.watch('energy_cost_per_kwh') || 0}
-                  onChange={(value) => form.setValue('energy_cost_per_kwh', value)}
-                  placeholder="R$ 0,85"
+                <Controller
+                  control={form.control}
+                  name="energy_cost_per_kwh"
+                  render={({ field, fieldState }) => (
+                    <>
+                      <CurrencyInput
+                        id="energy_cost_per_kwh"
+                        showCurrencySymbol
+                        value={field.value || 0}
+                        onChange={field.onChange}
+                        placeholder="R$ 0,85"
+                        aria-invalid={fieldState.error ? true : undefined}
+                      />
+                      {fieldState.error && (
+                        <p className="text-sm text-red-600 mt-1">{fieldState.error.message}</p>
+                      )}
+                    </>
+                  )}
                 />
               </div>
               <div>
@@ -300,24 +377,40 @@ export default function EnergyPresetsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="peak_hour_multiplier">Multiplicador Pico *</Label>
+                <Label htmlFor="peak_hour_multiplier">
+                  Multiplicador Pico <span className="font-normal text-neutral-500">(opcional)</span>
+                </Label>
                 <Input
                   id="peak_hour_multiplier"
                   type="number"
                   step="0.1"
-                  placeholder="1.5"
-                  {...form.register('peak_hour_multiplier', { valueAsNumber: true })}
+                  min="0"
+                  placeholder="Ex: 1.5"
+                  {...form.register('peak_hour_multiplier', { setValueAs: optionalNumber })}
                 />
+                {form.formState.errors.peak_hour_multiplier && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {form.formState.errors.peak_hour_multiplier.message}
+                  </p>
+                )}
               </div>
               <div>
-                <Label htmlFor="off_peak_hour_multiplier">Multiplicador Fora Pico *</Label>
+                <Label htmlFor="off_peak_hour_multiplier">
+                  Multiplicador Fora Pico <span className="font-normal text-neutral-500">(opcional)</span>
+                </Label>
                 <Input
                   id="off_peak_hour_multiplier"
                   type="number"
                   step="0.1"
-                  placeholder="0.8"
-                  {...form.register('off_peak_hour_multiplier', { valueAsNumber: true })}
+                  min="0"
+                  placeholder="Ex: 0.8"
+                  {...form.register('off_peak_hour_multiplier', { setValueAs: optionalNumber })}
                 />
+                {form.formState.errors.off_peak_hour_multiplier && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {form.formState.errors.off_peak_hour_multiplier.message}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -341,13 +434,19 @@ export default function EnergyPresetsPage() {
         </DialogContent>
       </Dialog>
 
+      <PresetTemplateDialog
+        type="energy"
+        open={isTemplateDialogOpen}
+        onOpenChange={setIsTemplateDialogOpen}
+      />
+
       <ConfirmDialog
         open={!!deletingPreset}
         onOpenChange={(open) => !open && setDeletingPreset(null)}
         title="Deletar preset"
         description={
           deletingPreset
-            ? `Tem certeza que deseja deletar o preset de "${getLocation(deletingPreset)}"?`
+            ? `Tem certeza que deseja deletar o preset "${energyPresetLabel(deletingPreset)}"?`
             : 'Tem certeza que deseja deletar este preset?'
         }
         onConfirm={handleDelete}

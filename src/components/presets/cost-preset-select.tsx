@@ -1,72 +1,29 @@
 'use client'
 
-import { useState } from 'react'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Label } from '@/components/ui/label'
 import { useCostPresets } from '@/lib/hooks/use-presets'
-import { Skeleton } from '@/components/ui/skeleton'
+import { PresetSelectBase, type PresetSelectProps } from './preset-select-base'
 import { formatCurrencyFromReais } from '@/lib/utils/format'
+import type { CostPreset } from '@/types/models'
 
-interface CostPresetSelectProps {
-  value?: string
-  onChange: (value: string | undefined) => void
-  label?: string
-  placeholder?: string
-  disabled?: boolean
+export function costPresetLabel(preset: CostPreset): string {
+  const summary = `${formatCurrencyFromReais(preset.labor_cost_per_hour)}/h · margem ${preset.profit_margin_percentage}%`
+  return preset.name ? `${preset.name} (${summary})` : summary
 }
 
-export function CostPresetSelect({
-  value,
-  onChange,
-  label = 'Preset de Custo',
-  placeholder = 'Selecione um preset',
-  disabled = false,
-}: CostPresetSelectProps) {
+export function CostPresetSelect({ label = 'Preset de Custo', ...props }: PresetSelectProps) {
   const { data: presets, isLoading } = useCostPresets()
 
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        {label && <Label>{label}</Label>}
-        <Skeleton className="h-10 w-full" />
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-2">
-      {label && <Label htmlFor="cost-preset">{label}</Label>}
-      <Select
-        value={value || 'none'}
-        onValueChange={(val) => onChange(val === 'none' ? undefined : val)}
-        disabled={disabled}
-      >
-        <SelectTrigger id="cost-preset">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="none">
-            <span className="text-neutral-500">Nenhum</span>
-          </SelectItem>
-          {presets?.map((preset) => (
-            <SelectItem key={preset.id} value={preset.id}>
-              Mão de obra: {formatCurrencyFromReais(preset.labor_cost_per_hour)}/h | Margem: {preset.profit_margin_percentage}%
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      {presets && presets.length === 0 && (
-        <p className="text-xs text-neutral-500">
-          Nenhum preset cadastrado. Crie um em Presets → Custos.
-        </p>
-      )}
-    </div>
+    <PresetSelectBase
+      {...props}
+      label={label}
+      isLoading={isLoading}
+      options={presets?.map((preset) => ({
+        id: preset.id,
+        label: costPresetLabel(preset),
+        isDefault: preset.is_default,
+      }))}
+      emptyHint="Nenhum preset cadastrado. Crie um em Presets → Custos."
+    />
   )
 }
-
