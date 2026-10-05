@@ -66,6 +66,7 @@ const NAV_ITEMS: NavItem[] = [
       { title: 'Máquinas', href: '/presets/machines', icon: Sliders },
       { title: 'Energia', href: '/presets/energy', icon: Sliders },
       { title: 'Custos', href: '/presets/costs', icon: Sliders },
+      { title: 'Perfis de impressão', href: '/presets/profiles', icon: Sliders },
     ],
   },
   {
