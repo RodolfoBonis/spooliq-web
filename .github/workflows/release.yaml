@@ -135,7 +135,6 @@ jobs:
             NODE_VERSION=${{ env.NODE_VERSION }}
             VERDACCIO_TOKEN=${{ secrets.VERDACCIO_TOKEN }}
             NEXT_PUBLIC_API_URL=https://api.spooliq.com/v1
-            NEXT_PUBLIC_CLIENT_ID=${{ secrets.SPOOLIQ_CLIENT_ID }}
 
       - name: Create GitHub Release
         env:
@@ -153,7 +152,6 @@ jobs:
           \`\`\`bash
           docker run -p 3000:3000 \\
             -e API_URL=your_api_url \\
-            -e NEXT_PUBLIC_CLIENT_ID=your_client_id \\
             ${ECR_REGISTRY}/rodolfobonis/spooliq-web:${VERSION}
           \`\`\`
           EOF

@@ -49,13 +49,9 @@ COPY . .
 
 # Declare build arguments for Next.js public environment variables
 ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_CLIENT_ID
-ARG NEXT_PUBLIC_CLIENT_SECRET
 
 # Set environment variables for build (NEXT_PUBLIC_* are inlined at build time)
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_CLIENT_ID=$NEXT_PUBLIC_CLIENT_ID
-ENV NEXT_PUBLIC_CLIENT_SECRET=$NEXT_PUBLIC_CLIENT_SECRET
 
 # Build the application with standalone output
 ENV NEXT_TELEMETRY_DISABLED=1

@@ -2,21 +2,24 @@
 
 import {use, useState} from 'react'
 import Link from 'next/link'
-import {ArrowLeft, Edit, Trash2, Mail, Phone, MapPin, FileText, DollarSign, AlertTriangle} from 'lucide-react'
+import {ArrowLeft, Edit, Trash2, Mail, Phone, MapPin, FileText, DollarSign, AlertTriangle, Box, Plus} from 'lucide-react'
 
 import {Button} from '@/components/ui/button'
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card'
 import {Avatar, AvatarFallback} from '@/components/ui/avatar'
 import {Separator} from '@/components/ui/separator'
+import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs'
 import {ConfirmationDialog} from '@/components/common/confirmation-dialog'
 
 import {useCustomer, useDeleteCustomer} from '@/lib/hooks/use-customers'
 import {useDeleteBudget, useGeneratePDF} from '@/lib/hooks/use-budgets'
+import {useModels3DByCustomer} from '@/lib/hooks/use-model3d'
 import {LoadingSkeleton} from '@/components/common/loading-skeleton'
 import {formatCurrency, getInitials} from '@/lib/utils/format'
 import {useRouter} from 'next/navigation'
 import {BudgetCard} from "@/components/budgets/budget-card"
 import {CustomerBudgetTable} from '@/components/customers/customer-budget-table'
+import {Model3DCard, Model3DUploadDialog} from '@/components/models3d'
 
 export default function CustomerDetailPage({params}: { params: Promise<{ id: string }> }) {
     const {id} = use(params)
@@ -26,6 +29,9 @@ export default function CustomerDetailPage({params}: { params: Promise<{ id: str
     const {mutate: deleteBudget} = useDeleteBudget()
     const {mutate: generatePDF} = useGeneratePDF()
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+    const [isUploadModelOpen, setIsUploadModelOpen] = useState(false)
+
+    const {data: models3d = []} = useModels3DByCustomer(id)
 
     const handleDelete = () => {
         if (!customer) return
@@ -254,43 +260,98 @@ export default function CustomerDetailPage({params}: { params: Promise<{ id: str
                         </Card>
                     </div>
 
-                    {/* Budgets List */}
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <CardTitle>Orçamentos</CardTitle>
-                                <Button size="sm" asChild className="bg-primary-500 hover:bg-primary-600 text-white">
-                                    <Link href={`/budgets/new?customer=${customer.id}`}>
-                                        Novo Orçamento
-                                    </Link>
-                                </Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            {customer.budgets && customer.budgets.length > 0 ? (
-                                <CustomerBudgetTable
-                                    budgets={customer.budgets}
-                                    customerName={customer.name}
-                                    limit={10}
-                                    onDelete={handleDeleteBudget}
-                                    onGeneratePDF={handleGeneratePDF}
-                                />
-                            ) : (
-                                <div className="text-center py-12">
-                                    <FileText className="h-12 w-12 text-neutral-400 mx-auto mb-4"/>
-                                    <p className="text-sm text-neutral-600 mb-4">
-                                        Nenhum orçamento encontrado para este cliente
-                                    </p>
-                                    <Button variant="outline" size="sm" asChild
-                                            className="bg-primary-500 hover:bg-primary-600 text-white">
-                                        <Link href={`/budgets/new?customer=${customer.id}`}>
-                                            Criar Primeiro Orçamento
-                                        </Link>
-                                    </Button>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
+                    {/* Tabs: Orçamentos + Modelos 3D */}
+                    <Tabs defaultValue="budgets">
+                        <TabsList>
+                            <TabsTrigger value="budgets">
+                                Orçamentos ({customer.budgets?.length || 0})
+                            </TabsTrigger>
+                            <TabsTrigger value="models3d">
+                                Modelos 3D ({models3d.length})
+                            </TabsTrigger>
+                        </TabsList>
+
+                        {/* Orçamentos tab */}
+                        <TabsContent value="budgets">
+                            <Card>
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle>Orçamentos</CardTitle>
+                                        <Button size="sm" asChild className="bg-primary-500 hover:bg-primary-600 text-white">
+                                            <Link href={`/budgets/new?customer=${customer.id}`}>
+                                                Novo Orçamento
+                                            </Link>
+                                        </Button>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    {customer.budgets && customer.budgets.length > 0 ? (
+                                        <CustomerBudgetTable
+                                            budgets={customer.budgets}
+                                            customerName={customer.name}
+                                            limit={10}
+                                            onDelete={handleDeleteBudget}
+                                            onGeneratePDF={handleGeneratePDF}
+                                        />
+                                    ) : (
+                                        <div className="text-center py-12">
+                                            <FileText className="h-12 w-12 text-neutral-400 mx-auto mb-4"/>
+                                            <p className="text-sm text-neutral-600 mb-4">
+                                                Nenhum orçamento encontrado para este cliente
+                                            </p>
+                                            <Button variant="outline" size="sm" asChild
+                                                    className="bg-primary-500 hover:bg-primary-600 text-white">
+                                                <Link href={`/budgets/new?customer=${customer.id}`}>
+                                                    Criar Primeiro Orçamento
+                                                </Link>
+                                            </Button>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
+                        {/* Modelos 3D tab */}
+                        <TabsContent value="models3d">
+                            <Card>
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle>Modelos 3D</CardTitle>
+                                        <Button size="sm" onClick={() => setIsUploadModelOpen(true)}>
+                                            <Plus className="mr-2 h-4 w-4" />
+                                            Adicionar Modelo
+                                        </Button>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    {models3d.length > 0 ? (
+                                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                                            {models3d.map((model) => (
+                                                <Model3DCard key={model.id} model={model} />
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-12">
+                                            <Box className="h-12 w-12 text-neutral-400 mx-auto mb-4"/>
+                                            <p className="text-sm text-neutral-600 mb-4">
+                                                Nenhum modelo 3D associado a este cliente
+                                            </p>
+                                            <Button variant="outline" size="sm" onClick={() => setIsUploadModelOpen(true)}>
+                                                Adicionar Primeiro Modelo
+                                            </Button>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                    </Tabs>
+
+                    {/* Upload model dialog */}
+                    <Model3DUploadDialog
+                        open={isUploadModelOpen}
+                        onOpenChange={setIsUploadModelOpen}
+                        customerId={customer.id}
+                    />
                 </div>
             </div>
         </div>

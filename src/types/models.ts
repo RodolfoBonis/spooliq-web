@@ -100,6 +100,7 @@ export interface Budget {
 export interface BudgetItem {
   id: string
   budget_id: string
+  model_3d_id?: string // ID do modelo 3D associado (opcional)
 
   // Product info
   product_name: string
@@ -593,4 +594,44 @@ export interface AsaasWebhookEvent {
       creditCardBrand: string
     }
   }
+}
+
+// 3D Model Models
+export interface Model3D {
+  id: string
+  organization_id: string
+  customer_id?: string
+  name: string
+  description: string
+  file_name: string
+  file_url: string
+  file_format: string // ".stl" ou ".3mf"
+  file_size_bytes: number
+  file_hash: string
+  thumbnail_url?: string
+  notes?: string
+  tags?: string
+  owner_user_id: string
+  created_at: string
+  updated_at: string
+  deleted_at?: string
+}
+
+export interface FindAllModel3DResponse {
+  data: Model3D[]
+  total: number
+  page: number
+  page_size: number
+  total_pages: number
+}
+
+export interface UploadConflictResponse {
+  /** Machine-readable error code; a duplicate upload returns `model3d_duplicate`. */
+  code?: string
+  /** pt-BR message from the standard envelope (preferred for display). */
+  message?: string
+  /** Legacy error string (fallback when `message` is absent). */
+  error?: string
+  /** The already-existing model that caused the conflict (may be absent). */
+  existing?: Model3D
 }

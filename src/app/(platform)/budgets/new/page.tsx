@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
 import { CustomerSelect } from '@/components/customers/customer-select'
 import { FilamentSelector } from '@/components/budgets/filament-selector'
+import { Model3DCombobox } from '@/components/models3d'
 import { BudgetPreviewCard } from '@/components/budgets/budget-preview-card'
 import { ProfileSelect } from '@/components/presets/profile-select'
 import { MachinePresetSelect } from '@/components/presets/machine-preset-select'
@@ -41,6 +42,7 @@ const AUTO_PRESET_LABEL = 'Automático (perfil ou padrão)'
 
 function newItem(order: number): CreateBudgetFormData['items'][number] {
   return {
+    model_3d_id: undefined,
     product_name: '',
     product_description: '',
     product_quantity: 1,
@@ -507,6 +509,22 @@ export default function NewBudgetPage() {
                     excludeIds={watchedFilaments
                       .map((f) => f?.filament_id)
                       .filter((id): id is string => !!id)}
+                  />
+                </div>
+
+                {/* Model 3D selector (optional) */}
+                <div className="mt-3 space-y-1">
+                  <label
+                    htmlFor={`model-3d-${itemIndex}`}
+                    className="text-sm font-medium text-neutral-700"
+                  >
+                    Modelo 3D <span className="text-neutral-400 font-normal">(opcional)</span>
+                  </label>
+                  <Model3DCombobox
+                    id={`model-3d-${itemIndex}`}
+                    value={watchedItem?.model_3d_id}
+                    onChange={(id) => form.setValue(`items.${itemIndex}.model_3d_id`, id)}
+                    customerId={values.customer_id}
                   />
                 </div>
 
