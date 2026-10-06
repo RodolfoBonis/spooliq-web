@@ -5,6 +5,12 @@ All notable changes to Spooliq Web will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0] - 2026-10-06
+
+- chore: bump version to 1.4.0 (d6e0c53)
+- feat(slicer): import sliced G-code/3MF into budget items (#38) (2d1eb1c)
+
+
 ## [v1.3.0] - 2026-10-06
 
 - chore: bump version to 1.3.0 (86fb35f)
