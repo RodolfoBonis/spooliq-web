@@ -21,6 +21,8 @@ import { Model3DThumbnail } from './model3d-thumbnail'
 import type { Model3D } from '@/types/models'
 
 interface Model3DComboboxProps {
+  /** id for the trigger button, so an external <label htmlFor> can target it. */
+  id?: string
   value?: string
   onChange: (id: string | undefined) => void
   customerId?: string
@@ -30,7 +32,7 @@ interface Model3DComboboxProps {
 const SEARCH_DEBOUNCE_MS = 300
 const SEARCH_PAGE_SIZE = 20
 
-export function Model3DCombobox({ value, onChange, customerId, disabled }: Model3DComboboxProps) {
+export function Model3DCombobox({ id, value, onChange, customerId, disabled }: Model3DComboboxProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -69,6 +71,7 @@ export function Model3DCombobox({ value, onChange, customerId, disabled }: Model
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            id={id}
             variant="outline"
             role="combobox"
             aria-expanded={open}
@@ -102,7 +105,7 @@ export function Model3DCombobox({ value, onChange, customerId, disabled }: Model
               {models.map((model) => (
                 <CommandItem
                   key={model.id}
-                  value={model.name}
+                  value={`${model.name} ${model.id}`}
                   onSelect={() => {
                     onChange(model.id === value ? undefined : model.id)
                     setOpen(false)
@@ -132,6 +135,7 @@ export function Model3DCombobox({ value, onChange, customerId, disabled }: Model
           type="button"
           variant="ghost"
           size="icon"
+          aria-label="Remover modelo 3D selecionado"
           className="h-9 w-9 shrink-0"
           onClick={() => onChange(undefined)}
           disabled={disabled}
