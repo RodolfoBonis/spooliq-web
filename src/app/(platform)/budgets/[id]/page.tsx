@@ -317,13 +317,32 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                           </p>
                         </div>
                       )}
+                      {!!item.post_processing_minutes && (
+                        <div>
+                          <p className="text-neutral-500">Pós-processamento</p>
+                          <p className="font-medium">{item.post_processing_minutes} min (total)</p>
+                        </div>
+                      )}
+                      {!!item.support_removal_minutes && (
+                        <div>
+                          <p className="text-neutral-500">Remoção de Suporte</p>
+                          <p className="font-medium">{item.support_removal_minutes} min (total)</p>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Labor Cost Breakdown */}
-                    {(item.setup_cost > 0 || item.manual_labor_cost > 0) && (
+                    {/* Cost breakdown (labor + Phase 4A operation costs) */}
+                    {(item.setup_cost > 0 ||
+                      item.manual_labor_cost > 0 ||
+                      !!item.machine_cost ||
+                      !!item.post_processing_cost ||
+                      !!item.support_removal_cost ||
+                      !!item.packaging_cost ||
+                      !!item.quality_control_cost ||
+                      !!item.failure_cost) && (
                       <div className="mt-3 p-3 bg-neutral-50 rounded-lg space-y-2">
                         <p className="text-xs font-medium text-neutral-700">
-                          Custos de Mão de Obra:
+                          Custos de Mão de Obra e Operação:
                         </p>
                         {item.setup_cost > 0 && (
                           <div className="flex justify-between text-xs">
@@ -343,6 +362,42 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                             <span className="font-medium">
                               {formatCurrency(item.manual_labor_cost)}
                             </span>
+                          </div>
+                        )}
+                        {!!item.machine_cost && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-neutral-600">Desgaste da Máquina</span>
+                            <span className="font-medium">{formatCurrency(item.machine_cost)}</span>
+                          </div>
+                        )}
+                        {!!item.post_processing_cost && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-neutral-600">Pós-processamento</span>
+                            <span className="font-medium">{formatCurrency(item.post_processing_cost)}</span>
+                          </div>
+                        )}
+                        {!!item.support_removal_cost && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-neutral-600">Remoção de Suporte</span>
+                            <span className="font-medium">{formatCurrency(item.support_removal_cost)}</span>
+                          </div>
+                        )}
+                        {!!item.packaging_cost && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-neutral-600">Embalagem</span>
+                            <span className="font-medium">{formatCurrency(item.packaging_cost)}</span>
+                          </div>
+                        )}
+                        {!!item.quality_control_cost && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-neutral-600">Controle de Qualidade</span>
+                            <span className="font-medium">{formatCurrency(item.quality_control_cost)}</span>
+                          </div>
+                        )}
+                        {!!item.failure_cost && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-neutral-600">Falhas</span>
+                            <span className="font-medium">{formatCurrency(item.failure_cost)}</span>
                           </div>
                         )}
                       </div>
@@ -534,6 +589,12 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                     color="yellow"
                   />
                 )}
+                <CostBreakdownBar
+                  label="Desgaste da Máquina"
+                  amount={budget.machine_cost ?? 0}
+                  total={budget.total_cost}
+                  color="purple"
+                />
                 {budget.setup_cost > 0 && (
                   <CostBreakdownBar
                     label="Setup"
@@ -550,6 +611,30 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                     color="purple"
                   />
                 )}
+                <CostBreakdownBar
+                  label="Pós-processamento"
+                  amount={budget.post_processing_cost ?? 0}
+                  total={budget.total_cost}
+                  color="blue"
+                />
+                <CostBreakdownBar
+                  label="Embalagem"
+                  amount={budget.packaging_cost ?? 0}
+                  total={budget.total_cost}
+                  color="orange"
+                />
+                <CostBreakdownBar
+                  label="Controle de Qualidade"
+                  amount={budget.quality_control_cost ?? 0}
+                  total={budget.total_cost}
+                  color="yellow"
+                />
+                <CostBreakdownBar
+                  label="Falhas"
+                  amount={budget.failure_cost ?? 0}
+                  total={budget.total_cost}
+                  color="red"
+                />
               </div>
 
               <Separator />
@@ -562,8 +647,13 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                     budget.filament_cost +
                     budget.waste_cost +
                     budget.energy_cost +
+                    (budget.machine_cost ?? 0) +
                     (budget.setup_cost || 0) +
-                    budget.labor_cost
+                    budget.labor_cost +
+                    (budget.post_processing_cost ?? 0) +
+                    (budget.packaging_cost ?? 0) +
+                    (budget.quality_control_cost ?? 0) +
+                    (budget.failure_cost ?? 0)
                   )}
                 </span>
               </div>
@@ -586,6 +676,42 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                   total={budget.total_cost}
                   color="green"
                 />
+              )}
+
+              {/* Base price, discount, shipping and taxes (Phase 4A) */}
+              {!!budget.base_price && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-neutral-700 font-medium">Preço base</span>
+                  <span className="font-semibold">{formatCurrency(budget.base_price)}</span>
+                </div>
+              )}
+              {!!budget.discount_amount && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-neutral-700">
+                    {budget.discount_type === 'percent' && budget.discount_value != null
+                      ? `Desconto (${budget.discount_value}%)`
+                      : 'Desconto'}
+                  </span>
+                  <span className="font-semibold text-red-600">
+                    − {formatCurrency(budget.discount_amount)}
+                  </span>
+                </div>
+              )}
+              {!!budget.shipping_cost && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-neutral-700">Frete</span>
+                  <span className="font-semibold">{formatCurrency(budget.shipping_cost)}</span>
+                </div>
+              )}
+              {!!budget.tax_amount && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-neutral-700">
+                    {budget.tax_rate_applied != null
+                      ? `Impostos (${budget.tax_rate_applied}%)`
+                      : 'Impostos'}
+                  </span>
+                  <span className="font-semibold">{formatCurrency(budget.tax_amount)}</span>
+                </div>
               )}
 
               <Separator />

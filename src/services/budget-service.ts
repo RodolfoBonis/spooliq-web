@@ -51,6 +51,8 @@ export interface CreateBudgetItemDTO {
   cost_preset_id?: string
   setup_time_minutes: number // Setup time in minutes (one-time)
   manual_labor_minutes_total: number // Total manual labor for all units
+  post_processing_minutes?: number // Phase 4A: total post-processing minutes (all units)
+  support_removal_minutes?: number // Phase 4A: total support-removal minutes (all units)
   additional_notes?: string
   filaments: CreateBudgetItemFilamentDTO[]
   order: number
@@ -66,6 +68,13 @@ export interface CreateBudgetDTO {
   cost_preset_id?: string // Budget-level cost preset (overhead/margin)
   include_energy_cost: boolean
   include_waste_cost: boolean
+  // Phase 4A pricing controls (all optional; API defaults apply when omitted).
+  include_machine_cost?: boolean
+  discount_type?: 'percent' | 'fixed' | null
+  discount_value?: number // percent 0-100, or REAIS when discount_type === 'fixed'
+  include_shipping?: boolean
+  shipping_override?: number | null // cents; overrides computed shipping when set
+  tax_rate?: number | null // % 0-99.99; null uses the company default
   delivery_days?: number
   payment_terms?: string
   notes?: string
