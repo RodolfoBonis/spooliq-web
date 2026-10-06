@@ -2,29 +2,95 @@ name: Release with Docker - spooliq-web
 
 permissions:
   contents: write
+  pull-requests: write
+  issues: write
 
 on:
-  workflow_run:
-    workflows: ["CI - spooliq-web"]
-    types:
-      - completed
-    branches: [main]
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v2.1.0)'
+        required: true
+        type: string
+      version:
+        description: 'Version without v prefix (e.g., 2.1.0)'
+        required: true
+        type: string
+
+concurrency:
+  group: release-production
+  cancel-in-progress: false
 
 env:
   NODE_VERSION: '20'
 
 jobs:
-  release:
-    runs-on: [ubuntu-latest]
-    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.validate.outputs.version }}
+      tag: ${{ steps.validate.outputs.tag }}
     steps:
-      - name: Checkout
+      - name: Checkout tag
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+
+      - name: Validate version consistency
+        id: validate
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          # Read version from package.json
+          FILE_VERSION=$(jq -r .version package.json)
+
+          # Verify tag format
+          if [[ ! "$INPUT_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "ERROR: Tag must be in format v1.2.3"
+            echo "Got: $INPUT_TAG"
+            exit 1
+          fi
+
+          # Extract version from tag
+          TAG_VERSION=${INPUT_TAG#v}
+
+          # Verify input version matches tag version
+          if [ "$INPUT_VERSION" != "$TAG_VERSION" ]; then
+            echo "ERROR: Input version ($INPUT_VERSION) doesn't match tag version ($TAG_VERSION)"
+            exit 1
+          fi
+
+          # Verify package.json version matches tag version
+          if [ "$TAG_VERSION" != "$FILE_VERSION" ]; then
+            echo "ERROR: Tag version ($TAG_VERSION) doesn't match package.json ($FILE_VERSION)"
+            echo ""
+            echo "This means the tag was created with the wrong version!"
+            echo "Expected: $FILE_VERSION"
+            echo "Got: $TAG_VERSION"
+            exit 1
+          fi
+
+          echo "version=$INPUT_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$INPUT_TAG" >> $GITHUB_OUTPUT
+
+          echo "✓ Version validated: $INPUT_VERSION"
+          echo "✓ Tag validated: $INPUT_TAG"
+          echo "✓ package.json matches: $FILE_VERSION"
+
+  release:
+    needs: validate
+    runs-on: [ubuntu-latest]
+    timeout-minutes: 30
+    steps:
+      - name: Record build start time
+        run: echo "BUILD_START_EPOCH=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -47,30 +113,6 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Determine Version Strategy
-        id: version-strategy
-        run: |
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            echo "strategy=tag" >> $GITHUB_OUTPUT
-            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          else
-            echo "strategy=auto" >> $GITHUB_OUTPUT
-            if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-              # Get current version from package.json
-              CURRENT_VERSION=$(node -p "require('./package.json').version")
-              # Increment patch version
-              NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
-              echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-              echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
-              # Update package.json
-              npm version $NEW_VERSION --no-git-tag-version
-            else
-              echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-              echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-            fi
-          fi
-
       - name: Set lowercase repository owner
         id: repo-owner
         run: |
@@ -86,7 +128,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: |
             ${{ steps.ecr.outputs.registry }}/rodolfobonis/spooliq-web:latest
-            ${{ steps.ecr.outputs.registry }}/rodolfobonis/spooliq-web:${{ steps.version-strategy.outputs.version }}
+            ${{ steps.ecr.outputs.registry }}/rodolfobonis/spooliq-web:${{ needs.validate.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -96,47 +138,37 @@ jobs:
             NEXT_PUBLIC_CLIENT_ID=${{ secrets.SPOOLIQ_CLIENT_ID }}
             NEXT_PUBLIC_CLIENT_SECRET=${{ secrets.SPOOLIQ_CLIENT_SECRET }}
 
-      - name: Add, commit and push version increment
-        if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'
-        uses: EndBug/add-and-commit@v9
-        with:
-          author_name: "GitHub Actions"
-          author_email: "actions@github.com"
-          message: "chore: bump version to ${{ steps.version-strategy.outputs.version }}"
-          add: "package.json"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Create Tag (if auto-increment)
-        if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'
-        run: |
-          git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}.git
-          git tag ${{ steps.version-strategy.outputs.tag }}
-          git push origin ${{ steps.version-strategy.outputs.tag }}
-
       - name: Create GitHub Release
-        if: steps.version-strategy.outputs.strategy == 'auto' && github.event_name == 'workflow_run'
-        uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-        with:
-          tag_name: ${{ steps.version-strategy.outputs.tag }}
-          release_name: Release ${{ steps.version-strategy.outputs.tag }}
-          body: |
-            ## Changes in this Release
-            - Docker image: `${{ steps.ecr.outputs.registry }}/rodolfobonis/spooliq-web:${{ steps.version-strategy.outputs.version }}`
-            - Automated release from CI pipeline
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          TAG: ${{ needs.validate.outputs.tag }}
+          VERSION: ${{ needs.validate.outputs.version }}
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          cat > release_notes.md <<EOF
+          ## Changes in this Release
+          - Docker image: \`${ECR_REGISTRY}/rodolfobonis/spooliq-web:${VERSION}\`
+          - Automated release from the release workflow
 
-            ### Docker Run Command
-            ```bash
-            docker run -p 3000:3000 \
-              -e API_URL=your_api_url \
-              -e NEXT_PUBLIC_CLIENT_ID=your_client_id \
-              -e NEXT_PUBLIC_CLIENT_SECRET=your_client_secret \
-              ${{ steps.ecr.outputs.registry }}/rodolfobonis/spooliq-web:${{ steps.version-strategy.outputs.version }}
-            ```
-          draft: false
-          prerelease: false
+          ### Docker Run Command
+          \`\`\`bash
+          docker run -p 3000:3000 \\
+            -e API_URL=your_api_url \\
+            -e NEXT_PUBLIC_CLIENT_ID=your_client_id \\
+            -e NEXT_PUBLIC_CLIENT_SECRET=your_client_secret \\
+            ${ECR_REGISTRY}/rodolfobonis/spooliq-web:${VERSION}
+          \`\`\`
+          EOF
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists, updating notes"
+            gh release edit "$TAG" --notes-file release_notes.md
+          else
+            gh release create "$TAG" \
+              --title "Release $TAG" \
+              --notes-file release_notes.md \
+              --verify-tag
+          fi
 
       - name: Checkout k3s manifest repository
         uses: actions/checkout@master
@@ -148,7 +180,7 @@ jobs:
 
       - name: Update K3s Manifests
         env:
-          VERSION: ${{ steps.version-strategy.outputs.version }}
+          VERSION: ${{ needs.validate.outputs.version }}
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
           REPOSITORY_OWNER: ${{ steps.repo-owner.outputs.lowercase }}
         run: |
@@ -186,33 +218,30 @@ jobs:
       - name: Calculate Build Duration
         id: build-duration
         run: |
-          START_TIME="${{ github.event.head_commit.timestamp }}"
-          if [ -z "$START_TIME" ] || [ "$START_TIME" = "null" ]; then
-            START_TIME="${{ github.event.repository.pushed_at }}"
+          # BUILD_START_EPOCH is recorded as the first step of this job, so the
+          # duration is reliable on workflow_dispatch (head_commit/pushed_at are not).
+          START_EPOCH="${BUILD_START_EPOCH:-0}"
+          END_EPOCH=$(date +%s)
+
+          if [ "$START_EPOCH" -le 0 ]; then
+            DURATION_SECONDS=0
+          else
+            DURATION_SECONDS=$((END_EPOCH - START_EPOCH))
           fi
-          if [ -z "$START_TIME" ] || [ "$START_TIME" = "null" ]; then
-            START_TIME=$(date -u -d '5 minutes ago' +%Y-%m-%dT%H:%M:%SZ)
-          fi
-          
-          END_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          
-          START_EPOCH=$(date -d "$START_TIME" +%s)
-          END_EPOCH=$(date -d "$END_TIME" +%s)
-          DURATION_SECONDS=$((END_EPOCH - START_EPOCH))
-          
-          if [ $DURATION_SECONDS -lt 60 ]; then
+
+          if [ "$DURATION_SECONDS" -lt 60 ]; then
             DURATION="${DURATION_SECONDS}s"
-          elif [ $DURATION_SECONDS -lt 3600 ]; then
+          elif [ "$DURATION_SECONDS" -lt 3600 ]; then
             MINUTES=$((DURATION_SECONDS / 60))
-            SECONDS=$((DURATION_SECONDS % 60))
-            DURATION="${MINUTES}m ${SECONDS}s"
+            SECS=$((DURATION_SECONDS % 60))
+            DURATION="${MINUTES}m ${SECS}s"
           else
             HOURS=$((DURATION_SECONDS / 3600))
             MINUTES=$(((DURATION_SECONDS % 3600) / 60))
-            SECONDS=$((DURATION_SECONDS % 60))
-            DURATION="${HOURS}h ${MINUTES}m ${SECONDS}s"
+            SECS=$((DURATION_SECONDS % 60))
+            DURATION="${HOURS}h ${MINUTES}m ${SECS}s"
           fi
-          
+
           echo "duration=$DURATION" >> $GITHUB_OUTPUT
 
       - name: Notify n8n Success
@@ -224,7 +253,7 @@ jobs:
             -d "{
               \"chatId\": \"${{ secrets.CHAT_ID }}\",
               \"threadId\": \"${{ secrets.THREAD_ID }}\",
-              \"message\": \"✅ Spooliq Web Production Deploy Success\n\n🚀 Version: ${{ steps.version-strategy.outputs.version }}\n📦 Tag: ${{ steps.version-strategy.outputs.tag }}\n👤 Author: ${{ github.actor }}\n🌐 URL: https://spooliq.com\n⏱️ Duration: ${{ steps.build-duration.outputs.duration }}\n🔗 Release: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version-strategy.outputs.tag }}\"
+              \"message\": \"✅ Spooliq Web Production Deploy Success\n\n🚀 Version: ${{ needs.validate.outputs.version }}\n📦 Tag: ${{ needs.validate.outputs.tag }}\n👤 Author: ${{ github.actor }}\n🌐 URL: https://spooliq.com\n⏱️ Duration: ${{ steps.build-duration.outputs.duration }}\n🔗 Release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}\"
             }"
 
       - name: Notify n8n Failure
@@ -236,5 +265,114 @@ jobs:
             -d "{
               \"chatId\": \"${{ secrets.CHAT_ID }}\",
               \"threadId\": \"${{ secrets.THREAD_ID }}\",
-              \"message\": \"❌ Spooliq Web Production Deploy Failed\n\n🚀 Version: ${{ steps.version-strategy.outputs.version }}\n📦 Tag: ${{ steps.version-strategy.outputs.tag }}\n👤 Author: ${{ github.actor }}\n⏱️ Duration: ${{ steps.build-duration.outputs.duration }}\n\n🔗 Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+              \"message\": \"❌ Spooliq Web Production Deploy Failed\n\n🚀 Version: ${{ needs.validate.outputs.version }}\n📦 Tag: ${{ needs.validate.outputs.tag }}\n👤 Author: ${{ github.actor }}\n⏱️ Duration: ${{ steps.build-duration.outputs.duration }}\n\n🔗 Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
             }"
+
+  backport:
+    needs: [validate, release]
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh label create "backport" \
+            --description "Backport changes to other branches" \
+            --color "FBCA04" \
+            --force 2>/dev/null || true
+
+          gh label create "automated" \
+            --description "Automatically created by workflows" \
+            --color "E99695" \
+            --force 2>/dev/null || true
+
+          gh label create "auto-merge" \
+            --description "Automatically merge when approved" \
+            --color "0E8A16" \
+            --force 2>/dev/null || true
+
+      - name: Create backport to develop
+        id: backport
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          VERSION: ${{ needs.validate.outputs.version }}
+          TAG: ${{ needs.validate.outputs.tag }}
+        run: |
+          # Setup git
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+          # Fetch develop
+          git fetch origin develop:develop
+
+          # Create backport branch from develop
+          BACKPORT_BRANCH="backport/${TAG}-to-develop"
+          git checkout -b "$BACKPORT_BRANCH" develop
+
+          # Merge main into the backport branch. A conflict means develop has
+          # diverged and needs manual reconciliation -- this must NOT fail the
+          # release (the image is already published). Flag it and exit cleanly.
+          if ! git merge origin/main --no-ff -m "chore: backport ${TAG} to develop"; then
+            echo "::warning::Backport of ${TAG} to develop has merge conflicts; manual resolution required."
+            git merge --abort || true
+            gh issue create \
+              --title "🔄 Backport ${TAG} to develop needs manual resolution" \
+              --body "The automated backport of ${TAG} from main to develop has merge conflicts. Reconcile develop with main manually." \
+              --label "backport" --label "automated" 2>/dev/null \
+              || echo "Issue create skipped (may already exist)"
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Clean merge -> push the backport branch and open the auto-merge PR
+          git push origin "$BACKPORT_BRANCH"
+          echo "created=true" >> "$GITHUB_OUTPUT"
+
+          gh pr create \
+            --base develop \
+            --head "$BACKPORT_BRANCH" \
+            --title "🔄 Backport ${TAG} to develop" \
+            --body "$(cat <<EOF
+          ## Automated Backport
+
+          This PR backports release **${TAG}** from main to develop.
+
+          ### Changes Included
+          - Version bump to ${VERSION}
+          - CHANGELOG updates
+          - All features and fixes from the release
+
+          ### Auto-merge
+          This PR is labeled for auto-merge and will be merged automatically after:
+          - ✓ All CI checks pass
+          - ✓ No merge conflicts
+
+          If there are conflicts, manual resolution is required.
+
+          ---
+          *Automated by release workflow*
+          EOF
+          )" \
+            --label "backport" \
+            --label "automated" \
+            --label "auto-merge" || echo "PR creation failed or already exists"
+
+      - name: Notify n8n backport created
+        if: success() && steps.backport.outputs.created == 'true'
+        run: |
+          curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.N8N_API_TOKEN }}" \
+            -d "{
+              \"chatId\": \"${{ secrets.CHAT_ID }}\",
+              \"threadId\": \"${{ secrets.THREAD_ID }}\",
+              \"message\": \"🔄 Backport ${{ needs.validate.outputs.tag }} to develop created and labeled for auto-merge.\"
+            }" || echo "Notification failed (non-critical)"
