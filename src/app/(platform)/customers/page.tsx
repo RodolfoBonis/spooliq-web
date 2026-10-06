@@ -27,11 +27,16 @@ import { ConfirmationDialog } from '@/components/common/confirmation-dialog'
 import { useCustomers, useDeleteCustomer } from '@/lib/hooks/use-customers'
 import { TableSkeleton } from '@/components/common/loading-skeleton'
 import { EmptyState } from '@/components/common/empty-state'
+import { PaginationControls } from '@/components/common/pagination-controls'
+import { useDebouncedValue } from '@/lib/hooks/use-debounced-value'
 import { formatCurrency, getInitials } from '@/lib/utils/format'
 
 export default function CustomersPage() {
   const [search, setSearch] = useState('')
-  const { data, isLoading } = useCustomers({ search, page: 1, pageSize: 50 })
+  const [page, setPage] = useState(1)
+  const debouncedSearch = useDebouncedValue(search, 300)
+
+  const { data, isLoading } = useCustomers({ search: debouncedSearch, page, pageSize: 12 })
   const { mutate: deleteCustomer, isPending: isDeleting } = useDeleteCustomer()
   const [customerToDelete, setCustomerToDelete] = useState<{ id: string; name: string } | null>(null)
 
@@ -67,7 +72,10 @@ export default function CustomersPage() {
           <Input
             placeholder="Buscar por nome ou email..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(1)
+            }}
             className="pl-10"
           />
         </div>
@@ -187,6 +195,14 @@ export default function CustomersPage() {
             </TableBody>
           </Table>
         </Card>
+      )}
+
+      {!isLoading && customers.length > 0 && (
+        <PaginationControls
+          page={page}
+          totalPages={data?.totalPages ?? 1}
+          onPageChange={setPage}
+        />
       )}
 
       {/* Delete Confirmation Dialog */}

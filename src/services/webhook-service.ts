@@ -1,5 +1,6 @@
 import { api } from '@/lib/api/client'
 import type { AsaasWebhookEvent } from '@/types/models'
+import { toPage } from '@/lib/api/pagination'
 
 export interface WebhookLog {
   id: string
@@ -47,17 +48,15 @@ export const webhookService = {
     page = 1,
     pageSize = 20
   ): Promise<{ logs: WebhookLog[]; total: number; page: number; page_size: number }> {
-    const { data } = await api.get<{ logs: WebhookLog[]; total: number; page: number; page_size: number }>(
-      '/admin/webhooks/logs',
-      {
-        params: {
-          provider,
-          page,
-          page_size: pageSize,
-        },
-      }
-    )
-    return data
+    const { data } = await api.get('/admin/webhooks/logs', {
+      params: {
+        provider,
+        page,
+        page_size: pageSize,
+      },
+    })
+    const result = toPage<WebhookLog>(data, 'logs')
+    return { logs: result.data, total: result.total, page: result.page, page_size: result.pageSize }
   },
 
   /**

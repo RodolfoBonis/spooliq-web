@@ -1,6 +1,7 @@
 import api from '@/lib/api/client'
-import {Customer, CustomerBudget} from '@/types/models'
-import type {PaginatedResponse} from '@/types/api'
+import { buildListParams, toPage } from '@/lib/api/pagination'
+import { Customer, CustomerBudget } from '@/types/models'
+import type { PaginatedResponse } from '@/types/api'
 
 export interface CustomerFilters {
     search?: string
@@ -23,30 +24,35 @@ export interface CreateCustomerDTO {
 export interface UpdateCustomerDTO extends Partial<CreateCustomerDTO> {
 }
 
+/** Raw list item: the API may wrap each customer with aggregate counts. */
+interface RawCustomerListItem {
+    customer?: Customer
+    budget_count?: number
+    total_budgets?: number
+}
+
+function normalizeListItem(item: RawCustomerListItem & Partial<Customer>): Customer {
+    // New shape may return the customer flat; legacy wraps it under `customer`.
+    const base = item.customer ?? (item as Customer)
+    return {
+        ...base,
+        budgets_count: item.budget_count ?? base.budgets_count,
+        total_spent: item.total_budgets ?? base.total_spent ?? 0,
+    }
+}
+
 export const customerService = {
     /**
-     * List customers with filters and pagination
+     * List customers with filters and pagination. Tolerant to both the new
+     * `{ data, total, page, page_size, total_pages }` envelope and legacy arrays.
      */
     async list(filters?: CustomerFilters): Promise<PaginatedResponse<Customer>> {
-        const {data} = await api.get('/customers/', {
-            params: filters,
+        const { search, page, pageSize } = filters || {}
+        const { data } = await api.get('/customers/', {
+            params: buildListParams({ page, pageSize, q: search }),
         })
-
-        // Backend returns: { data: [{ customer: {...}, budget_count: 0 }], total, page, page_size, total_pages }
-        // We need to extract the customer objects
-        const customers = data.data?.map((item: any) => ({
-            ...item.customer,
-            budgets_count: item.budget_count,
-            total_spent: item.total_budgets || 0,
-        })) || []
-
-        return {
-            data: customers,
-            total: data.total || 0,
-            page: data.page || 1,
-            pageSize: data.page_size || 10,
-            totalPages: data.total_pages || 1,
-        }
+        const pageData = toPage<RawCustomerListItem & Partial<Customer>>(data)
+        return { ...pageData, data: pageData.data.map(normalizeListItem) }
     },
 
     /**
@@ -94,4 +100,3 @@ export const customerService = {
 }
 
 export default customerService
-

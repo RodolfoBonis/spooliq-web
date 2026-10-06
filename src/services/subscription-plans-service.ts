@@ -1,4 +1,5 @@
 import { api } from '@/lib/api/client'
+import { toPage } from '@/lib/api/pagination'
 import type { SubscriptionPlanModel } from '@/types/models'
 
 export interface CreatePlanRequest {
@@ -115,8 +116,9 @@ export const subscriptionPlansService = {
    * Available to everyone, even non-authenticated users
    */
   async listActivePlans(): Promise<PlanListResponse> {
-    const { data } = await api.get<PlanListResponse>('/plans')
-    return data
+    const { data } = await api.get('/plans')
+    const page = toPage<SubscriptionPlanModel>(data, 'plans')
+    return { plans: page.data, total: page.total }
   },
 
   /**
@@ -124,11 +126,9 @@ export const subscriptionPlansService = {
    * Shows both active and inactive plans
    */
   async listAllPlans(): Promise<PlanListResponse> {
-    const { data } = await api.get<SubscriptionPlanModel[]>('/admin/subscription-plans')
-    return {
-      plans: data,
-      total: data.length
-    }
+    const { data } = await api.get('/admin/subscription-plans')
+    const page = toPage<SubscriptionPlanModel>(data, 'plans')
+    return { plans: page.data, total: page.total }
   },
 
   /**
@@ -154,10 +154,18 @@ export const subscriptionPlansService = {
    * Returns paginated list of companies subscribed to the plan
    */
   async getPlanCompanies(id: string, page: number = 1, pageSize: number = 20): Promise<PlanCompaniesResponse> {
-    const { data } = await api.get<PlanCompaniesResponse>(
-      `/admin/subscription-plans/${id}/companies?page=${page}&page_size=${pageSize}`
+    const { data } = await api.get(
+      `/admin/subscription-plans/${id}/companies`,
+      { params: { page, page_size: pageSize } }
     )
-    return data
+    const result = toPage<PlanCompany>(data, 'companies')
+    return {
+      companies: result.data,
+      page: result.page,
+      page_size: result.pageSize,
+      total_count: result.total,
+      total_pages: result.totalPages,
+    }
   },
 
   /**

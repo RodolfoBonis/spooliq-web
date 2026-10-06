@@ -27,6 +27,10 @@ export const ROUTE_PERMISSIONS = {
 
   // Presets
   '/presets': [ROLES.OWNER, ROLES.ORG_ADMIN, ROLES.USER],
+  '/presets/machines': [ROLES.OWNER, ROLES.ORG_ADMIN, ROLES.USER],
+  '/presets/energy': [ROLES.OWNER, ROLES.ORG_ADMIN, ROLES.USER],
+  '/presets/costs': [ROLES.OWNER, ROLES.ORG_ADMIN, ROLES.USER],
+  '/presets/profiles': [ROLES.OWNER, ROLES.ORG_ADMIN, ROLES.USER],
 
   // Settings
   '/settings/company': [ROLES.OWNER, ROLES.ORG_ADMIN],

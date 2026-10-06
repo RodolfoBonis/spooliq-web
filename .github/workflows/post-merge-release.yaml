@@ -1,0 +1,155 @@
+name: Post-Merge Release Handler
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  trigger-release:
+    if: |
+      github.event.pull_request.merged == true &&
+      (startsWith(github.event.pull_request.head.ref, 'release/') ||
+       startsWith(github.event.pull_request.head.ref, 'hotfix/'))
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract-version.outputs.version }}
+      tag: ${{ steps.extract-version.outputs.tag }}
+    steps:
+      - name: Extract version from branch
+        id: extract-version
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          # Remove release/ or hotfix/ prefix
+          VERSION=${BRANCH#release/}
+          VERSION=${VERSION#hotfix/}
+
+          # Remove v prefix if exists
+          VERSION=${VERSION#v}
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+          echo "Tag: v${VERSION}"
+
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify tag exists
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          TAG: ${{ steps.extract-version.outputs.tag }}
+          VERSION: ${{ steps.extract-version.outputs.version }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          # Always fetch tags so the check is authoritative regardless of what
+          # the checkout happened to include.
+          git fetch --tags --force origin
+
+          # 1) The tag must exist.
+          if ! git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "ERROR: Tag $TAG does not exist!"
+            echo "The release workflow expects tags to be created during prepare-release or hotfix"
+            exit 1
+          fi
+          echo "✓ Tag $TAG exists"
+
+          # 2) The tag commit must be part of the history that was merged into
+          #    main. This blocks deploying a tag that points somewhere else.
+          if [ -n "$MERGE_SHA" ] && [ "$MERGE_SHA" != "null" ]; then
+            git cat-file -e "${MERGE_SHA}^{commit}" 2>/dev/null || git fetch origin main --force
+            if ! git merge-base --is-ancestor "$TAG" "$MERGE_SHA"; then
+              echo "ERROR: Tag $TAG is not an ancestor of the merged commit $MERGE_SHA"
+              echo "The tag does not belong to the history that was merged into main."
+              exit 1
+            fi
+            echo "✓ Tag $TAG is an ancestor of merged commit $MERGE_SHA"
+          else
+            echo "WARNING: merge_commit_sha unavailable; skipping ancestry check"
+          fi
+
+          # 3) package.json at the tag must match the version we are deploying.
+          TAG_PKG_VERSION=$(git show "${TAG}:package.json" | jq -r .version)
+          if [ "$TAG_PKG_VERSION" != "$VERSION" ]; then
+            echo "ERROR: package.json at $TAG is '$TAG_PKG_VERSION', expected '$VERSION'"
+            echo "The tag was created against the wrong version."
+            exit 1
+          fi
+          echo "✓ package.json at $TAG matches $VERSION"
+
+          echo "✓ Tag validation passed"
+
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh label create "release" \
+            --description "Release PR" \
+            --color "0E8A16" \
+            --force 2>/dev/null || true
+
+          gh label create "hotfix" \
+            --description "Urgent fix for production issues" \
+            --color "D93F0B" \
+            --force 2>/dev/null || true
+
+          gh label create "automated" \
+            --description "Automatically created by workflows" \
+            --color "BFD4F2" \
+            --force 2>/dev/null || true
+
+          echo "✓ Labels ensured"
+
+      - name: Trigger production deployment
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          TAG: ${{ steps.extract-version.outputs.tag }}
+          VERSION: ${{ steps.extract-version.outputs.version }}
+        run: |
+          echo "🚀 Triggering production deployment for $TAG"
+
+          gh workflow run release.yaml \
+            --ref "$TAG" \
+            -f tag="$TAG" \
+            -f version="$VERSION"
+
+          echo "✓ Production deployment workflow triggered"
+
+      - name: Notify n8n
+        if: success()
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          TAG: ${{ steps.extract-version.outputs.tag }}
+          ACTOR: ${{ github.actor }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          N8N_WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
+          N8N_API_TOKEN: ${{ secrets.N8N_API_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          THREAD_ID: ${{ secrets.THREAD_ID }}
+        run: |
+          BRANCH_TYPE="release"
+          if [[ "$HEAD_REF" == hotfix/* ]]; then
+            BRANCH_TYPE="hotfix"
+          fi
+
+          MESSAGE="🚀 Production deployment triggered for ${TAG} (${BRANCH_TYPE})\n\n👤 Merged by: ${ACTOR}\n🔗 PR: ${PR_URL}"
+          jq -n \
+            --arg chatId "$CHAT_ID" \
+            --arg threadId "$THREAD_ID" \
+            --arg message "$MESSAGE" \
+            '{chatId: $chatId, threadId: $threadId, message: $message}' \
+          | curl -X POST "$N8N_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer $N8N_API_TOKEN" \
+              -d @- || echo "Notification failed (non-critical)"
+
+          echo "✓ Team notified"

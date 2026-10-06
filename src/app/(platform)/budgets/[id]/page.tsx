@@ -31,7 +31,6 @@ import {
 import {
   formatCurrency,
   formatDateShort,
-  formatTime,
   formatWeight,
   getColorPreviewStyle,
 } from '@/lib/utils/format'
@@ -41,15 +40,21 @@ import {
   Trash2,
   Download,
   MoreVertical,
-  FileText,
   User,
-  Calendar,
   Clock,
+  Sliders,
   Package,
   DollarSign,
   AlertCircle,
 } from 'lucide-react'
-import type { BudgetStatus } from '@/types/models'
+import type { BudgetStatus, BudgetWithDetails } from '@/types/models'
+
+type DetailItem = BudgetWithDetails['items'][number]
+
+/** Budgets created before the labor breakdown existed lack these fields. */
+function isLegacyItem(item: Partial<DetailItem>): boolean {
+  return item.setup_time_minutes === undefined || item.manual_labor_minutes_total === undefined
+}
 
 export default function BudgetDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -61,7 +66,6 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
-    console.log('BUDGET', budget);
   if (isLoading) {
     return (
       <div className="container max-w-6xl py-6">
@@ -92,6 +96,13 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
       </div>
     )
   }
+
+  // Effective cost preset (labor rate, overhead, margin). Budgets created before
+  // v2.8.0 have no budget-level preset; the API then uses the first item's.
+  const effectiveCostPreset = budget.cost_preset ?? budget.items[0]?.cost_preset ?? null
+  // Only legacy items with a real per-item override differ from the effective preset.
+  const itemCostPresetOverride = (item: DetailItem) =>
+    item.cost_preset?.name && item.cost_preset.id !== effectiveCostPreset?.id ? item.cost_preset : null
 
   const handleDelete = () => {
     deleteBudget(id, {
@@ -241,9 +252,14 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                           </div>
                         )}
                       </div>
-                      <span className="text-lg font-bold text-primary-600">
-                        {formatCurrency(item.item_total_cost)}
-                      </span>
+                      <div className="text-right">
+                        <span className="text-lg font-bold text-primary-600">
+                          {formatCurrency(item.sale_total ?? item.item_total_cost)}
+                        </span>
+                        {item.sale_total !== undefined && (
+                          <p className="text-xs text-neutral-500">Total de venda</p>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 text-sm mb-4">
@@ -261,12 +277,32 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                         <p className="text-neutral-500">Tempo de Impressão</p>
                         <p className="font-medium">{item.print_time_display}</p>
                       </div>
+                      {item.sale_unit_price !== undefined && (
+                        <div>
+                          <p className="text-neutral-500">Preço de Venda Unitário</p>
+                          <p className="font-medium">
+                            {formatCurrency(item.sale_unit_price)}
+                          </p>
+                        </div>
+                      )}
                       <div>
-                        <p className="text-neutral-500">Preço Unitário</p>
+                        <p className="text-neutral-500">Custo Unitário</p>
                         <p className="font-medium">
                           {formatCurrency(item.unit_price)}
                         </p>
                       </div>
+                      <div>
+                        <p className="text-neutral-500">Custo do Item</p>
+                        <p className="font-medium">
+                          {formatCurrency(item.item_total_cost)}
+                        </p>
+                      </div>
+                      {itemCostPresetOverride(item) && (
+                        <div>
+                          <p className="text-neutral-500">Preset de Custo do item</p>
+                          <p className="font-medium">{itemCostPresetOverride(item)?.name}</p>
+                        </div>
+                      )}
                       {item.setup_time_minutes > 0 && (
                         <div>
                           <p className="text-neutral-500">Tempo de Setup</p>
@@ -449,10 +485,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                   Custos
                 </CardTitle>
                 {/* Legacy calculation badge */}
-                {budget.items.some((item: any) =>
-                  item.setup_time_minutes === undefined ||
-                  item.manual_labor_minutes_total === undefined
-                ) && (
+                {budget.items.some(isLegacyItem) && (
                   <Badge variant="outline" className="bg-yellow-50 border-yellow-300 text-yellow-700">
                     <AlertCircle className="h-3 w-3 mr-1" />
                     Cálculo Antigo
@@ -462,10 +495,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Legacy calculation warning */}
-              {budget.items.some((item: any) =>
-                item.setup_time_minutes === undefined ||
-                item.manual_labor_minutes_total === undefined
-              ) && (
+              {budget.items.some(isLegacyItem) && (
                 <Alert className="bg-yellow-50 border-yellow-200">
                   <AlertCircle className="h-4 w-4 text-yellow-600" />
                   <AlertTitle className="text-yellow-800">
@@ -569,6 +599,35 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
               </div>
             </CardContent>
           </Card>
+
+          {/* Calculation settings (profile and presets) */}
+          {(budget.profile || budget.machine_preset || budget.energy_preset || effectiveCostPreset) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Sliders className="h-5 w-5" />
+                  Configuração de Cálculo
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <dl className="space-y-2 text-sm">
+                  {[
+                    { label: 'Perfil de impressão', ref: budget.profile },
+                    { label: 'Máquina', ref: budget.machine_preset },
+                    { label: 'Energia', ref: budget.energy_preset },
+                    { label: 'Custos (mão de obra, overhead e margem)', ref: effectiveCostPreset },
+                  ]
+                    .filter((entry) => entry.ref?.name)
+                    .map((entry) => (
+                      <div key={entry.label} className="flex items-start justify-between gap-3">
+                        <dt className="text-neutral-500">{entry.label}</dt>
+                        <dd className="font-medium text-right">{entry.ref?.name}</dd>
+                      </div>
+                    ))}
+                </dl>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Print Time */}
           <Card>

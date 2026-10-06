@@ -1,5 +1,6 @@
 import { api } from '@/lib/api/client'
-import type { Budget, BudgetWithDetails } from '@/types/models'
+import { buildListParams, toPage } from '@/lib/api/pagination'
+import type { Budget, BudgetItem, BudgetItemFilament, BudgetWithDetails } from '@/types/models'
 
 export interface BudgetFilters {
   page?: number
@@ -7,6 +8,8 @@ export interface BudgetFilters {
   status?: string
   customer_id?: string
   search?: string
+  from?: string
+  to?: string
 }
 
 export interface BudgetListItem extends Budget {
@@ -17,7 +20,7 @@ export interface BudgetListItem extends Budget {
     phone?: string
     document?: string
   }
-  items: any[]
+  items: BudgetItem[]
   total_print_time_hours: number
   total_print_time_minutes: number
   total_print_time_display: string
@@ -57,8 +60,10 @@ export interface CreateBudgetDTO {
   name: string
   description?: string
   customer_id: string
+  profile_id?: string // Print profile; the API resolves omitted presets from it
   machine_preset_id?: string
   energy_preset_id?: string
+  cost_preset_id?: string // Budget-level cost preset (overhead/margin)
   include_energy_cost: boolean
   include_waste_cost: boolean
   delivery_days?: number
@@ -67,7 +72,21 @@ export interface CreateBudgetDTO {
   items: CreateBudgetItemDTO[]
 }
 
-export interface UpdateBudgetDTO extends Partial<CreateBudgetDTO> {}
+export type UpdateBudgetDTO = Partial<CreateBudgetDTO>
+
+/** Same body as create, but customer and name are optional (nothing is persisted). */
+export type PreviewBudgetDTO = Omit<CreateBudgetDTO, 'customer_id' | 'name'> & {
+  customer_id?: string
+  name?: string
+}
+
+/** Full budget breakdown computed by `POST /budgets/preview` (all money in cents). */
+export type BudgetPreview = Omit<
+  BudgetWithDetails,
+  'id' | 'organization_id' | 'customer' | 'customer_id' | 'status' | 'owner_user_id' | 'created_at' | 'updated_at' | 'items'
+> & {
+  items: Array<Omit<BudgetItem, 'id' | 'budget_id' | 'created_at' | 'updated_at'> & { filaments?: BudgetItemFilament[] }>
+}
 
 export interface UpdateBudgetStatusDTO {
   status: 'sent' | 'approved' | 'rejected' | 'printing' | 'completed'
@@ -76,16 +95,25 @@ export interface UpdateBudgetStatusDTO {
 
 export const budgetService = {
   async list(filters?: BudgetFilters): Promise<BudgetListResponse> {
-    const params = new URLSearchParams()
-    
-    if (filters?.page) params.append('page', filters.page.toString())
-    if (filters?.pageSize) params.append('pageSize', filters.pageSize.toString())
-    if (filters?.status) params.append('status', filters.status)
-    if (filters?.customer_id) params.append('customer_id', filters.customer_id)
-    if (filters?.search) params.append('search', filters.search)
-
-    const { data } = await api.get<BudgetListResponse>(`/budgets?${params.toString()}`)
-    return data
+    const { data } = await api.get('/budgets', {
+      params: buildListParams({
+        page: filters?.page,
+        pageSize: filters?.pageSize,
+        q: filters?.search,
+        status: filters?.status,
+        customer_id: filters?.customer_id,
+        from: filters?.from,
+        to: filters?.to,
+      }),
+    })
+    const pageData = toPage<BudgetListItem>(data)
+    return {
+      data: pageData.data,
+      total: pageData.total,
+      page: pageData.page,
+      page_size: pageData.pageSize,
+      total_pages: pageData.totalPages,
+    }
   },
 
   async getById(id: string): Promise<BudgetWithDetails> {
@@ -95,6 +123,11 @@ export const budgetService = {
 
   async create(budgetData: CreateBudgetDTO): Promise<Budget> {
     const { data } = await api.post<Budget>('/budgets', budgetData)
+    return data
+  },
+
+  async preview(budgetData: PreviewBudgetDTO, signal?: AbortSignal): Promise<BudgetPreview> {
+    const { data } = await api.post<BudgetPreview>('/budgets/preview', budgetData, { signal })
     return data
   },
 

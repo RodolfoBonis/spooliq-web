@@ -3,9 +3,9 @@ import { toast } from 'sonner'
 import {
   brandService,
   type BrandFilters,
-  type CreateBrandDTO,
   type UpdateBrandDTO,
 } from '@/services/brand-service'
+import { getApiErrorMessage } from '@/lib/api/errors'
 
 export function useBrands(filters?: BrandFilters) {
   return useQuery({
@@ -31,8 +31,8 @@ export function useCreateBrand() {
       queryClient.invalidateQueries({ queryKey: ['brands'] })
       toast.success('Marca criada com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao criar marca')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao criar marca'))
     },
   })
 }
@@ -48,8 +48,8 @@ export function useUpdateBrand() {
       queryClient.invalidateQueries({ queryKey: ['brands', variables.id] })
       toast.success('Marca atualizada com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao atualizar marca')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao atualizar marca'))
     },
   })
 }
@@ -63,9 +63,8 @@ export function useDeleteBrand() {
       queryClient.invalidateQueries({ queryKey: ['brands'] })
       toast.success('Marca deletada com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao deletar marca')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao deletar marca'))
     },
   })
 }
-

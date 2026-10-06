@@ -31,6 +31,7 @@ import {
 } from '@/components/models3d'
 import { formatFileSize } from '@/lib/utils/cdn-model'
 import { toast } from 'sonner'
+import { getApiErrorMessage } from '@/lib/api/errors'
 import type { Model3D } from '@/types/models'
 
 type ViewMode = 'grid' | 'list'
@@ -48,20 +49,20 @@ export default function ModelsPage() {
     search: search || undefined,
     format: format && format !== 'all' ? format : undefined,
     page,
-    page_size: 24,
+    pageSize: 24,
   })
   const { mutate: deleteModel } = useDeleteModel3D()
   const { isOpen: isConfirmOpen, confirm, handleConfirm, handleCancel } = useConfirmation()
 
   const models = data?.data || []
-  const totalPages = data?.total_pages || 1
+  const totalPages = data?.totalPages || 1
 
   const handleDelete = useCallback(
     (id: string) => {
       confirm(() => {
         deleteModel(id, {
           onSuccess: () => toast.success('Modelo excluído com sucesso!'),
-          onError: () => toast.error('Erro ao excluir modelo'),
+          onError: (err) => toast.error(getApiErrorMessage(err, 'Erro ao excluir modelo')),
         })
       })
     },

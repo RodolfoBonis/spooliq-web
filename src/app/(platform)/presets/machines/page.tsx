@@ -29,22 +29,39 @@ import {
   useCreateMachinePreset,
   useUpdateMachinePreset,
   useDeleteMachinePreset,
+  useSetDefaultPreset,
+  useDuplicatePreset,
+  useSuggestPresetName,
 } from '@/lib/hooks/use-presets'
-import { useForm } from 'react-hook-form'
+import { useCanManageDefaults } from '@/lib/hooks/use-can-manage-defaults'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { machinePresetSchema, type MachinePresetFormData } from '@/lib/validations/preset'
-import { Plus, Edit, Trash2, Settings } from 'lucide-react'
+import {
+  machinePresetSchema,
+  normalizeOptionalName,
+  type MachinePresetFormData,
+} from '@/lib/validations/preset'
+import { Plus, Settings, LayoutTemplate } from 'lucide-react'
 import type { MachinePreset } from '@/types/models'
 import { formatCurrencyFromReais } from '@/lib/utils/format'
 import { CurrencyInput } from '@/components/ui/currency-input'
+import { DefaultBadge } from '@/components/presets/default-badge'
+import { PresetNameField } from '@/components/presets/preset-name-field'
+import { PresetRowActions } from '@/components/presets/preset-row-actions'
+import { PresetTemplateDialog } from '@/components/presets/preset-template-dialog'
+import { machinePresetLabel } from '@/components/presets/machine-preset-select'
 
 export default function MachinePresetsPage() {
   const { data: presets, isLoading } = useMachinePresets()
   const { mutate: createPreset, isPending: isCreating } = useCreateMachinePreset()
   const { mutate: updatePreset, isPending: isUpdating } = useUpdateMachinePreset()
   const { mutate: deletePreset } = useDeleteMachinePreset()
+  const { mutate: setDefaultPreset, isPending: isSettingDefault } = useSetDefaultPreset('machine')
+  const { mutate: duplicatePreset, isPending: isDuplicating } = useDuplicatePreset('machine')
+  const canManageDefaults = useCanManageDefaults()
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false)
   const [editingPreset, setEditingPreset] = useState<MachinePreset | null>(null)
   const [deletingPreset, setDeletingPreset] = useState<MachinePreset | null>(null)
 
@@ -53,7 +70,6 @@ export default function MachinePresetsPage() {
     defaultValues: {
       name: '',
       description: '',
-      is_default: false,
       brand: '',
       model: '',
       build_volume_x: 256,
@@ -76,7 +92,6 @@ export default function MachinePresetsPage() {
     form.reset({
       name: '',
       description: '',
-      is_default: false,
       brand: '',
       model: '',
       build_volume_x: 256,
@@ -100,7 +115,6 @@ export default function MachinePresetsPage() {
     form.reset({
       name: preset.name || '',
       description: preset.description || '',
-      is_default: preset.is_default || false,
       brand: preset.brand || '',
       model: preset.model || '',
       build_volume_x: preset.build_volume_x,
@@ -119,7 +133,25 @@ export default function MachinePresetsPage() {
     setIsDialogOpen(true)
   }
 
-  const handleSubmit = (data: MachinePresetFormData) => {
+  // Name suggestion (only while the name field is empty)
+  const [nameValue, brand, model, nozzleDiameter] = useWatch({
+    control: form.control,
+    name: ['name', 'brand', 'model', 'nozzle_diameter'],
+  })
+  const isNameEmpty = !nameValue?.trim()
+  const { data: suggestedName, isFetching: isSuggesting } = useSuggestPresetName(
+    {
+      type: 'machine',
+      brand: brand || undefined,
+      model: model || undefined,
+      nozzle_diameter: Number.isFinite(nozzleDiameter) ? nozzleDiameter : undefined,
+    },
+    isDialogOpen && isNameEmpty
+  )
+
+  const handleSubmit = (formData: MachinePresetFormData) => {
+    // Default status is changed only through the "Definir como padrão" action.
+    const data = { ...formData, name: normalizeOptionalName(formData.name) }
     if (editingPreset) {
       updatePreset(
         { id: editingPreset.id, data },
@@ -178,13 +210,19 @@ export default function MachinePresetsPage() {
             Configure as especificações técnicas das suas impressoras 3D
           </p>
         </div>
-        <Button
-          onClick={handleOpenCreate}
-          className="bg-primary-500 hover:bg-primary-600"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Preset
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setIsTemplateDialogOpen(true)}>
+            <LayoutTemplate className="mr-2 h-4 w-4" />
+            Criar a partir de modelo
+          </Button>
+          <Button
+            onClick={handleOpenCreate}
+            className="bg-primary-500 hover:bg-primary-600"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Preset
+          </Button>
+        </div>
       </div>
 
       {/* Content */}
@@ -225,7 +263,10 @@ export default function MachinePresetsPage() {
                   <TableRow key={preset.id}>
                     <TableCell className="font-medium">
                       <div>
-                        <p className="font-medium">{preset.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{machinePresetLabel(preset)}</p>
+                          {preset.is_default && <DefaultBadge />}
+                        </div>
                         {preset.description && (
                           <p className="text-xs text-neutral-500">{preset.description}</p>
                         )}
@@ -243,22 +284,16 @@ export default function MachinePresetsPage() {
                     <TableCell>{preset.power_consumption}</TableCell>
                     <TableCell>{formatCurrencyFromReais(preset.cost_per_hour)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleOpenEdit(preset)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeletingPreset(preset)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
-                      </div>
+                      <PresetRowActions
+                        itemLabel={machinePresetLabel(preset)}
+                        isDefault={!!preset.is_default}
+                        canManageDefaults={canManageDefaults}
+                        onEdit={() => handleOpenEdit(preset)}
+                        onDuplicate={() => duplicatePreset(preset.id)}
+                        onSetDefault={() => setDefaultPreset(preset.id)}
+                        onDelete={() => setDeletingPreset(preset)}
+                        isBusy={isSettingDefault || isDuplicating}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -282,18 +317,20 @@ export default function MachinePresetsPage() {
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             {/* Name and Description */}
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="name">Nome do Preset *</Label>
-                <Input
-                  id="name"
-                  placeholder="Ex: Bambu Lab X1 Carbon"
-                  {...form.register('name')}
-                  required
-                />
-                {form.formState.errors.name && (
-                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.name.message}</p>
+              <Controller
+                control={form.control}
+                name="name"
+                render={({ field, fieldState }) => (
+                  <PresetNameField
+                    label="Nome do Preset"
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    suggestion={isNameEmpty ? suggestedName : undefined}
+                    isSuggesting={isSuggesting}
+                    error={fieldState.error?.message}
+                  />
                 )}
-              </div>
+              />
               <div>
                 <Label htmlFor="description">Descrição</Label>
                 <Input
@@ -448,10 +485,17 @@ export default function MachinePresetsPage() {
             {/* Cost */}
             <div>
               <Label htmlFor="cost_per_hour">Custo por Hora</Label>
-              <CurrencyInput
-                value={form.watch('cost_per_hour')}
-                onChange={(value) => form.setValue('cost_per_hour', value)}
-                placeholder="R$ 0,00"
+              <Controller
+                control={form.control}
+                name="cost_per_hour"
+                render={({ field }) => (
+                  <CurrencyInput
+                    id="cost_per_hour"
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="R$ 0,00"
+                  />
+                )}
               />
               <p className="text-xs text-neutral-500 mt-1">
                 Custo operacional por hora de impressão
@@ -478,12 +522,18 @@ export default function MachinePresetsPage() {
         </DialogContent>
       </Dialog>
 
+      <PresetTemplateDialog
+        type="machine"
+        open={isTemplateDialogOpen}
+        onOpenChange={setIsTemplateDialogOpen}
+      />
+
       {/* Delete Confirmation */}
       <ConfirmDialog
         open={!!deletingPreset}
         onOpenChange={(open) => !open && setDeletingPreset(null)}
         title="Deletar preset"
-        description={`Tem certeza que deseja deletar o preset "${deletingPreset?.brand} ${deletingPreset?.model}"?`}
+        description={`Tem certeza que deseja deletar o preset "${deletingPreset ? machinePresetLabel(deletingPreset) : ''}"?`}
         onConfirm={handleDelete}
         confirmText="Deletar"
         variant="destructive"

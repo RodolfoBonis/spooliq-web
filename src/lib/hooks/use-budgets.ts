@@ -1,7 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { budgetService } from '@/services/budget-service'
-import type { BudgetFilters, CreateBudgetDTO, UpdateBudgetDTO, UpdateBudgetStatusDTO } from '@/services/budget-service'
+import type { BudgetFilters, BudgetPreview, CreateBudgetDTO, PreviewBudgetDTO, UpdateBudgetDTO, UpdateBudgetStatusDTO } from '@/services/budget-service'
 import { toast } from 'sonner'
+import { getApiErrorMessage } from '@/lib/api/errors'
 
 export function useBudgets(filters?: BudgetFilters) {
   return useQuery({
@@ -18,6 +19,24 @@ export function useBudget(id: string) {
   })
 }
 
+/**
+ * Server-side cost preview (`POST /budgets/preview`), the single source of truth for
+ * budget math. Pass `null` while the form isn't ready; debounce the payload upstream.
+ */
+export function useBudgetPreview(payload: PreviewBudgetDTO | null) {
+  return useQuery({
+    queryKey: ['budget-preview', payload],
+    queryFn: ({ signal }) => {
+      if (!payload) return Promise.reject<BudgetPreview>(new Error('Preview payload is not ready'))
+      return budgetService.preview(payload, signal)
+    },
+    enabled: payload !== null,
+    placeholderData: keepPreviousData,
+    retry: false,
+    staleTime: 30 * 1000,
+  })
+}
+
 export function useCreateBudget() {
   const queryClient = useQueryClient()
 
@@ -27,8 +46,8 @@ export function useCreateBudget() {
       queryClient.invalidateQueries({ queryKey: ['budgets'] })
       toast.success('Orçamento criado com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Erro ao criar orçamento')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao criar orçamento'))
     },
   })
 }
@@ -44,8 +63,8 @@ export function useUpdateBudget() {
       queryClient.invalidateQueries({ queryKey: ['budgets', variables.id] })
       toast.success('Orçamento atualizado com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Erro ao atualizar orçamento')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao atualizar orçamento'))
     },
   })
 }
@@ -61,8 +80,8 @@ export function useUpdateBudgetStatus() {
       queryClient.invalidateQueries({ queryKey: ['budgets', variables.id] })
       toast.success('Status do orçamento atualizado!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Erro ao atualizar status')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao atualizar status'))
     },
   })
 }
@@ -76,8 +95,8 @@ export function useDeleteBudget() {
       queryClient.invalidateQueries({ queryKey: ['budgets'] })
       toast.success('Orçamento deletado com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Erro ao deletar orçamento')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao deletar orçamento'))
     },
   })
 }
@@ -100,8 +119,8 @@ export function useGeneratePDF() {
 
       toast.success('PDF baixado com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Erro ao gerar PDF')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao gerar PDF'))
     },
   })
 }
