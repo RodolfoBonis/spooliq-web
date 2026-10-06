@@ -40,7 +40,6 @@ export function buildBudgetPreviewPayload(values: WatchedBudgetForm): PreviewBud
       print_time_minutes: Math.min(59, toWholeNumber(item.print_time_minutes)),
       setup_time_minutes: toWholeNumber(item.setup_time_minutes),
       manual_labor_minutes_total: toWholeNumber(item.manual_labor_minutes_total),
-      cost_preset_id: item.cost_preset_id || undefined,
       filaments,
       order: index,
     })

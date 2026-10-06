@@ -55,9 +55,6 @@ function ItemBreakdown({ item, name }: { item: PreviewItem; name: string }) {
           />
         )}
       </dl>
-      {item.cost_preset?.name && (
-        <p className="text-xs text-neutral-500 mt-1">Preset de custo: {item.cost_preset.name}</p>
-      )}
     </div>
   )
 }

@@ -96,6 +96,13 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
     )
   }
 
+  // Effective cost preset (labor rate, overhead, margin). Budgets created before
+  // v2.8.0 have no budget-level preset; the API then uses the first item's.
+  const effectiveCostPreset = budget.cost_preset ?? budget.items[0]?.cost_preset ?? null
+  // Only legacy items with a real per-item override differ from the effective preset.
+  const itemCostPresetOverride = (item: DetailItem) =>
+    item.cost_preset?.name && item.cost_preset.id !== effectiveCostPreset?.id ? item.cost_preset : null
+
   const handleDelete = () => {
     deleteBudget(id, {
       onSuccess: () => {
@@ -284,10 +291,10 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                           {formatCurrency(item.item_total_cost)}
                         </p>
                       </div>
-                      {item.cost_preset?.name && (
+                      {itemCostPresetOverride(item) && (
                         <div>
-                          <p className="text-neutral-500">Preset de Custo</p>
-                          <p className="font-medium">{item.cost_preset.name}</p>
+                          <p className="text-neutral-500">Preset de Custo do item</p>
+                          <p className="font-medium">{itemCostPresetOverride(item)?.name}</p>
                         </div>
                       )}
                       {item.setup_time_minutes > 0 && (
@@ -588,7 +595,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
           </Card>
 
           {/* Calculation settings (profile and presets) */}
-          {(budget.profile || budget.machine_preset || budget.energy_preset || budget.cost_preset) && (
+          {(budget.profile || budget.machine_preset || budget.energy_preset || effectiveCostPreset) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -602,7 +609,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                     { label: 'Perfil de impressão', ref: budget.profile },
                     { label: 'Máquina', ref: budget.machine_preset },
                     { label: 'Energia', ref: budget.energy_preset },
-                    { label: 'Custos (overhead e margem)', ref: budget.cost_preset },
+                    { label: 'Custos (mão de obra, overhead e margem)', ref: effectiveCostPreset },
                   ]
                     .filter((entry) => entry.ref?.name)
                     .map((entry) => (
