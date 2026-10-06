@@ -1,3 +1,5 @@
+import type { SliceAnalysis } from './slicer'
+
 // Domain Models
 
 export interface User {
@@ -614,6 +616,8 @@ export interface Model3D {
   owner_user_id: string
   created_at: string
   updated_at: string
+  /** Stored slicer analysis (without suggestions) when the model was analyzed. */
+  slice_analysis?: SliceAnalysis
   deleted_at?: string
 }
 
