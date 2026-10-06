@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { getApiErrorMessage } from '@/lib/api/errors'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -79,9 +80,9 @@ export default function LoginPage() {
 
       toast.success('Login realizado com sucesso!')
       router.push('/dashboard')
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login error:', error)
-      toast.error(error.response?.data?.message || 'Erro ao fazer login')
+      toast.error(getApiErrorMessage(error, 'Erro ao fazer login'))
     } finally {
       setIsLoading(false)
     }

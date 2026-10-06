@@ -1,4 +1,5 @@
 import { api } from '@/lib/api/client'
+import { buildListParams, toPage } from '@/lib/api/pagination'
 import type {
   MachinePreset,
   EnergyPreset,
@@ -47,8 +48,8 @@ export const presetService = {
   },
 
   async listTemplates(type: PresetType): Promise<PresetTemplate[]> {
-    const { data } = await api.get<PresetTemplate[]>('/presets/templates', { params: { type } })
-    return data ?? []
+    const { data } = await api.get('/presets/templates', { params: { type } })
+    return toPage<PresetTemplate>(data, 'templates').data
   },
 
   async createFromTemplate(key: string, overrides: CreateFromTemplateDTO = {}): Promise<PresetSummary> {
@@ -99,8 +100,8 @@ export type UpdateMachinePresetDTO = Partial<CreateMachinePresetDTO>
 
 export const machinePresetService = {
   async list(): Promise<MachinePreset[]> {
-    const { data } = await api.get<MachinePreset[]>('/presets/machines')
-    return data
+    const { data } = await api.get('/presets/machines', { params: buildListParams({ pageSize: 100 }) })
+    return toPage<MachinePreset>(data).data
   },
 
   async getById(id: string): Promise<MachinePreset> {
@@ -144,8 +145,8 @@ export type UpdateEnergyPresetDTO = Partial<CreateEnergyPresetDTO>
 
 export const energyPresetService = {
   async list(): Promise<EnergyPreset[]> {
-    const { data } = await api.get<EnergyPreset[]>('/presets/energy')
-    return data
+    const { data } = await api.get('/presets/energy', { params: buildListParams({ pageSize: 100 }) })
+    return toPage<EnergyPreset>(data).data
   },
 
   async getById(id: string): Promise<EnergyPreset> {
@@ -189,8 +190,8 @@ export type UpdateCostPresetDTO = Partial<CreateCostPresetDTO>
 
 export const costPresetService = {
   async list(): Promise<CostPreset[]> {
-    const { data } = await api.get<CostPreset[]>('/presets/costs')
-    return data
+    const { data } = await api.get('/presets/costs', { params: buildListParams({ pageSize: 100 }) })
+    return toPage<CostPreset>(data).data
   },
 
   async getById(id: string): Promise<CostPreset> {

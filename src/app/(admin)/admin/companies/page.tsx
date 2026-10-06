@@ -17,6 +17,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useAdminCompanies, useUpdateCompanyStatus, useAdminStats } from '@/lib/hooks/use-admin'
 import { formatDate, formatCurrencyFromReais } from '@/lib/utils/format'
 import { Building2, Search, MoreVertical, DollarSign, TrendingUp } from 'lucide-react'
+import { PaginationControls } from '@/components/common/pagination-controls'
+import { useDebouncedValue } from '@/lib/hooks/use-debounced-value'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,12 +28,20 @@ import {
 import type { CompanyAdmin } from '@/services/admin-service'
 
 export default function AdminCompaniesPage() {
-  const { data: companiesData, isLoading: isLoadingCompanies } = useAdminCompanies()
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const debouncedSearch = useDebouncedValue(search, 300)
+
+  const { data: companiesData, isLoading: isLoadingCompanies } = useAdminCompanies({
+    page,
+    pageSize: 20,
+    search: debouncedSearch || undefined,
+  })
   const { data: stats, isLoading: isLoadingStats } = useAdminStats()
   const { mutate: updateStatus } = useUpdateCompanyStatus()
-  const [search, setSearch] = useState('')
-  
+
   const companies = companiesData?.companies || []
+  const totalPages = companiesData?.total_pages || 1
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -71,11 +81,6 @@ export default function AdminCompaniesPage() {
     }
     return 0
   }
-
-  const filteredCompanies = companies.filter((company) =>
-    company.name.toLowerCase().includes(search.toLowerCase()) ||
-    company.email?.toLowerCase().includes(search.toLowerCase())
-  )
 
   if (isLoadingCompanies || isLoadingStats) {
     return (
@@ -172,7 +177,10 @@ export default function AdminCompaniesPage() {
               <Input
                 placeholder="Buscar por nome ou email..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
                 className="pl-10"
               />
             </div>
@@ -192,8 +200,8 @@ export default function AdminCompaniesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCompanies && filteredCompanies.length > 0 ? (
-                filteredCompanies.map((company) => (
+              {companies && companies.length > 0 ? (
+                companies.map((company) => (
                   <TableRow key={company.id}>
                     <TableCell>
                       <div>
@@ -224,7 +232,7 @@ export default function AdminCompaniesPage() {
                             onClick={() =>
                               updateStatus({ 
                                 organizationId: company.organization_id, 
-                                request: { status: 'active' } 
+                                request: { status: 'ACTIVE' } 
                               })
                             }
                           >
@@ -267,6 +275,10 @@ export default function AdminCompaniesPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {!isLoadingCompanies && companies.length > 0 && (
+        <PaginationControls page={page} totalPages={totalPages} onPageChange={setPage} />
+      )}
     </div>
   )
 }

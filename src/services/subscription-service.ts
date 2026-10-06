@@ -1,5 +1,7 @@
+import { isAxiosError } from 'axios'
 import { api } from '@/lib/api/client'
-import type { Company, SubscriptionPayment } from '@/types/models'
+import { toPage } from '@/lib/api/pagination'
+import type { Company } from '@/types/models'
 import type { PaymentHistoryResponse } from '@/types/api'
 
 export interface SubscriptionInfo {
@@ -32,44 +34,39 @@ export const subscriptionService = {
   },
 
   /**
-   * Get payment history for the current company
-   * Uses the payment methods list endpoint which shows payment history
+   * Get payment history for the current company.
+   * Backend route: `GET /company/subscription/payments` (Owner only) — see
+   * features/company/routes.go. Tolerant to both the new `{ data, total, ... }` envelope
+   * and legacy wrappers (`payments`, `entries`, `payment_methods`).
    */
   async getPaymentHistory(page = 1, pageSize = 10): Promise<PaymentHistoryResponse> {
     try {
-      // Note: The backend uses /payment-methods to list payment methods
-      // For actual payment history, we might need to use admin endpoints or wait for implementation
-      const { data } = await api.get<PaymentHistoryResponse>('/payment-methods', {
+      const { data } = await api.get('/company/subscription/payments', {
         params: { page, page_size: pageSize },
       })
-      return data
-    } catch (error) {
-      // If endpoint doesn't exist yet, return empty array
-      console.warn('Payment history endpoint not available yet')
+      const result = toPage<PaymentHistoryResponse['payments'][number]>(data, 'payments')
       return {
-        payments: [],
-        total: 0,
-        page: 1,
-        page_size: pageSize,
+        payments: result.data,
+        total: result.total,
+        page: result.page,
+        page_size: result.pageSize,
       }
+    } catch (error) {
+      // Treat a missing endpoint as "no history yet"; surface everything else.
+      if (isAxiosError(error) && error.response?.status === 404) {
+        return { payments: [], total: 0, page, page_size: pageSize }
+      }
+      console.error('Error fetching subscription payment history:', error)
+      throw error
     }
-  },
-
-  /**
-   * Get subscription plans
-   * Public endpoint to list available subscription plans
-   */
-  async getSubscriptionPlans(): Promise<{ plans: any[] }> {
-    const { data } = await api.get<{ plans: any[] }>('/plans')
-    return data
   },
 
   /**
    * Subscribe to a plan
    * Requires owner role
    */
-  async subscribeToPlan(planId: string, paymentMethodId?: string): Promise<{ message: string; subscription: any }> {
-    const { data } = await api.post<{ message: string; subscription: any }>('/subscriptions/subscribe', {
+  async subscribeToPlan(planId: string, paymentMethodId?: string): Promise<{ message: string; subscription: unknown }> {
+    const { data } = await api.post<{ message: string; subscription: unknown }>('/subscriptions/subscribe', {
       plan_id: planId,
       payment_method_id: paymentMethodId,
     })
@@ -89,8 +86,8 @@ export const subscriptionService = {
   /**
    * Get detailed subscription status
    */
-  async getDetailedSubscriptionStatus(): Promise<any> {
-    const { data } = await api.get<any>('/subscriptions/status')
+  async getDetailedSubscriptionStatus(): Promise<unknown> {
+    const { data } = await api.get<unknown>('/subscriptions/status')
     return data
   },
 }

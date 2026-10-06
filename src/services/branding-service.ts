@@ -1,4 +1,5 @@
 import { api } from '@/lib/api/client'
+import { toPage } from '@/lib/api/pagination'
 
 export interface CompanyBrandingColors {
   template_name?: string
@@ -43,8 +44,8 @@ export const brandingService = {
   },
 
   async listTemplates(): Promise<BrandingTemplate[]> {
-    const { data } = await api.get<{ templates: BrandingTemplate[] }>('/company/branding/templates')
-    return data.templates
+    const { data } = await api.get('/company/branding/templates')
+    return toPage<BrandingTemplate>(data, 'templates').data
   },
 }
 

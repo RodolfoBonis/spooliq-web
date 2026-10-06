@@ -34,6 +34,8 @@ import { Card } from '@/components/ui/card'
 import { ConfirmationDialog } from '@/components/common/confirmation-dialog'
 import { TableSkeleton } from '@/components/common/loading-skeleton'
 import { EmptyState } from '@/components/common/empty-state'
+import { PaginationControls } from '@/components/common/pagination-controls'
+import { useDebouncedValue } from '@/lib/hooks/use-debounced-value'
 
 import {
   useMaterials,
@@ -48,7 +50,10 @@ import type { Material } from '@/types/models'
 
 export default function MaterialsPage() {
   const [search, setSearch] = useState('')
-  const { data, isLoading } = useMaterials({ search, page: 1, pageSize: 50 })
+  const [page, setPage] = useState(1)
+  const debouncedSearch = useDebouncedValue(search, 300)
+
+  const { data, isLoading } = useMaterials({ search: debouncedSearch, page, pageSize: 12 })
   const { mutate: createMaterial, isPending: isCreating } = useCreateMaterial()
   const { mutate: updateMaterial, isPending: isUpdating } = useUpdateMaterial()
   const { mutate: deleteMaterial, isPending: isDeleting } = useDeleteMaterial()
@@ -143,7 +148,10 @@ export default function MaterialsPage() {
           <Input
             placeholder="Buscar materiais..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(1)
+            }}
             className="pl-10"
           />
         </div>
@@ -216,6 +224,14 @@ export default function MaterialsPage() {
             </TableBody>
           </Table>
         </Card>
+      )}
+
+      {!isLoading && materials.length > 0 && (
+        <PaginationControls
+          page={page}
+          totalPages={data?.totalPages ?? 1}
+          onPageChange={setPage}
+        />
       )}
 
       {/* Create/Edit Dialog */}

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { customerService, type CustomerFilters, type CreateCustomerDTO, type UpdateCustomerDTO } from '@/services/customer-service'
+import { customerService, type CustomerFilters, type UpdateCustomerDTO } from '@/services/customer-service'
+import { getApiErrorMessage } from '@/lib/api/errors'
 
 export function useCustomers(filters?: CustomerFilters) {
   return useQuery({
@@ -26,8 +27,8 @@ export function useCreateCustomer() {
       queryClient.invalidateQueries({ queryKey: ['customers'] })
       toast.success('Cliente criado com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao criar cliente')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao criar cliente'))
     },
   })
 }
@@ -55,9 +56,8 @@ export function useDeleteCustomer() {
       queryClient.invalidateQueries({ queryKey: ['customers'] })
       toast.success('Cliente deletado com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao deletar cliente')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao deletar cliente'))
     },
   })
 }
-

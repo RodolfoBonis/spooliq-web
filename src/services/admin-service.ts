@@ -1,4 +1,5 @@
 import { api } from '@/lib/api/client'
+import { buildListParams, toPage } from '@/lib/api/pagination'
 
 export interface SubscriptionPlan {
   id: string
@@ -98,25 +99,30 @@ export interface PaymentHistoryResponse {
 }
 
 export const adminService = {
-  async listCompanies(page = 1, pageSize = 20, statusFilter?: string): Promise<{
+  async listCompanies(
+    page = 1,
+    pageSize = 20,
+    statusFilter?: string,
+    search?: string
+  ): Promise<{
     companies: CompanyAdmin[]
     total: number
     page: number
     page_size: number
+    total_pages: number
   }> {
-    const { data } = await api.get<{
-      companies: CompanyAdmin[]
-      total: number
-      page: number
-      page_size: number
-    }>('/admin/companies', {
-      params: {
-        page,
-        page_size: pageSize,
-        status: statusFilter,
-      },
+    const { data } = await api.get('/admin/companies', {
+      params: buildListParams({ page, pageSize, q: search, status: statusFilter }),
     })
-    return data
+    // Tolerates legacy { companies, total_count } and the new { data, total } envelope.
+    const result = toPage<CompanyAdmin>(data, 'companies')
+    return {
+      companies: result.data,
+      total: result.total,
+      page: result.page,
+      page_size: result.pageSize,
+      total_pages: result.totalPages,
+    }
   },
 
   async getCompany(organizationId: string): Promise<CompanyAdmin> {
@@ -146,7 +152,7 @@ export const adminService = {
     page = 1,
     pageSize = 20
   ): Promise<PaymentHistoryResponse> {
-    const { data } = await api.get<PaymentHistoryResponse>(
+    const { data } = await api.get(
       `/admin/subscriptions/${organizationId}/payments`,
       {
         params: {
@@ -155,7 +161,13 @@ export const adminService = {
         },
       }
     )
-    return data
+    const result = toPage<PaymentHistoryResponse['payments'][number]>(data, 'payments')
+    return {
+      payments: result.data,
+      total: result.total,
+      page: result.page,
+      page_size: result.pageSize,
+    }
   },
 
   async getStats(): Promise<AdminStats> {
