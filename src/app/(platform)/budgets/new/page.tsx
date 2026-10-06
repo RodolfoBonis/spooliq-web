@@ -64,7 +64,9 @@ export default function NewBudgetPage() {
   const { mutate: createBudget, isPending } = useCreateBudget()
   const { data: profiles } = useProfiles()
   const [selectedFilaments, setSelectedFilaments] = useState<Record<string, Filament>>({})
+  // Target is kept while the dialog animates closed so it doesn't flip modes mid-exit.
   const [sliceImport, setSliceImport] = useState<{ itemIndex: number; modelId?: string } | null>(null)
+  const [sliceOpen, setSliceOpen] = useState(false)
 
   const form = useForm<CreateBudgetFormData>({
     resolver: zodResolver(createBudgetSchema),
@@ -478,7 +480,7 @@ export default function NewBudgetPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setSliceImport({ itemIndex })}
+                    onClick={() => { setSliceImport({ itemIndex }); setSliceOpen(true) }}
                   >
                     <FileUp className="mr-2 h-4 w-4" />
                     Importar arquivo fatiado
@@ -567,7 +569,7 @@ export default function NewBudgetPage() {
 
                 <SliceModelPrompt
                   modelId={watchedItem?.model_3d_id}
-                  onImport={() => setSliceImport({ itemIndex, modelId: watchedItem?.model_3d_id })}
+                  onImport={() => { setSliceImport({ itemIndex, modelId: watchedItem?.model_3d_id }); setSliceOpen(true) }}
                 />
 
                 {form.formState.errors.items?.[itemIndex]?.filaments && (
@@ -810,8 +812,8 @@ export default function NewBudgetPage() {
       </form>
 
       <SliceImportDialog
-        open={sliceImport !== null}
-        onOpenChange={(next) => { if (!next) setSliceImport(null) }}
+        open={sliceOpen}
+        onOpenChange={setSliceOpen}
         modelId={sliceImport?.modelId}
         onApply={(payload) => {
           if (sliceImport) applySliceToItem(sliceImport.itemIndex, payload)

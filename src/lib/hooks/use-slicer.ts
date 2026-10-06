@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { isAxiosError } from 'axios'
 import { slicerService, type AnalyzeSliceOptions } from '@/services/slicer-service'
 
 interface AnalyzeSliceVariables {
@@ -28,5 +29,11 @@ export function useModelSliceAnalysis(modelId?: string) {
     enabled: !!modelId,
     // The analysis is immutable for a given model; avoid refetch churn.
     staleTime: 5 * 60 * 1000,
+    // A 4xx (e.g. 404 slice_analysis_not_found) won't change on retry.
+    retry: (failureCount, error) => {
+      const status = isAxiosError(error) ? error.response?.status : undefined
+      if (status !== undefined && status >= 400 && status < 500) return false
+      return failureCount < 2
+    },
   })
 }

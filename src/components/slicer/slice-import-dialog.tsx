@@ -52,7 +52,9 @@ export function SliceImportDialog({
   modelId,
   onApply,
 }: SliceImportDialogProps) {
-  const isModelMode = !!modelId
+  // The user can fall back to uploading a file when the model has no analysis.
+  const [uploadInstead, setUploadInstead] = useState(false)
+  const isModelMode = !!modelId && !uploadInstead
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
@@ -61,7 +63,7 @@ export function SliceImportDialog({
   const abortRef = useRef<AbortController | null>(null)
 
   const analyzeMutation = useAnalyzeSlice()
-  const modelQuery = useModelSliceAnalysis(open && modelId ? modelId : undefined)
+  const modelQuery = useModelSliceAnalysis(open && isModelMode ? modelId : undefined)
 
   const analysis = isModelMode ? modelQuery.data : analyzeMutation.data
   const error = isModelMode ? modelQuery.error : analyzeMutation.error
@@ -74,6 +76,7 @@ export function SliceImportDialog({
     setFileError(null)
     setProgress(0)
     setPayload(null)
+    setUploadInstead(false)
     analyzeMutation.reset()
   }, [analyzeMutation])
 
@@ -145,7 +148,12 @@ export function SliceImportDialog({
   const errorCode = error ? getErrorCode(error) : undefined
   const isNotSliced = errorCode === 'file_not_sliced'
   const errorMessage = error
-    ? getApiErrorMessage(error, 'Não foi possível analisar o arquivo.')
+    ? getApiErrorMessage(error, 'Não foi possível analisar o arquivo.', {
+        byCode: {
+          slice_analysis_not_found:
+            'Este modelo não possui dados de fatiamento. Envie o arquivo fatiado para preencher o item.',
+        },
+      })
     : null
 
   const showDropzone = !isModelMode && !analysis && !isLoading && !error
@@ -191,7 +199,7 @@ export function SliceImportDialog({
 
           {/* Upload / analysis progress */}
           {showProgress && (
-            <div className="space-y-3 py-6">
+            <div className="space-y-3 py-6" aria-live="polite">
               <div className="flex items-center gap-2 text-sm text-neutral-700">
                 <FileIcon className="h-4 w-4 text-neutral-500" />
                 <span className="truncate font-medium">{selectedFile?.name}</span>
@@ -220,7 +228,7 @@ export function SliceImportDialog({
 
           {/* Error */}
           {error && (
-            <div className="space-y-3 py-4">
+            <div className="space-y-3 py-4" role="alert">
               <div className="rounded-lg border border-red-200 bg-red-50 p-4">
                 <div className="flex items-start gap-2">
                   <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
@@ -237,7 +245,11 @@ export function SliceImportDialog({
                   </div>
                 </div>
               </div>
-              {!isModelMode && (
+              {isModelMode ? (
+                <Button variant="outline" onClick={() => setUploadInstead(true)}>
+                  Enviar arquivo fatiado
+                </Button>
+              ) : (
                 <Button variant="outline" onClick={resetState}>
                   Escolher outro arquivo
                 </Button>

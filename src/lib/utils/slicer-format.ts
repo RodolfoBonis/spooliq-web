@@ -32,5 +32,6 @@ export function formatGrams(grams: number): string {
 
 /** Round a gram amount to one decimal place (0.1g), the budget item's resolution. */
 export function roundGrams(grams: number): number {
-  return Math.round(grams * 10) / 10
+  // Budget filament quantities must be > 0: a tiny slot still counts as 0.1 g.
+  return Math.max(0.1, Math.round(grams * 10) / 10)
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { FilamentSelector } from '@/components/budgets/filament-selector'
+import { Button } from '@/components/ui/button'
 import { ConfidenceBadge } from './confidence-badge'
 import { useFilament } from '@/lib/hooks/use-filaments'
 import { formatGrams } from '@/lib/utils/slicer-format'
@@ -64,6 +65,17 @@ export function SliceFilamentSlotRow({ slot, onChange }: SliceFilamentSlotRowPro
               <span className="text-xs text-neutral-500">Sugestão:</span>
               <span className="text-sm text-neutral-800">{suggestion.name}</span>
               <ConfidenceBadge confidence={suggestion.confidence} />
+              {override && override.id !== suggestion.filament_id && (
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 text-xs"
+                  onClick={() => setOverride(null)}
+                >
+                  Usar sugestão
+                </Button>
+              )}
             </div>
           ) : (
             <p className="text-xs text-neutral-500">
