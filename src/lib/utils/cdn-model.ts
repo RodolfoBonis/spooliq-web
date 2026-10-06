@@ -1,9 +1,13 @@
 /**
- * Builds the authenticated, org-scoped URL that streams a 3D model's binary file
- * through the Next.js proxy (`/api/models3d/:id/file` → backend `GET /v1/models3d/:id/file`).
+ * Path (relative to the axios `api` instance whose baseURL is `/api`) that streams
+ * a 3D model's binary file through the Next.js proxy
+ * (`/api/models3d/:id/file` → backend `GET /v1/models3d/:id/file`).
+ *
+ * Use this with the shared axios client so the Authorization header (injected by the
+ * request interceptor) is attached — a bare `<a href>` / loader URL would get a 401.
  */
-export function getModelFileUrl(id: string): string {
-  return `/api/models3d/${id}/file`
+export function getModelFilePath(id: string): string {
+  return `/models3d/${id}/file`
 }
 
 /**

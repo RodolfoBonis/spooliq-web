@@ -3,24 +3,58 @@
 // Inner viewer — must be imported via dynamic() with { ssr: false }
 // three.js is not SSR-compatible
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import axios from 'axios'
+import { AlertCircle, Loader2 } from 'lucide-react'
 import * as THREE from 'three'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { model3dService } from '@/services/model3d-service'
 
 interface Model3DViewerInnerProps {
-  /** Ready-to-fetch URL for the binary file (already proxied/authenticated). */
-  fileUrl: string
+  /** ID of the model whose binary file should be fetched (authenticated via axios). */
+  modelId: string
   /** File format, e.g. ".stl" or ".3mf" (leading dot optional). */
   format: string
   className?: string
 }
 
-export function Model3DViewerInner({ fileUrl, format, className }: Model3DViewerInnerProps) {
+type LoadState =
+  | { status: 'loading'; progress: number | null }
+  | { status: 'ready' }
+  | { status: 'error'; message: string }
+
+/** Recursively dispose every geometry and material (arrays included) under an object. */
+function disposeObject(object: THREE.Object3D): void {
+  object.traverse((child) => {
+    const mesh = child as THREE.Mesh
+    if (mesh.geometry) {
+      mesh.geometry.dispose()
+    }
+    if (mesh.material) {
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+      for (const material of materials) {
+        material.dispose()
+      }
+    }
+  })
+}
+
+export function Model3DViewerInner({ modelId, format, className }: Model3DViewerInnerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const [state, setState] = useState<LoadState>({ status: 'loading', progress: null })
+
+  const normalizedFormat = useMemo(
+    () => (format.startsWith('.') ? format.toLowerCase() : `.${format.toLowerCase()}`),
+    [format]
+  )
+  const isSupported = normalizedFormat === '.stl' || normalizedFormat === '.3mf'
 
   useEffect(() => {
+    // Unsupported formats are handled at render time (no three.js setup needed).
+    if (!isSupported) return
+
     const container = containerRef.current
     if (!container) return
 
@@ -86,59 +120,58 @@ export function Model3DViewerInner({ fileUrl, format, className }: Model3DViewer
     }
 
     let disposed = false
-    const normalizedFormat = format.startsWith('.')
-      ? format.toLowerCase()
-      : `.${format.toLowerCase()}`
+    const controller = new AbortController()
 
-    const onError = (err: unknown) => {
-      console.error('3D model load error:', err)
+    const parseGeometry = (buffer: ArrayBuffer): THREE.Object3D => {
+      if (normalizedFormat === '.stl') {
+        const geometry = new STLLoader().parse(buffer)
+        geometry.computeVertexNormals()
+        const material = new THREE.MeshPhongMaterial({
+          color: 0x808080,
+          specular: 0x404040,
+          shininess: 32,
+        })
+        const mesh = new THREE.Mesh(geometry, material)
+        mesh.castShadow = true
+        mesh.receiveShadow = true
+        return mesh
+      }
+      // normalizedFormat === '.3mf' (guaranteed by isSupported)
+      const object = new ThreeMFLoader().parse(buffer)
+      object.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.castShadow = true
+          child.receiveShadow = true
+        }
+      })
+      return object
     }
 
-    if (normalizedFormat === '.stl') {
-      const loader = new STLLoader()
-      loader.load(
-        fileUrl,
-        (geometry) => {
+    model3dService
+      .getFileBuffer(modelId, {
+        signal: controller.signal,
+        onDownloadProgress: (event) => {
           if (disposed) return
-          geometry.computeVertexNormals()
-          const material = new THREE.MeshPhongMaterial({
-            color: 0x808080,
-            specular: 0x404040,
-            shininess: 32,
-          })
-          const mesh = new THREE.Mesh(geometry, material)
-          mesh.castShadow = true
-          mesh.receiveShadow = true
-          scene.add(mesh)
-          centerAndFit(mesh)
-          animate()
+          const progress = event.total ? event.loaded / event.total : null
+          setState({ status: 'loading', progress })
         },
-        undefined,
-        onError
-      )
-    } else if (normalizedFormat === '.3mf') {
-      const loader = new ThreeMFLoader()
-      loader.load(
-        fileUrl,
-        (object) => {
-          if (disposed) return
-          object.traverse((child) => {
-            if (child instanceof THREE.Mesh) {
-              child.castShadow = true
-              child.receiveShadow = true
-            }
-          })
-          scene.add(object)
-          centerAndFit(object)
-          animate()
-        },
-        undefined,
-        onError
-      )
-    } else {
-      onError(new Error(`Formato não suportado: ${format}`))
-      animate()
-    }
+      })
+      .then((buffer) => {
+        if (disposed) return
+        const object = parseGeometry(buffer)
+        scene.add(object)
+        centerAndFit(object)
+        setState({ status: 'ready' })
+        animate()
+      })
+      .catch((err: unknown) => {
+        if (disposed || axios.isCancel(err) || controller.signal.aborted) return
+        console.error('3D model load error:', err)
+        setState({
+          status: 'error',
+          message: 'Não foi possível carregar o modelo 3D. Tente novamente.',
+        })
+      })
 
     // Resize observer
     const resizeObserver = new ResizeObserver(() => {
@@ -153,15 +186,49 @@ export function Model3DViewerInner({ fileUrl, format, className }: Model3DViewer
 
     return () => {
       disposed = true
+      controller.abort()
       cancelAnimationFrame(animId)
       resizeObserver.disconnect()
       controls.dispose()
+
+      // Dispose every geometry/material in the scene, then the renderer itself.
+      disposeObject(scene)
+      scene.clear()
       renderer.dispose()
-      if (container.contains(renderer.domElement)) {
-        container.removeChild(renderer.domElement)
+      renderer.forceContextLoss()
+      const canvas = renderer.domElement
+      if (canvas.parentNode) {
+        canvas.parentNode.removeChild(canvas)
       }
     }
-  }, [fileUrl, format])
+  }, [modelId, normalizedFormat, isSupported])
 
-  return <div ref={containerRef} className={className} style={{ background: '#F5F5F5' }} />
+  return (
+    <div className={className} style={{ position: 'relative', background: '#F5F5F5' }}>
+      <div ref={containerRef} className="h-full w-full" />
+
+      {!isSupported ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#F5F5F5] px-4 text-center text-red-600">
+          <AlertCircle className="h-8 w-8" />
+          <p className="text-sm">
+            {`Formato não suportado: ${format.replace('.', '').toUpperCase()}`}
+          </p>
+        </div>
+      ) : state.status === 'loading' ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#F5F5F5] text-neutral-500">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <p className="text-sm">
+            {state.progress !== null
+              ? `Carregando modelo... ${Math.round(state.progress * 100)}%`
+              : 'Carregando modelo...'}
+          </p>
+        </div>
+      ) : state.status === 'error' ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#F5F5F5] px-4 text-center text-red-600">
+          <AlertCircle className="h-8 w-8" />
+          <p className="text-sm">{state.message}</p>
+        </div>
+      ) : null}
+    </div>
+  )
 }

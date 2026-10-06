@@ -21,15 +21,16 @@ const Model3DViewerInner = dynamic(
 )
 
 interface Model3DViewerProps {
-  fileUrl: string
+  /** ID of the model to render; its file is fetched authenticated via axios. */
+  modelId: string
   format: string
   className?: string
 }
 
-export function Model3DViewer({ fileUrl, format, className }: Model3DViewerProps) {
+export function Model3DViewer({ modelId, format, className }: Model3DViewerProps) {
   return (
     <div className={cn('h-full w-full', className)}>
-      <Model3DViewerInner fileUrl={fileUrl} format={format} className="h-full w-full" />
+      <Model3DViewerInner key={`${modelId}:${format}`} modelId={modelId} format={format} className="h-full w-full" />
     </div>
   )
 }

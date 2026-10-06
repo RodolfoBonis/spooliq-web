@@ -626,6 +626,12 @@ export interface FindAllModel3DResponse {
 }
 
 export interface UploadConflictResponse {
-  error: string
-  existing: Model3D
+  /** Machine-readable error code; a duplicate upload returns `model3d_duplicate`. */
+  code?: string
+  /** pt-BR message from the standard envelope (preferred for display). */
+  message?: string
+  /** Legacy error string (fallback when `message` is absent). */
+  error?: string
+  /** The already-existing model that caused the conflict (may be absent). */
+  existing?: Model3D
 }
