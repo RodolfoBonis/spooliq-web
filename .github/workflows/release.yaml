@@ -72,8 +72,8 @@ jobs:
             exit 1
           fi
 
-          echo "version=$INPUT_VERSION" >> $GITHUB_OUTPUT
-          echo "tag=$INPUT_TAG" >> $GITHUB_OUTPUT
+          echo "version=$INPUT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$INPUT_TAG" >> "$GITHUB_OUTPUT"
 
           echo "✓ Version validated: $INPUT_VERSION"
           echo "✓ Tag validated: $INPUT_TAG"
@@ -117,7 +117,7 @@ jobs:
         id: repo-owner
         run: |
           REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "lowercase=$REPO_OWNER" >> $GITHUB_OUTPUT
+          echo "lowercase=$REPO_OWNER" >> "$GITHUB_OUTPUT"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -136,7 +136,6 @@ jobs:
             VERDACCIO_TOKEN=${{ secrets.VERDACCIO_TOKEN }}
             NEXT_PUBLIC_API_URL=https://api.spooliq.com/v1
             NEXT_PUBLIC_CLIENT_ID=${{ secrets.SPOOLIQ_CLIENT_ID }}
-            NEXT_PUBLIC_CLIENT_SECRET=${{ secrets.SPOOLIQ_CLIENT_SECRET }}
 
       - name: Create GitHub Release
         env:
@@ -155,7 +154,6 @@ jobs:
           docker run -p 3000:3000 \\
             -e API_URL=your_api_url \\
             -e NEXT_PUBLIC_CLIENT_ID=your_client_id \\
-            -e NEXT_PUBLIC_CLIENT_SECRET=your_client_secret \\
             ${ECR_REGISTRY}/rodolfobonis/spooliq-web:${VERSION}
           \`\`\`
           EOF
@@ -242,7 +240,7 @@ jobs:
             DURATION="${HOURS}h ${MINUTES}m ${SECS}s"
           fi
 
-          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+          echo "duration=$DURATION" >> "$GITHUB_OUTPUT"
 
       - name: Notify n8n Success
         if: success()
