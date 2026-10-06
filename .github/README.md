@@ -8,37 +8,56 @@ PRs merged into `main`** — never directly from a push or a raw tag.
 
 ```
 prepare-release (or hotfix)   →   PR to main   →   review & merge   →   post-merge-release   →   release
-   bump version + CHANGELOG        manual gate       (human)             verifies tag,            validate → build →
-   create & push tag vX.Y.Z                                             dispatches release.yaml   GH release → k3s → argocd → backport
+   sync main → bump version        manual gate       (human)             verifies tag,            validate → build →
+   + CHANGELOG, push tag vX.Y.Z                                          ancestry & version,       GH release → k3s → argocd → backport
 ```
+
+## ⚠️ One-time: sync `develop` with `main`
+
+`prepare-release` now **merges `main` into the source branch before tagging** and takes
+`main`'s version of `.github/**`, `package.json`, `package-lock.json` and `CHANGELOG.md`.
+This guarantees the tagged commit carries the current (dispatch-only) workflows even when
+`develop` is stale.
+
+However, the stale workflows still live on `develop` itself until `develop` is reconciled
+with `main`. **After this change is merged to `main`, open a `main → develop` sync PR** so
+that `develop`'s own `.github/` no longer carries the old `release.yaml`
+(`push: tags`/`workflow_run`), `bot-code-reviewer.yaml` or `release-staging.yaml`. Until that
+sync lands, the self-healing merge in `prepare-release` is what keeps releases safe.
 
 ## Workflows
 
 ### `prepare-release.yaml` (manual)
-- Trigger: `workflow_dispatch` (choose `from_branch`, `increment_type` or explicit `version`).
-- Creates `release/vX.Y.Z` from the chosen branch.
+- Trigger: `workflow_dispatch` (choose `from_branch` — `develop`|`main`, `increment_type` or explicit `version`).
+- Validates `from_branch` (allowlist) and `version` (`X.Y.Z`).
+- **Merges `main` into `from_branch` first**, resolving `.github/**` and the version/changelog
+  files to `main`. Any other conflict fails the run with a clear message (no release off an
+  unresolved merge).
+- Creates `release/vX.Y.Z` from the synced branch.
 - Bumps `package.json` **and** `package-lock.json`, updates `CHANGELOG.md`.
-- Creates and pushes an **annotated tag** `vX.Y.Z`.
-- Opens a PR to `main` (label `release`). The PR is **not** auto-merged.
+- Creates and pushes an **annotated tag** `vX.Y.Z` (carrying the new workflows).
+- Opens a PR to `main` (label `release`) using `--body-file`. The PR is **not** auto-merged.
 
 ### `hotfix.yaml` (manual)
 - Trigger: `workflow_dispatch` (requires a `description`; `version` auto-increments the patch).
+- Validates `version` (`X.Y.Z`); runs from `main`, so no stale-branch merge is needed.
 - Creates `hotfix/vX.Y.Z` from `main`, bumps version, creates and pushes the tag.
-- Opens a critical PR to `main`. Backport is handled later by `release.yaml`.
+- Opens a critical PR to `main` using `--body-file`. Backport is handled later by `release.yaml`.
 
 ### `post-merge-release.yaml` (automatic)
 - Trigger: a `release/*` or `hotfix/*` PR **merged** into `main`.
-- Extracts the version from the branch, verifies the tag exists, then dispatches
-  `release.yaml` via `gh workflow run release.yaml --ref <tag> -f tag -f version`.
+- Extracts the version from the branch, then verifies: the tag exists, the tag commit is an
+  **ancestor of the merged `main` commit**, and `package.json` at the tag equals the version.
+- Dispatches `release.yaml` via `gh workflow run release.yaml --ref <tag> -f tag -f version`.
 
 ### `release.yaml` (manual / dispatched)
 - Trigger: `workflow_dispatch` only, with required `tag` and `version` inputs.
 - `concurrency: release-production` serializes production deploys.
 - `validate` job: checks out the tag, enforces the `vX.Y.Z` tag format and that
   `package.json` version equals the input version.
-- `release` job: builds & pushes the Docker image (`:latest` + `:<version>`),
-  creates the GitHub Release (`gh release create`), updates the k3s manifest and
-  syncs ArgoCD.
+- `release` job: records a start timestamp, builds & pushes the Docker image
+  (`:latest` + `:<version>`), creates the GitHub Release (`gh release create`), updates the
+  k3s manifest and syncs ArgoCD. Build duration is measured from the recorded start time.
 - `backport` job: merges `main` into `backport/<tag>-to-develop` and opens an
   auto-merge PR (or files an issue on conflict).
 
@@ -53,12 +72,21 @@ prepare-release (or hotfix)   →   PR to main   →   review & merge   →   po
 - **Release PRs are merged manually** — there is no release auto-merge.
 - Cleans up merged non-protected branches.
 
+## Security notes
+
+- User-controlled inputs (`version`, `from_branch`, `description`) are passed to shell
+  scripts via `env:` and referenced as quoted shell variables — never interpolated into
+  `run:` bodies, `git tag -m`, or PR titles/bodies as `${{ ... }}`.
+- PR bodies are written with `printf`/`cat` to a file and created with `gh pr create
+  --body-file`, so changelog/description content containing backticks or `$` is never
+  evaluated by the shell.
+
 ## Creating a release
 
 1. Actions → **Prepare Release** → run from `develop` (or `main`), pick the increment.
 2. Review and **merge** the release PR into `main`.
-3. `post-merge-release` dispatches `release.yaml`, which deploys to production and
-   opens the backport PR to `develop`.
+3. `post-merge-release` validates the tag and dispatches `release.yaml`, which deploys to
+   production and opens the backport PR to `develop`.
 
 ## Creating a hotfix
 
