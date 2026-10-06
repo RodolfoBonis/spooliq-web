@@ -12,12 +12,24 @@ prepare-release (or hotfix)   →   PR to main   →   review & merge   →   po
    + CHANGELOG, push tag vX.Y.Z                                          ancestry & version,       GH release → k3s → argocd → backport
 ```
 
+## ⚠️ Merge release and hotfix PRs with a **merge commit**
+
+`post-merge-release` only dispatches the deploy when the tag commit is an ancestor of the
+merge commit on `main`. A **squash** or **rebase** merge rewrites the commits, so the tag is
+not in `main`'s history: the check fails and **nothing is deployed** (fail-closed). Always use
+"Create a merge commit" (`gh pr merge <n> --merge`) for `release/*` and `hotfix/*` PRs.
+Regular feature PRs can keep using squash.
+
 ## ⚠️ One-time: sync `develop` with `main`
 
 `prepare-release` now **merges `main` into the source branch before tagging** and takes
 `main`'s version of `.github/**`, `package.json`, `package-lock.json` and `CHANGELOG.md`.
 This guarantees the tagged commit carries the current (dispatch-only) workflows even when
 `develop` is stale.
+
+It is also a **hard prerequisite** for releasing from `develop`: any real source conflict
+between `develop` and `main` (not only workflows) makes `prepare-release` abort with a clear
+message.
 
 However, the stale workflows still live on `develop` itself until `develop` is reconciled
 with `main`. **After this change is merged to `main`, open a `main → develop` sync PR** so
@@ -84,14 +96,17 @@ sync lands, the self-healing merge in `prepare-release` is what keeps releases s
 ## Creating a release
 
 1. Actions → **Prepare Release** → run from `develop` (or `main`), pick the increment.
-2. Review and **merge** the release PR into `main`.
+2. Review and **merge** the release PR into `main` **with a merge commit** (not squash).
 3. `post-merge-release` validates the tag and dispatches `release.yaml`, which deploys to
    production and opens the backport PR to `develop`.
 
 ## Creating a hotfix
 
-1. Actions → **Hotfix** → describe the issue.
-2. Review and merge the hotfix PR into `main`; deployment and backport follow automatically.
+1. Merge the fix into `main` first (normal PR).
+2. Actions → **Hotfix** → describe the issue. The tag is created on the version-bump commit,
+   so commits pushed to the hotfix branch afterwards are **not** in the deployed image.
+3. Review and merge the hotfix PR into `main` **with a merge commit**; deployment and backport
+   follow automatically.
 
 ## Secrets used
 
