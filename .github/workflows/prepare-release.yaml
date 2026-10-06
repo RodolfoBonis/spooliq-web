@@ -42,6 +42,7 @@ jobs:
         with:
           ref: ${{ inputs.from_branch }}
           fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
 
       - name: Configure Git
         run: |
@@ -98,6 +99,7 @@ jobs:
 
       - name: Update package.json version
         run: |
+          # npm version bumps both package.json and package-lock.json
           npm version ${{ steps.version.outputs.version }} --no-git-tag-version
 
       - name: Commit version change
@@ -149,22 +151,26 @@ jobs:
           EOF
           fi
 
-          # Store changelog for PR body (escape for JSON)
-          CHANGELOG_FOR_PR=$(cat /tmp/changelog_entry.md | sed 's/$/\\n/' | tr -d '\n')
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG_FOR_PR" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
       - name: Commit changelog
         run: |
           git add CHANGELOG.md
           git commit -m "docs: update CHANGELOG for v${{ steps.version.outputs.version }}"
 
-      - name: Push release branch
+      - name: Create and push tag
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
+          TAG="v${{ steps.version.outputs.version }}"
+
+          echo "Creating annotated tag $TAG..."
+          git tag -a "$TAG" -m "Release $TAG"
+
+          echo "Pushing branch and tag..."
           git push origin ${{ steps.create_branch.outputs.branch }}
+          git push origin "$TAG"
+
+          echo "✓ Tag $TAG created and pushed"
+          echo "✓ Branch ${{ steps.create_branch.outputs.branch }} pushed"
 
       - name: Ensure labels exist
         env:
@@ -182,7 +188,7 @@ jobs:
             --head ${{ steps.create_branch.outputs.branch }} \
             --title "🚀 Release v${{ steps.version.outputs.version }}" \
             --label "release,automated" \
-            --body "$(cat <<'EOF'
+            --body "$(cat <<EOF
           ## 🚀 Release v${{ steps.version.outputs.version }}
 
           ### Changelog
@@ -200,7 +206,7 @@ jobs:
           ### Deployment Process
           1. ✅ Merge this PR to \`main\`
           2. 🚀 Automatic deployment to **production**
-          3. 🏷️ Git tag will be created automatically
+          3. 🏷️ Tag \`v${{ steps.version.outputs.version }}\` already created
           4. 📦 GitHub release will be published
           5. 🔄 Changes will be backported to \`develop\`
 
@@ -215,15 +221,12 @@ jobs:
           EOF
           )"
 
-      - name: Create draft backport PR preview
+      - name: Create backport PR preview comment
         if: inputs.from_branch == 'develop'
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          # This creates a preview of what will be backported
-          # The actual backport will happen after release is merged
-          echo "Backport to develop will be created automatically after release merge"
-
+          # The actual backport happens after the release is merged (release.yaml backport job).
           gh pr comment $(gh pr list --head ${{ steps.create_branch.outputs.branch }} --json number -q '.[0].number') \
             --body "ℹ️ After this release is merged to main, a backport PR to \`develop\` will be created automatically."
 

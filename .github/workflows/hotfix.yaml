@@ -29,6 +29,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
 
       - name: Configure Git
         run: |
@@ -71,6 +72,7 @@ jobs:
 
       - name: Update package.json version
         run: |
+          # npm version bumps both package.json and package-lock.json
           npm version ${{ steps.version.outputs.version }} --no-git-tag-version
 
       - name: Commit version change
@@ -78,22 +80,41 @@ jobs:
           git add package.json package-lock.json
           git commit -m "chore: bump version to ${{ steps.version.outputs.version }} for hotfix"
 
-      - name: Push hotfix branch
+      - name: Create and push tag
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
+          TAG="v${{ steps.version.outputs.version }}"
+
+          echo "Creating hotfix tag $TAG..."
+          git tag -a "$TAG" -m "Hotfix $TAG: ${{ inputs.description }}"
+
+          echo "Pushing branch and tag..."
           git push origin ${{ steps.create_branch.outputs.branch }}
+          git push origin "$TAG"
+
+          echo "✓ Hotfix tag $TAG created and pushed"
+          echo "✓ Branch ${{ steps.create_branch.outputs.branch }} pushed"
+
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh label create "hotfix" --color "D93F0B" --description "Urgent fix for production issues" --force
+          gh label create "priority:critical" --color "B60205" --description "Critical priority" --force
+          gh label create "automated" --color "BFD4F2" --description "Created by automation" --force
 
       - name: Create PR to main
+        id: pr
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          gh pr create \
+          PR_URL=$(gh pr create \
             --base main \
             --head ${{ steps.create_branch.outputs.branch }} \
             --title "🚨 Hotfix v${{ steps.version.outputs.version }}: ${{ inputs.description }}" \
             --label "hotfix,priority:critical,automated" \
-            --body "$(cat <<'EOF'
+            --body "$(cat <<EOF
           ## 🚨 Hotfix v${{ steps.version.outputs.version }}
 
           ### Description
@@ -101,8 +122,9 @@ jobs:
 
           ### Deployment Process
           1. ✅ This PR will be automatically deployed to **production** once merged
-          2. 🔄 A backport PR to \`develop\` will be created automatically
-          3. 📢 Notifications will be sent via n8n/Telegram
+          2. 🏷️ Tag \`v${{ steps.version.outputs.version }}\` already created
+          3. 🔄 A backport PR to \`develop\` will be created automatically after merge
+          4. 📢 Notifications will be sent via n8n/Telegram
 
           ### Checklist
           - [ ] Code changes tested locally
@@ -113,48 +135,14 @@ jobs:
           ### Post-Merge Actions
           - Release workflow will automatically deploy to production
           - Backport PR will sync changes to develop branch
-          - Version tag will be created automatically
 
           ---
           🤖 _This PR was created automatically by the hotfix workflow_
           EOF
-          )"
+          )")
 
-      - name: Create draft backport PR to develop
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          # Create a backport branch
-          BACKPORT_BRANCH="backport/hotfix-v${{ steps.version.outputs.version }}-to-develop"
-
-          git checkout develop
-          git checkout -b $BACKPORT_BRANCH
-          git cherry-pick ${{ steps.create_branch.outputs.branch }}
-          git push origin $BACKPORT_BRANCH
-
-          gh pr create \
-            --base develop \
-            --head $BACKPORT_BRANCH \
-            --title "🔄 Backport hotfix v${{ steps.version.outputs.version }} to develop" \
-            --label "backport,hotfix,automated" \
-            --draft \
-            --body "$(cat <<'EOF'
-          ## 🔄 Backport Hotfix to Develop
-
-          This PR backports hotfix v${{ steps.version.outputs.version }} from main to develop.
-
-          ### Related PRs
-          - Main PR: #${{ steps.pr.outputs.number }}
-
-          ### Actions
-          - [ ] Review changes
-          - [ ] Resolve any conflicts
-          - [ ] Approve and merge
-
-          ---
-          🤖 _This backport PR was created automatically_
-          EOF
-          )"
+          echo "number=$(basename "$PR_URL")" >> $GITHUB_OUTPUT
+          echo "url=$PR_URL" >> $GITHUB_OUTPUT
 
       - name: Notify hotfix created
         env:
@@ -162,6 +150,7 @@ jobs:
           N8N_API_TOKEN: ${{ secrets.N8N_API_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
           THREAD_ID: ${{ secrets.THREAD_ID }}
+          PR_URL: ${{ steps.pr.outputs.url }}
         run: |
           curl -X POST "$N8N_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
@@ -169,28 +158,5 @@ jobs:
             -d "{
               \"chatId\": \"$CHAT_ID\",
               \"threadId\": \"$THREAD_ID\",
-              \"message\": \"🚨 Hotfix v${{ steps.version.outputs.version }} Created\n\n📋 Description: ${{ inputs.description }}\n🌿 Branch: ${{ steps.create_branch.outputs.branch }}\n👤 Created by: ${{ github.actor }}\n🔗 PR: https://github.com/${{ github.repository }}/pulls\"
-            }"
-
-  deploy-hotfix:
-    runs-on: ubuntu-latest
-    needs: create-hotfix
-    if: github.event.pull_request.merged == true && startsWith(github.head_ref, 'hotfix/')
-    steps:
-      - name: Notify deployment started
-        env:
-          N8N_WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
-          N8N_API_TOKEN: ${{ secrets.N8N_API_TOKEN }}
-          CHAT_ID: ${{ secrets.CHAT_ID }}
-          THREAD_ID: ${{ secrets.THREAD_ID }}
-        run: |
-          echo "Hotfix merged - deployment will be handled by release.yaml workflow"
-
-          curl -X POST "$N8N_WEBHOOK_URL" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $N8N_API_TOKEN" \
-            -d "{
-              \"chatId\": \"$CHAT_ID\",
-              \"threadId\": \"$THREAD_ID\",
-              \"message\": \"🚀 Hotfix Deployment Started\n\n📦 Version: ${{ needs.create-hotfix.outputs.version }}\n🌐 Production deployment in progress...\n⏳ Monitoring release workflow\"
+              \"message\": \"🚨 Hotfix v${{ steps.version.outputs.version }} Created\n\n📋 Description: ${{ inputs.description }}\n🌿 Branch: ${{ steps.create_branch.outputs.branch }}\n👤 Created by: ${{ github.actor }}\n🔗 PR: $PR_URL\"
             }"
