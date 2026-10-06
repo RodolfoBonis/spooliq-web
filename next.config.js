@@ -3,7 +3,7 @@ const nextConfig = {
   images: {
     remotePatterns: [
       { hostname: 'localhost' },
-      { hostname: 'rb-cdn.rodolfodebonis.com.br' },
+      { hostname: 'assets.spooliq.com' },
       { hostname: 'api.spooliq.com.br' },
       { hostname: 'api.spooliq.stg.rb.lab' },
     ],
@@ -20,3 +20,5 @@ const nextConfig = {
 
 module.exports = nextConfig
 
+
+// cdn migration: images served by the public cdn edge (assets.spooliq.com)

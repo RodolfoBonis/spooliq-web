@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Upload, X, File } from 'lucide-react'
 import { toast } from 'sonner'
+import { getApiErrorMessage } from '@/lib/api/errors'
 import {
   Dialog,
   DialogContent,
@@ -99,7 +100,7 @@ export function Model3DUploadDialog({ open, onOpenChange, customerId }: Model3DU
           handleClose()
           return
         }
-        toast.error('Erro ao enviar modelo 3D')
+        toast.error(getApiErrorMessage(err, 'Erro ao enviar modelo 3D'))
       },
     })
   }

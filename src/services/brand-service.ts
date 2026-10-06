@@ -1,4 +1,6 @@
 import api from '@/lib/api/client'
+import { buildListParams, toPage } from '@/lib/api/pagination'
+import type { PaginatedResponse } from '@/types/api'
 import type { Brand } from '@/types/models'
 
 export interface BrandFilters {
@@ -19,19 +21,14 @@ export interface UpdateBrandDTO {
 
 export const brandService = {
   /**
-   * List brands
+   * List brands. Tolerant to both the new `{ data, total, ... }` envelope and legacy arrays.
    */
-  async list(filters?: BrandFilters): Promise<{ data: Brand[]; total: number }> {
+  async list(filters?: BrandFilters): Promise<PaginatedResponse<Brand>> {
     const { search, page, pageSize } = filters || {}
-    const params = new URLSearchParams()
-    if (search) params.append('search', search)
-    if (pageSize) params.append('pageSize', pageSize.toString())
-
-    const response = await api.get<{ data: Brand[] }>(
-      `/brands/?${params.toString()}`
-    )
-
-    return { data: response.data.data, total: response.data.data.length }
+    const { data } = await api.get('/brands/', {
+      params: buildListParams({ page, pageSize, q: search }),
+    })
+    return toPage<Brand>(data)
   },
 
   /**
@@ -73,4 +70,3 @@ export const brandService = {
 }
 
 export default brandService
-

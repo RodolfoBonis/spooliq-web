@@ -34,7 +34,7 @@ export function CustomerSelect({
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
 
-  const { data, isLoading } = useCustomers({ search, pageSize: 50 })
+  const { data, isLoading } = useCustomers({ search, pageSize: 100 })
   const customers = data?.data || []
 
   const selectedCustomer = customers.find((c) => c.id === value)

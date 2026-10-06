@@ -1,4 +1,5 @@
 import { api } from '@/lib/api/client'
+import { toPage } from '@/lib/api/pagination'
 import type { PaymentMethod } from '@/types/models'
 
 export interface AddPaymentMethodRequest {
@@ -41,8 +42,9 @@ export const paymentMethodService = {
    * Only owners can view payment methods
    */
   async listPaymentMethods(): Promise<ListPaymentMethodsResponse> {
-    const { data } = await api.get<ListPaymentMethodsResponse>('/payment-methods')
-    return data
+    const { data } = await api.get('/payment-methods')
+    const page = toPage<PaymentMethod>(data, 'payment_methods')
+    return { payment_methods: page.data, total: page.total }
   },
 
   /**

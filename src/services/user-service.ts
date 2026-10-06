@@ -1,4 +1,5 @@
 import { api } from '@/lib/api/client'
+import { toPage } from '@/lib/api/pagination'
 
 export interface User {
   id: string
@@ -27,8 +28,8 @@ export interface UpdateUserDTO {
 
 export const userService = {
   async list(): Promise<User[]> {
-    const { data } = await api.get<User[]>('/users')
-    return data
+    const { data } = await api.get('/users')
+    return toPage<User>(data).data
   },
 
   async create(userData: CreateUserDTO): Promise<User> {

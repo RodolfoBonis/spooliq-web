@@ -1,4 +1,5 @@
 import api from '@/lib/api/client';
+import { toPage } from '@/lib/api/pagination';
 import type {
   DashboardOverview,
   RevenueTrendData,
@@ -35,10 +36,11 @@ export const dashboardApi = {
   },
 
   async getRecentActivity(limit: number = 20): Promise<RecentActivityData> {
-    const { data } = await api.get<RecentActivityData>('/dashboard/recent-activity', {
+    const { data } = await api.get('/dashboard/recent-activity', {
       params: { limit },
     });
-    return data;
+    const page = toPage<RecentActivityData['activities'][number]>(data, 'activities');
+    return { activities: page.data, total: page.total };
   },
 
   async getTopCustomers(period: PeriodFilter, limit: number = 5): Promise<TopCustomersData> {

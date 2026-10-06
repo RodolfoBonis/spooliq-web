@@ -6,6 +6,7 @@ import subscriptionManagementService, {
   type SubscribeResponse,
   type SubscriptionStatusResponse,
 } from '@/services/subscription-management-service'
+import { getApiErrorMessage } from '@/lib/api/errors'
 
 export function useSubscriptionStatus() {
   return useQuery({
@@ -31,12 +32,9 @@ export function useSubscribeToPlan() {
         toast.success('Assinatura ativada com sucesso!')
       }
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('Error subscribing to plan:', error)
-      toast.error(
-        error?.response?.data?.message ||
-          'Erro ao ativar assinatura. Tente novamente.'
-      )
+      toast.error(getApiErrorMessage(error, 'Erro ao ativar assinatura. Tente novamente.'))
     },
   })
 }
@@ -54,12 +52,9 @@ export function useCancelSubscription() {
         `Assinatura cancelada. Efetiva em: ${new Date(data.effective_date).toLocaleDateString('pt-BR')}`
       )
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('Error cancelling subscription:', error)
-      toast.error(
-        error?.response?.data?.message ||
-          'Erro ao cancelar assinatura. Tente novamente.'
-      )
+      toast.error(getApiErrorMessage(error, 'Erro ao cancelar assinatura. Tente novamente.'))
     },
   })
 }
@@ -74,12 +69,9 @@ export function useReactivateSubscription() {
       queryClient.invalidateQueries({ queryKey: ['subscription'] })
       toast.success('Assinatura reativada com sucesso!')
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('Error reactivating subscription:', error)
-      toast.error(
-        error?.response?.data?.message ||
-          'Erro ao reativar assinatura. Tente novamente.'
-      )
+      toast.error(getApiErrorMessage(error, 'Erro ao reativar assinatura. Tente novamente.'))
     },
   })
 }
@@ -103,12 +95,9 @@ export function useChangePlan() {
       
       toast.success(message)
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('Error changing plan:', error)
-      toast.error(
-        error?.response?.data?.message ||
-          'Erro ao alterar plano. Tente novamente.'
-      )
+      toast.error(getApiErrorMessage(error, 'Erro ao alterar plano. Tente novamente.'))
     },
   })
 }

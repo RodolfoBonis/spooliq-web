@@ -6,6 +6,7 @@ import subscriptionPlansService, {
   type PlanListResponse,
 } from '@/services/subscription-plans-service'
 import type { SubscriptionPlanModel } from '@/types/models'
+import { getApiErrorMessage } from '@/lib/api/errors'
 
 export function useActivePlans() {
   return useQuery({
@@ -31,12 +32,9 @@ export function useCreatePlan() {
       queryClient.invalidateQueries({ queryKey: ['subscription-plans'] })
       toast.success('Plano criado com sucesso!')
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('Error creating plan:', error)
-      toast.error(
-        error?.response?.data?.message ||
-          'Erro ao criar plano. Tente novamente.'
-      )
+      toast.error(getApiErrorMessage(error, 'Erro ao criar plano. Tente novamente.'))
     },
   })
 }
@@ -51,12 +49,9 @@ export function useUpdatePlan() {
       queryClient.invalidateQueries({ queryKey: ['subscription-plans'] })
       toast.success('Plano atualizado com sucesso!')
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('Error updating plan:', error)
-      toast.error(
-        error?.response?.data?.message ||
-          'Erro ao atualizar plano. Tente novamente.'
-      )
+      toast.error(getApiErrorMessage(error, 'Erro ao atualizar plano. Tente novamente.'))
     },
   })
 }
@@ -70,12 +65,9 @@ export function useDeletePlan() {
       queryClient.invalidateQueries({ queryKey: ['subscription-plans'] })
       toast.success('Plano removido com sucesso!')
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('Error deleting plan:', error)
-      toast.error(
-        error?.response?.data?.message ||
-          'Erro ao remover plano. Tente novamente.'
-      )
+      toast.error(getApiErrorMessage(error, 'Erro ao remover plano. Tente novamente.'))
     },
   })
 }

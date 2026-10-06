@@ -1,13 +1,15 @@
 import api from '@/lib/api/client'
+import { buildListParams, toPage } from '@/lib/api/pagination'
 import { AxiosError } from 'axios'
-import type { Model3D, FindAllModel3DResponse, UploadConflictResponse } from '@/types/models'
+import type { Model3D, UploadConflictResponse } from '@/types/models'
+import type { PaginatedResponse } from '@/types/api'
 
 export interface Model3DFilters {
   search?: string
   format?: string
   customer_id?: string
   page?: number
-  page_size?: number
+  pageSize?: number
 }
 
 export interface UpdateModel3DDTO {
@@ -29,18 +31,15 @@ export class UploadConflictError extends Error {
 
 export const model3dService = {
   /**
-   * List 3D models with filters (paginated)
+   * List 3D models with filters and pagination. Tolerant to both the new
+   * `{ data, total, page, page_size, total_pages }` envelope and legacy arrays.
    */
-  async list(filters?: Model3DFilters): Promise<FindAllModel3DResponse> {
-    const params = new URLSearchParams()
-    if (filters?.search) params.append('search', filters.search)
-    if (filters?.format) params.append('format', filters.format)
-    if (filters?.customer_id) params.append('customer_id', filters.customer_id)
-    if (filters?.page) params.append('page', filters.page.toString())
-    if (filters?.page_size) params.append('page_size', filters.page_size.toString())
-
-    const { data } = await api.get<FindAllModel3DResponse>(`/models3d?${params.toString()}`)
-    return data
+  async list(filters?: Model3DFilters): Promise<PaginatedResponse<Model3D>> {
+    const { search, format, customer_id, page, pageSize } = filters || {}
+    const { data } = await api.get('/models3d', {
+      params: buildListParams({ page, pageSize, q: search, format, customer_id }),
+    })
+    return toPage<Model3D>(data)
   },
 
   /**

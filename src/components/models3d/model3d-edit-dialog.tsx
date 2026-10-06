@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
+import { getApiErrorMessage } from '@/lib/api/errors'
 import {
   Dialog,
   DialogContent,
@@ -57,8 +58,8 @@ export function Model3DEditDialog({ model, open, onOpenChange }: Model3DEditDial
           toast.success('Modelo atualizado com sucesso!')
           handleClose()
         },
-        onError: () => {
-          toast.error('Erro ao atualizar modelo')
+        onError: (err) => {
+          toast.error(getApiErrorMessage(err, 'Erro ao atualizar modelo'))
         },
       }
     )

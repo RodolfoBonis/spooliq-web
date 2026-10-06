@@ -1,11 +1,83 @@
 import { api } from '@/lib/api/client'
-import type { MachinePreset, EnergyPreset, CostPreset } from '@/types/models'
+import { buildListParams, toPage } from '@/lib/api/pagination'
+import type {
+  MachinePreset,
+  EnergyPreset,
+  CostPreset,
+  PresetTemplate,
+  PresetType,
+} from '@/types/models'
 
 // ✅ CORRECTED - Aligned with Backend
 
+/** Fields accepted by `POST /presets/suggest-name` (only the ones relevant to `type` are used). */
+export interface SuggestPresetNameDTO {
+  type: PresetType
+  // Machine
+  brand?: string
+  model?: string
+  nozzle_diameter?: number
+  // Energy
+  provider?: string
+  city?: string
+  state?: string
+  energy_cost_per_kwh?: number
+  // Cost
+  labor_cost_per_hour?: number
+  profit_margin_percentage?: number
+}
+
+export interface CreateFromTemplateDTO {
+  name?: string
+  is_default?: boolean
+}
+
+/** Shape of a preset after a generic action (default, duplicate, from-template). */
+export interface PresetSummary {
+  id: string
+  name: string
+  type: PresetType
+  is_default: boolean
+}
+
+// Actions shared by every preset type
+export const presetService = {
+  async suggestName(input: SuggestPresetNameDTO): Promise<string> {
+    const { data } = await api.post<{ name?: string }>('/presets/suggest-name', input)
+    return data.name ?? ''
+  },
+
+  async listTemplates(type: PresetType): Promise<PresetTemplate[]> {
+    const { data } = await api.get('/presets/templates', { params: { type } })
+    return toPage<PresetTemplate>(data, 'templates').data
+  },
+
+  async createFromTemplate(key: string, overrides: CreateFromTemplateDTO = {}): Promise<PresetSummary> {
+    const { data } = await api.post<PresetSummary>(
+      `/presets/from-template/${encodeURIComponent(key)}`,
+      overrides
+    )
+    return data
+  },
+
+  async setDefault(id: string): Promise<PresetSummary> {
+    const { data } = await api.post<PresetSummary>(`/presets/${id}/default`)
+    return data
+  },
+
+  async duplicate(id: string): Promise<PresetSummary> {
+    const { data } = await api.post<PresetSummary>(`/presets/${id}/duplicate`)
+    return data
+  },
+
+  async delete(id: string): Promise<void> {
+    await api.delete(`/presets/${id}`)
+  },
+}
+
 // Machine Presets
 export interface CreateMachinePresetDTO {
-  name: string // Required field - preset name
+  name?: string // Optional - the API auto-generates a name when omitted
   description?: string // Optional description
   is_default?: boolean // Whether this is a default preset
   brand?: string
@@ -21,15 +93,15 @@ export interface CreateMachinePresetDTO {
   bed_temperature_max?: number // °C
   extruder_temperature_max?: number // °C
   filament_diameter?: number // mm (1.75 or 2.85)
-  cost_per_hour?: number // cents
+  cost_per_hour?: number // reais
 }
 
-export interface UpdateMachinePresetDTO extends Partial<CreateMachinePresetDTO> {}
+export type UpdateMachinePresetDTO = Partial<CreateMachinePresetDTO>
 
 export const machinePresetService = {
   async list(): Promise<MachinePreset[]> {
-    const { data } = await api.get<MachinePreset[]>('/presets/machines')
-    return data
+    const { data } = await api.get('/presets/machines', { params: buildListParams({ pageSize: 100 }) })
+    return toPage<MachinePreset>(data).data
   },
 
   async getById(id: string): Promise<MachinePreset> {
@@ -48,19 +120,20 @@ export const machinePresetService = {
   },
 
   async delete(id: string): Promise<void> {
-    await api.delete(`/presets/machines/${id}`)
+    // The API exposes a single delete route for every preset type
+    await api.delete(`/presets/${id}`)
   },
 }
 
 // Energy Presets
 export interface CreateEnergyPresetDTO {
-  name: string // Required field - preset name
+  name?: string // Optional - the API auto-generates a name when omitted
   description?: string // Optional description
   is_default?: boolean // Whether this is a default preset
   country?: string
   state?: string
   city?: string
-  energy_cost_per_kwh: number // cents
+  energy_cost_per_kwh: number // reais
   currency: string // "BRL", "USD", etc (3-letter ISO code)
   provider?: string
   tariff_type?: string
@@ -68,12 +141,12 @@ export interface CreateEnergyPresetDTO {
   off_peak_hour_multiplier?: number
 }
 
-export interface UpdateEnergyPresetDTO extends Partial<CreateEnergyPresetDTO> {}
+export type UpdateEnergyPresetDTO = Partial<CreateEnergyPresetDTO>
 
 export const energyPresetService = {
   async list(): Promise<EnergyPreset[]> {
-    const { data } = await api.get<EnergyPreset[]>('/presets/energy')
-    return data
+    const { data } = await api.get('/presets/energy', { params: buildListParams({ pageSize: 100 }) })
+    return toPage<EnergyPreset>(data).data
   },
 
   async getById(id: string): Promise<EnergyPreset> {
@@ -92,32 +165,33 @@ export const energyPresetService = {
   },
 
   async delete(id: string): Promise<void> {
-    await api.delete(`/presets/energy/${id}`)
+    // The API exposes a single delete route for every preset type
+    await api.delete(`/presets/${id}`)
   },
 }
 
 // Cost Presets
 export interface CreateCostPresetDTO {
-  name: string // Required field - preset name
+  name?: string // Optional - the API auto-generates a name when omitted
   description?: string // Optional description
   is_default?: boolean // Whether this is a default preset
-  labor_cost_per_hour?: number // cents
-  packaging_cost_per_item?: number // cents
-  shipping_cost_base?: number // cents
-  shipping_cost_per_gram?: number // cents
+  labor_cost_per_hour?: number // reais
+  packaging_cost_per_item?: number // reais
+  shipping_cost_base?: number // reais
+  shipping_cost_per_gram?: number // reais
   overhead_percentage?: number // 0-100
-  profit_margin_percentage?: number // 0-100
-  post_processing_cost_per_hour?: number // cents
-  support_removal_cost_per_hour?: number // cents
-  quality_control_cost_per_item?: number // cents
+  profit_margin_percentage?: number // 0-1000
+  post_processing_cost_per_hour?: number // reais
+  support_removal_cost_per_hour?: number // reais
+  quality_control_cost_per_item?: number // reais
 }
 
-export interface UpdateCostPresetDTO extends Partial<CreateCostPresetDTO> {}
+export type UpdateCostPresetDTO = Partial<CreateCostPresetDTO>
 
 export const costPresetService = {
   async list(): Promise<CostPreset[]> {
-    const { data } = await api.get<CostPreset[]>('/presets/costs')
-    return data
+    const { data } = await api.get('/presets/costs', { params: buildListParams({ pageSize: 100 }) })
+    return toPage<CostPreset>(data).data
   },
 
   async getById(id: string): Promise<CostPreset> {
@@ -136,7 +210,8 @@ export const costPresetService = {
   },
 
   async delete(id: string): Promise<void> {
-    await api.delete(`/presets/costs/${id}`)
+    // The API exposes a single delete route for every preset type
+    await api.delete(`/presets/${id}`)
   },
 }
 

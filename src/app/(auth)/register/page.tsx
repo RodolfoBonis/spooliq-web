@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2, ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import { toast } from 'sonner'
+import { getApiErrorMessage } from '@/lib/api/errors'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -92,10 +93,9 @@ export default function RegisterPage() {
 
       toast.success('Conta criada com sucesso! Faça login para continuar.')
       router.push('/login')
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Register error:', error)
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Erro ao criar conta'
-      toast.error(errorMessage)
+      toast.error(getApiErrorMessage(error, 'Erro ao criar conta'))
     } finally {
       setIsLoading(false)
     }

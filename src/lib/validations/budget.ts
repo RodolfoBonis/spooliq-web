@@ -16,7 +16,6 @@ export const budgetItemSchema = z.object({
   product_dimensions: z.string().optional(),
   print_time_hours: z.number().min(0, 'Horas devem ser 0 ou mais'),
   print_time_minutes: z.number().min(0, 'Minutos devem ser 0 ou mais').max(59, 'Minutos devem ser no máximo 59'),
-  cost_preset_id: z.string().uuid().optional(),
   setup_time_minutes: z.number().min(0, 'Tempo de setup deve ser 0 ou mais'),
   manual_labor_minutes_total: z.number().min(0, 'Tempo de mão de obra deve ser 0 ou mais'),
   additional_notes: z.string().optional(),
@@ -29,8 +28,10 @@ export const createBudgetSchema = z.object({
   name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
   description: z.string().optional(),
   customer_id: z.string().uuid('Cliente inválido'),
+  profile_id: z.string().uuid().optional(),
   machine_preset_id: z.string().uuid().optional(),
   energy_preset_id: z.string().uuid().optional(),
+  cost_preset_id: z.string().uuid().optional(), // budget-level: labor rate, overhead and margin for every item
   include_energy_cost: z.boolean(),
   include_waste_cost: z.boolean(),
   delivery_days: z.number().positive().optional(),

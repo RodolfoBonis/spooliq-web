@@ -40,12 +40,6 @@ export interface RegisterResponse {
   message: string
 }
 
-export interface ApiError {
-  error: string
-  message: string
-  statusCode: number
-}
-
 export interface PaginationParams {
   page?: number
   pageSize?: number

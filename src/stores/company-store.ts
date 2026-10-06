@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { Company } from '@/types/models'
 import { companyService, type UpdateCompanyDTO } from '@/services/company-service'
 import { toast } from 'sonner'
+import { getApiErrorMessage } from '@/lib/api/errors'
 
 interface CompanyState {
   company: Company | null
@@ -25,8 +26,8 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
       set({ isLoading: true, error: null })
       const company = await companyService.get()
       set({ company, isLoading: false })
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Erro ao carregar empresa'
+    } catch (error: unknown) {
+      const errorMessage = getApiErrorMessage(error, 'Erro ao carregar empresa')
       set({ error: errorMessage, isLoading: false })
       toast.error(errorMessage)
     }
@@ -38,8 +39,8 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
       const company = await companyService.update(data)
       set({ company, isLoading: false })
       toast.success('Empresa atualizada com sucesso!')
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Erro ao atualizar empresa'
+    } catch (error: unknown) {
+      const errorMessage = getApiErrorMessage(error, 'Erro ao atualizar empresa')
       set({ error: errorMessage, isLoading: false })
       toast.error(errorMessage)
       throw error
@@ -56,8 +57,8 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
       set({ company: updatedCompany, isLoading: false })
       
       toast.success('Logo atualizado com sucesso!')
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Erro ao fazer upload do logo'
+    } catch (error: unknown) {
+      const errorMessage = getApiErrorMessage(error, 'Erro ao fazer upload do logo')
       set({ error: errorMessage, isLoading: false })
       toast.error(errorMessage)
       throw error

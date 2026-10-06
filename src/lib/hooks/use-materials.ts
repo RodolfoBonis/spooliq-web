@@ -3,9 +3,9 @@ import { toast } from 'sonner'
 import {
   materialService,
   type MaterialFilters,
-  type CreateMaterialDTO,
   type UpdateMaterialDTO,
 } from '@/services/material-service'
+import { getApiErrorMessage } from '@/lib/api/errors'
 
 export function useMaterials(filters?: MaterialFilters) {
   return useQuery({
@@ -31,8 +31,8 @@ export function useCreateMaterial() {
       queryClient.invalidateQueries({ queryKey: ['materials'] })
       toast.success('Material criado com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao criar material')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao criar material'))
     },
   })
 }
@@ -48,8 +48,8 @@ export function useUpdateMaterial() {
       queryClient.invalidateQueries({ queryKey: ['materials', variables.id] })
       toast.success('Material atualizado com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao atualizar material')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao atualizar material'))
     },
   })
 }
@@ -63,9 +63,8 @@ export function useDeleteMaterial() {
       queryClient.invalidateQueries({ queryKey: ['materials'] })
       toast.success('Material deletado com sucesso!')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao deletar material')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao deletar material'))
     },
   })
 }
-
