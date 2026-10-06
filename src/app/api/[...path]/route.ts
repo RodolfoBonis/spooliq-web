@@ -46,6 +46,27 @@ export async function DELETE(
 }
 
 /**
+ * Hop-by-hop headers (RFC 7230 §6.1) must never be forwarded by a proxy, plus
+ * the `proxy-*` family. These describe a single transport connection, not the
+ * end-to-end message.
+ */
+const HOP_BY_HOP_HEADERS = new Set([
+  'connection',
+  'keep-alive',
+  'transfer-encoding',
+  'upgrade',
+  'proxy-authorization',
+  'proxy-authenticate',
+  'te',
+  'trailer',
+])
+
+function isHopByHopHeader(key: string): boolean {
+  const k = key.toLowerCase()
+  return HOP_BY_HOP_HEADERS.has(k) || k.startsWith('proxy-')
+}
+
+/**
  * Decides whether a proxied response body must be forwarded as raw bytes
  * (streamed) instead of decoded as text. 3D model files are served as
  * `model/stl` / `model/3mf` (and the 3MF XML vendor type), so `model/` and the
@@ -64,6 +85,42 @@ function isBinaryContentType(contentType: string): boolean {
     contentType.includes('application/zip') ||
     contentType.includes('application/gzip')
   )
+}
+
+/**
+ * Builds the forwarded REQUEST headers: drops `host` and all hop-by-hop headers.
+ * When the body was re-serialized (JSON), the original `content-length` no longer
+ * matches, so the caller drops it separately.
+ */
+function buildForwardRequestHeaders(request: NextRequest): Headers {
+  const headers = new Headers()
+  request.headers.forEach((value, key) => {
+    const k = key.toLowerCase()
+    if (k === 'host') return
+    if (isHopByHopHeader(k)) return
+    headers.set(key, value)
+  })
+  return headers
+}
+
+/**
+ * Builds the forwarded RESPONSE headers. Node's fetch transparently decompresses
+ * the body, so `content-encoding` is always dropped and `content-length` is dropped
+ * whenever the body was decoded (either decompressed or re-serialized as text) —
+ * otherwise the browser would see a length that no longer matches the bytes.
+ * Hop-by-hop headers are stripped; content-type/content-disposition/cache-control/
+ * etag are preserved.
+ */
+function buildForwardResponseHeaders(response: Response, decoded: boolean): Headers {
+  const headers = new Headers()
+  response.headers.forEach((value, key) => {
+    const k = key.toLowerCase()
+    if (isHopByHopHeader(k)) return
+    if (k === 'content-encoding') return
+    if (k === 'content-length' && decoded) return
+    headers.set(key, value)
+  })
+  return headers
 }
 
 async function proxyRequest(
@@ -86,25 +143,22 @@ async function proxyRequest(
 
     console.log('🔄 Proxy Request:', method, targetUrl)
 
-    // Forward all headers except host
-    const headers = new Headers()
-    request.headers.forEach((value, key) => {
-      if (key.toLowerCase() !== 'host') {
-        headers.set(key, value)
-      }
-    })
+    const headers = buildForwardRequestHeaders(request)
 
     // Get request body if present
     let body: BodyInit | undefined = undefined
     if (method !== 'GET' && method !== 'HEAD') {
       const contentType = request.headers.get('content-type')
       if (contentType?.includes('application/json')) {
+        // Re-serialized: the original content-length no longer applies.
         body = JSON.stringify(await request.json())
+        headers.delete('content-length')
       } else if (contentType?.includes('multipart/form-data')) {
         // For multipart data, pass the raw stream to preserve boundary
         body = request.body ?? undefined
       } else {
         body = await request.text()
+        headers.delete('content-length')
       }
     }
 
@@ -117,17 +171,24 @@ async function proxyRequest(
     }
 
     // Add duplex option for streaming body (required for Node.js fetch)
-    if (body && body instanceof ReadableStream) {
+    const bodyIsStream = body instanceof ReadableStream
+    if (bodyIsStream) {
       fetchOptions.duplex = 'half'
     }
 
     let response = await fetch(targetUrl, fetchOptions)
 
     // If backend responds with a redirect that uses a relative Location like "/v1/...",
-    // follow it server-side and return the final response to the browser
+    // follow it server-side and return the final response to the browser.
     if ([301, 302, 303, 307, 308].includes(response.status)) {
       const location = response.headers.get('location') || ''
-      if (location) {
+      const isBodylessMethod = method === 'GET' || method === 'HEAD'
+      // A streamed (multipart) body was already consumed by the first fetch and
+      // cannot be replayed, so we must NOT refetch with it. Buffered bodies
+      // (JSON/text strings) are safe to reuse.
+      const canFollow = location !== '' && (isBodylessMethod || !bodyIsStream)
+
+      if (canFollow) {
         let absoluteLocation = location
         if (/^https?:\/\//i.test(location)) {
           absoluteLocation = location
@@ -137,20 +198,16 @@ async function proxyRequest(
         } else {
           absoluteLocation = new URL(location, API_BASE_URL).toString()
         }
-        const redirectOptions: RequestInit & { duplex?: string } = {
-          method: method === 'GET' ? 'GET' : method,
+
+        response = await fetch(absoluteLocation, {
+          method,
           headers,
-          body: method === 'GET' || method === 'HEAD' ? undefined : body,
+          body: isBodylessMethod ? undefined : body,
           redirect: 'follow',
-        }
-
-        // Add duplex option for redirect too if needed
-        if (body && body instanceof ReadableStream && method !== 'GET' && method !== 'HEAD') {
-          redirectOptions.duplex = 'half'
-        }
-
-        response = await fetch(absoluteLocation, redirectOptions)
+        })
       }
+      // Otherwise (streamed body we can't replay) fall through and return the
+      // redirect response as-is rather than refetch with a consumed stream.
     }
 
     console.log('✅ Proxy Response:', response.status, targetUrl)
@@ -163,21 +220,18 @@ async function proxyRequest(
       })
     }
 
-    // Forward response headers (includes content-type and content-length)
-    const responseHeaders = new Headers()
-    response.headers.forEach((value, key) => {
-      responseHeaders.set(key, value)
-    })
-
     // Binary responses (PDFs, images, 3D model files, ...) must be forwarded as raw
     // bytes. Stream the body straight through so large files (e.g. 50MB STL/3MF) are
-    // not buffered in memory, and content-type/content-length are preserved.
+    // not buffered in memory.
     const contentType = response.headers.get('content-type') || ''
     if (isBinaryContentType(contentType)) {
+      // If the upstream body was compressed, Node already decoded it, so the
+      // original content-length is stale and must be dropped.
+      const wasEncoded = response.headers.has('content-encoding')
       return new NextResponse(response.body, {
         status: response.status,
         statusText: response.statusText,
-        headers: responseHeaders,
+        headers: buildForwardResponseHeaders(response, wasEncoded),
       })
     }
 
@@ -185,7 +239,7 @@ async function proxyRequest(
     return new NextResponse(responseBody, {
       status: response.status,
       statusText: response.statusText,
-      headers: responseHeaders,
+      headers: buildForwardResponseHeaders(response, true),
     })
   } catch (error) {
     console.error('❌ Proxy Error:', error)
