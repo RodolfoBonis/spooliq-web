@@ -75,6 +75,7 @@ export default function FilamentsPage() {
     search: debouncedSearch,
     brand_id: brandFilter && brandFilter !== 'all' ? brandFilter : undefined,
     material_id: materialFilter && materialFilter !== 'all' ? materialFilter : undefined,
+    diameter: diameterFilter && diameterFilter !== 'all' ? parseFloat(diameterFilter) : undefined,
     page,
     pageSize: 24,
   });
@@ -121,10 +122,8 @@ export default function FilamentsPage() {
     }
   }, []);
 
-  // Filter by diameter locally
-  const filteredFilaments = diameterFilter && diameterFilter !== 'all'
-    ? filaments.filter(f => f.diameter === parseFloat(diameterFilter))
-    : filaments;
+  // Filtering (including diameter) is done server-side; total/pages come from the server.
+  const totalFilaments = filamentsData?.total ?? filaments.length;
 
   // Create form
   const createForm = useForm<CreateFilamentForm>({
@@ -347,7 +346,7 @@ export default function FilamentsPage() {
       {/* View Mode Toggle */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-neutral-600">
-          {filteredFilaments.length} {filteredFilaments.length === 1 ? 'filamento encontrado' : 'filamentos encontrados'}
+          {totalFilaments} {totalFilaments === 1 ? 'filamento encontrado' : 'filamentos encontrados'}
         </p>
         <div className="flex gap-1 border rounded-lg p-1 bg-neutral-100">
           <Button
@@ -372,7 +371,7 @@ export default function FilamentsPage() {
       {/* Content */}
       {isLoading ? (
         <TableSkeleton />
-      ) : filteredFilaments.length === 0 ? (
+      ) : filaments.length === 0 ? (
         <EmptyState
           title="Nenhum filamento encontrado"
           description={hasActiveFilters ? "Tente ajustar os filtros de busca" : "Adicione seu primeiro filamento ao catálogo"}
@@ -389,7 +388,7 @@ export default function FilamentsPage() {
       ) : viewMode === 'grid' ? (
         /* Grid View */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredFilaments.map((filament) => (
+          {filaments.map((filament) => (
             <Card key={filament.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -462,7 +461,7 @@ export default function FilamentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredFilaments.map((filament) => (
+              {filaments.map((filament) => (
                 <TableRow key={filament.id}>
                   <TableCell>
                     <div
@@ -507,7 +506,7 @@ export default function FilamentsPage() {
         </div>
       )}
 
-      {!isLoading && filteredFilaments.length > 0 && (
+      {!isLoading && filaments.length > 0 && (
         <PaginationControls
           page={page}
           totalPages={filamentsData?.totalPages ?? 1}

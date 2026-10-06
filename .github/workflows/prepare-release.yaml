@@ -282,10 +282,13 @@ jobs:
             printf -- '- [ ] Performance tested\n'
             printf -- '- [ ] Security reviewed\n'
             printf '\n### Deployment Process\n'
+            # shellcheck disable=SC2016
             printf '1. ✅ Merge this PR to `main`\n'
             printf '2. 🚀 Automatic deployment to **production**\n'
+            # shellcheck disable=SC2016
             printf '3. 🏷️ Tag `v%s` already created\n' "$VERSION"
             printf '4. 📦 GitHub release will be published\n'
+            # shellcheck disable=SC2016
             printf '5. 🔄 Changes will be backported to `develop`\n'
             printf '\n### Post-Merge Actions\n'
             printf -- '- Production deployment via ArgoCD\n'

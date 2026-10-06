@@ -284,7 +284,7 @@ export function useSetDefaultPreset(type: PresetType) {
     onError: (error: unknown) => {
       toast.error(
         getApiErrorMessage(error, 'Erro ao definir preset padrão', {
-          byStatus: { 403: 'Apenas proprietários e administradores podem definir o preset padrão.' },
+          byCode: { insufficient_role: 'Apenas proprietários e administradores podem definir o preset padrão.' },
         })
       )
     },

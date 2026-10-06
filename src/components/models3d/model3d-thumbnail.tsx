@@ -2,7 +2,8 @@
 
 import { Box } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getModelThumbnailUrl, formatModelFormat } from '@/lib/utils/cdn-model'
+import { CDNImage } from '@/components/ui/cdn-image'
+import { formatModelFormat } from '@/lib/utils/cdn-model'
 import type { Model3D } from '@/types/models'
 
 interface Model3DThumbnailProps {
@@ -11,17 +12,22 @@ interface Model3DThumbnailProps {
 }
 
 export function Model3DThumbnail({ model, className }: Model3DThumbnailProps) {
-  const thumbnailUrl = getModelThumbnailUrl(model.thumbnail_url)
   const formatLabel = formatModelFormat(model.file_format)
 
   return (
     <div className={cn('relative aspect-square overflow-hidden rounded-md bg-[#F5F5F5]', className)}>
-      {thumbnailUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={thumbnailUrl}
+      {model.thumbnail_url ? (
+        // thumbnail_url is served directly from the public CDN (see CDNImage)
+        <CDNImage
+          src={model.thumbnail_url}
           alt={model.name}
-          className="h-full w-full object-cover"
+          fill
+          className="object-cover"
+          fallback={
+            <div className="flex h-full w-full items-center justify-center">
+              <Box className="h-1/3 w-1/3 text-neutral-400" />
+            </div>
+          }
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center">

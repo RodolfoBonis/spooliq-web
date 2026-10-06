@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   filamentService,
   type FilamentFilters,
-  type CreateFilamentDTO,
   type UpdateFilamentDTO,
 } from '@/services/filament-service'
 
@@ -10,8 +9,10 @@ export function useFilaments(filters?: FilamentFilters) {
   return useQuery({
     queryKey: ['filaments', filters],
     queryFn: () => {
-      // Use search endpoint if filters are provided, otherwise use list
-      if (filters && (filters.search || filters.brand_id || filters.material_id)) {
+      // Use the dedicated search endpoint only for free-text queries; the list endpoint
+      // now accepts every structural filter (brand_id, material_id, color_type, diameter,
+      // min_price, max_price) and returns the server-side total/page count.
+      if (filters?.search) {
         return filamentService.search(filters)
       }
       return filamentService.list(filters)
@@ -61,4 +62,3 @@ export function useDeleteFilament() {
     },
   })
 }
-

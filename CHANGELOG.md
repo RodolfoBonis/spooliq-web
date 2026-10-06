@@ -5,6 +5,20 @@ All notable changes to Spooliq Web will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.3.0] - 2026-10-06
+
+- chore: bump version to 1.3.0 (86fb35f)
+- feat(models3d): 3D model catalog with STL/3MF viewer and budget linking; filters and error cleanups (#35) (995e287)
+- ci: fix shellcheck findings and stop baking the client secret into the image (#34) (1772f83)
+
+
+## [v1.2.0] - 2026-10-06
+
+- chore: bump version to 1.2.0 (a67a5fa)
+- feat(web): transition-tolerant lists, server-side search/pagination, standardized errors, healthz (#29) (94f032f)
+- ci: deploy only via release/hotfix PRs (API release model) and remove OpenAI (#28) (11b5664)
+
+
 ## [v1.1.0] - 2026-02-20
 
 - chore: bump version to 1.1.0 (6214ba2)

@@ -33,8 +33,8 @@ jobs:
           # Remove v prefix if exists
           VERSION=${VERSION#v}
 
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Extracted version: $VERSION"
           echo "Tag: v${VERSION}"
 

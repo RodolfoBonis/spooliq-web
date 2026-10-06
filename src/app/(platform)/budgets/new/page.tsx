@@ -514,10 +514,14 @@ export default function NewBudgetPage() {
 
                 {/* Model 3D selector (optional) */}
                 <div className="mt-3 space-y-1">
-                  <label className="text-sm font-medium text-neutral-700">
+                  <label
+                    htmlFor={`model-3d-${itemIndex}`}
+                    className="text-sm font-medium text-neutral-700"
+                  >
                     Modelo 3D <span className="text-neutral-400 font-normal">(opcional)</span>
                   </label>
                   <Model3DCombobox
+                    id={`model-3d-${itemIndex}`}
                     value={watchedItem?.model_3d_id}
                     onChange={(id) => form.setValue(`items.${itemIndex}.model_3d_id`, id)}
                     customerId={values.customer_id}

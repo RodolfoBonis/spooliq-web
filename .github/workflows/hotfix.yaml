@@ -146,7 +146,9 @@ jobs:
             printf '%s\n' "$DESCRIPTION"
             printf '\n### Deployment Process\n'
             printf '1. ✅ This PR will be automatically deployed to **production** once merged\n'
+            # shellcheck disable=SC2016
             printf '2. 🏷️ Tag `v%s` already created\n' "$VERSION"
+            # shellcheck disable=SC2016
             printf '3. 🔄 A backport PR to `develop` will be created automatically after merge\n'
             printf '4. 📢 Notifications will be sent via n8n/Telegram\n'
             printf '\n### Checklist\n'

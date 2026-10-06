@@ -1,9 +1,12 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { getApiErrorMessage } from '@/lib/api/errors'
 import {
   model3dService,
   type Model3DFilters,
   type UpdateModel3DDTO,
 } from '@/services/model3d-service'
+import type { Model3D } from '@/types/models'
 
 export function useModels3D(filters?: Model3DFilters) {
   return useQuery({
@@ -56,6 +59,20 @@ export function useDeleteModel3D() {
     mutationFn: (id: string) => model3dService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['models3d'] })
+    },
+  })
+}
+
+/**
+ * Downloads a model's binary file through the authenticated axios client
+ * (blob → object URL → `a.download`), surfacing a pt-BR toast on failure.
+ */
+export function useDownloadModel3D() {
+  return useMutation({
+    mutationFn: (model: Pick<Model3D, 'id' | 'file_name'>) =>
+      model3dService.downloadFile(model),
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao baixar o arquivo'))
     },
   })
 }

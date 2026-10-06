@@ -56,7 +56,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           # Get PR state
-          PR_STATE=$(gh pr view $PR_NUMBER --json state --jq '.state')
+          PR_STATE=$(gh pr view "$PR_NUMBER" --json state --jq '.state')
 
           if [ "$PR_STATE" != "OPEN" ]; then
             echo "PR is not open, skipping auto-merge"
@@ -64,7 +64,7 @@ jobs:
           fi
 
           # Check if PR is mergeable
-          MERGEABLE=$(gh pr view $PR_NUMBER --json mergeable --jq '.mergeable')
+          MERGEABLE=$(gh pr view "$PR_NUMBER" --json mergeable --jq '.mergeable')
 
           if [ "$MERGEABLE" != "MERGEABLE" ]; then
             echo "PR is not mergeable yet, skipping auto-merge"
@@ -72,7 +72,7 @@ jobs:
           fi
 
           # Check if all checks have passed
-          CHECKS_STATUS=$(gh pr view $PR_NUMBER --json statusCheckRollup --jq '[.statusCheckRollup[] | select(.conclusion != null)] | all(.conclusion == "SUCCESS" or .conclusion == "SKIPPED")')
+          CHECKS_STATUS=$(gh pr view "$PR_NUMBER" --json statusCheckRollup --jq '[.statusCheckRollup[] | select(.conclusion != null)] | all(.conclusion == "SUCCESS" or .conclusion == "SKIPPED")')
 
           if [ "$CHECKS_STATUS" != "true" ]; then
             echo "Not all checks have passed yet, skipping auto-merge"
@@ -80,8 +80,8 @@ jobs:
           fi
 
           # Auto-approve and merge
-          gh pr review --approve $PR_NUMBER --body "🤖 Auto-approving backport PR"
-          gh pr merge --auto --squash $PR_NUMBER
+          gh pr review --approve "$PR_NUMBER" --body "🤖 Auto-approving backport PR"
+          gh pr merge --auto --squash "$PR_NUMBER"
 
   # NOTE: Release PRs do NOT auto-merge.
   # They are merged manually after review (mirrors the API repo's release model),

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, ChevronsUpDown, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -16,36 +16,62 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import { useModels3D, useModels3DByCustomer } from '@/lib/hooks/use-model3d'
+import { useModel3D, useModels3D, useModels3DByCustomer } from '@/lib/hooks/use-model3d'
 import { Model3DThumbnail } from './model3d-thumbnail'
 import type { Model3D } from '@/types/models'
 
 interface Model3DComboboxProps {
+  /** id for the trigger button, so an external <label htmlFor> can target it. */
+  id?: string
   value?: string
   onChange: (id: string | undefined) => void
   customerId?: string
   disabled?: boolean
 }
 
-export function Model3DCombobox({ value, onChange, customerId, disabled }: Model3DComboboxProps) {
+const SEARCH_DEBOUNCE_MS = 300
+const SEARCH_PAGE_SIZE = 20
+
+export function Model3DCombobox({ id, value, onChange, customerId, disabled }: Model3DComboboxProps) {
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
 
-  // Fetch models — by customer if customerId provided, otherwise all
+  const hasCustomer = !!customerId
+
+  // Debounce the free-text query used for server-side search (no-customer mode).
+  useEffect(() => {
+    if (hasCustomer) return
+    const timer = setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [query, hasCustomer])
+
+  // With a customer: load that customer's models (flat array, client-filtered by cmdk).
   const byCustomer = useModels3DByCustomer(customerId)
-  const allModels = useModels3D(undefined)
+  // Without a customer: search server-side via `q`, capped at SEARCH_PAGE_SIZE.
+  const serverSearch = useModels3D(
+    hasCustomer
+      ? undefined
+      : { search: debouncedQuery || undefined, pageSize: SEARCH_PAGE_SIZE }
+  )
 
-  const models: Model3D[] = customerId
-    ? (byCustomer.data || [])
-    : (allModels.data?.data || [])
+  const models: Model3D[] = hasCustomer
+    ? (byCustomer.data ?? [])
+    : (serverSearch.data?.data ?? [])
 
-  const isLoading = customerId ? byCustomer.isLoading : allModels.isLoading
-  const selected = models.find((m) => m.id === value)
+  const isLoading = hasCustomer ? byCustomer.isLoading : serverSearch.isLoading
+
+  // Resolve the selected model even when it is not part of the current result page.
+  const selectedFromList = models.find((m) => m.id === value)
+  const selectedQuery = useModel3D(value && !selectedFromList ? value : undefined)
+  const selected = selectedFromList ?? selectedQuery.data
 
   return (
     <div className="flex items-center gap-1">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            id={id}
             variant="outline"
             role="combobox"
             aria-expanded={open}
@@ -64,8 +90,14 @@ export function Model3DCombobox({ value, onChange, customerId, disabled }: Model
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0" align="start">
-          <Command>
-            <CommandInput placeholder="Buscar modelo..." />
+          {/* In no-customer mode, filtering happens server-side, so disable cmdk's
+              client-side filter to show exactly what the API returned. */}
+          <Command shouldFilter={hasCustomer}>
+            <CommandInput
+              placeholder="Buscar modelo..."
+              value={query}
+              onValueChange={setQuery}
+            />
             <CommandEmpty>
               {isLoading ? 'Carregando...' : 'Nenhum modelo encontrado.'}
             </CommandEmpty>
@@ -73,7 +105,7 @@ export function Model3DCombobox({ value, onChange, customerId, disabled }: Model
               {models.map((model) => (
                 <CommandItem
                   key={model.id}
-                  value={model.name}
+                  value={`${model.name} ${model.id}`}
                   onSelect={() => {
                     onChange(model.id === value ? undefined : model.id)
                     setOpen(false)
@@ -103,6 +135,7 @@ export function Model3DCombobox({ value, onChange, customerId, disabled }: Model
           type="button"
           variant="ghost"
           size="icon"
+          aria-label="Remover modelo 3D selecionado"
           className="h-9 w-9 shrink-0"
           onClick={() => onChange(undefined)}
           disabled={disabled}
