@@ -48,14 +48,17 @@ function reaisToCents(reais: number): number {
  */
 export function buildBudgetPricingPayload(values: WatchedBudgetForm): BudgetPricingPayload {
   const discountType = values.discount_type && values.discount_type !== 'none' ? values.discount_type : null
-  const discountValue = discountType ? toPositiveNumber(values.discount_value) : undefined
+  const rawDiscount = discountType ? toPositiveNumber(values.discount_value) : undefined
+  // Preview only: omit values the API would reject (form zod blocks submit anyway).
+  const discountValue = discountType === 'percent' && rawDiscount !== undefined && rawDiscount > 100 ? undefined : rawDiscount
 
   const includeShipping = values.include_shipping ?? false
   const overrideReais = toFiniteNumber(values.shipping_override)
   const shippingOverride =
     includeShipping && overrideReais !== undefined && overrideReais > 0 ? reaisToCents(overrideReais) : null
 
-  const taxRate = toFiniteNumber(values.tax_rate)
+  const rawTax = toFiniteNumber(values.tax_rate)
+  const taxRate = rawTax !== undefined && rawTax >= 0 && rawTax <= 99.99 ? rawTax : undefined
 
   return {
     include_machine_cost: values.include_machine_cost ?? true,

@@ -713,7 +713,7 @@ export default function NewBudgetPage() {
                           placeholder="Ex: 20"
                           aria-describedby={`post-processing-help-${itemIndex}`}
                           {...form.register(`items.${itemIndex}.post_processing_minutes`, {
-                            valueAsNumber: true,
+                            setValueAs: (v: unknown) => optionalNumber(v) ?? 0,
                           })}
                         />
                         <p id={`post-processing-help-${itemIndex}`} className="text-xs text-neutral-500 mt-1">
@@ -735,7 +735,7 @@ export default function NewBudgetPage() {
                           placeholder="Ex: 10"
                           aria-describedby={`support-removal-help-${itemIndex}`}
                           {...form.register(`items.${itemIndex}.support_removal_minutes`, {
-                            valueAsNumber: true,
+                            setValueAs: (v: unknown) => optionalNumber(v) ?? 0,
                           })}
                         />
                         <p id={`support-removal-help-${itemIndex}`} className="text-xs text-neutral-500 mt-1">
@@ -837,11 +837,10 @@ export default function NewBudgetPage() {
                       form.setValue('discount_type', next, {
                         shouldValidate: form.formState.isSubmitted,
                       })
-                      if (next === 'none') {
-                        form.setValue('discount_value', undefined, {
-                          shouldValidate: form.formState.isSubmitted,
-                        })
-                      }
+                      // Reset the value so e.g. 10% never silently becomes R$10.
+                      form.setValue('discount_value', undefined, {
+                        shouldValidate: form.formState.isSubmitted,
+                      })
                     }}
                   >
                     <SelectTrigger id="discount_type" aria-label="Tipo de desconto">

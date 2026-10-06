@@ -382,7 +382,7 @@ export default function CompanySettingsPage() {
                             value={field.value ?? ''}
                             onChange={(e) =>
                               field.onChange(
-                                e.target.value === '' ? undefined : Number(e.target.value)
+                                e.target.value === '' ? 0 : Number(e.target.value)
                               )
                             }
                             onBlur={field.onBlur}

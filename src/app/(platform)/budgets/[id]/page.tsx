@@ -589,12 +589,14 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                     color="yellow"
                   />
                 )}
-                <CostBreakdownBar
-                  label="Desgaste da Máquina"
-                  amount={budget.machine_cost ?? 0}
-                  total={budget.total_cost}
-                  color="purple"
-                />
+                {!!budget.machine_cost && (
+                  <CostBreakdownBar
+                    label="Desgaste da Máquina"
+                    amount={budget.machine_cost ?? 0}
+                    total={budget.total_cost}
+                    color="purple"
+                  />
+                )}
                 {budget.setup_cost > 0 && (
                   <CostBreakdownBar
                     label="Setup"
@@ -611,30 +613,38 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                     color="purple"
                   />
                 )}
-                <CostBreakdownBar
-                  label="Pós-processamento"
-                  amount={budget.post_processing_cost ?? 0}
-                  total={budget.total_cost}
-                  color="blue"
-                />
-                <CostBreakdownBar
-                  label="Embalagem"
-                  amount={budget.packaging_cost ?? 0}
-                  total={budget.total_cost}
-                  color="orange"
-                />
-                <CostBreakdownBar
-                  label="Controle de Qualidade"
-                  amount={budget.quality_control_cost ?? 0}
-                  total={budget.total_cost}
-                  color="yellow"
-                />
-                <CostBreakdownBar
-                  label="Falhas"
-                  amount={budget.failure_cost ?? 0}
-                  total={budget.total_cost}
-                  color="red"
-                />
+                {!!budget.post_processing_cost && (
+                  <CostBreakdownBar
+                    label="Pós-processamento"
+                    amount={budget.post_processing_cost ?? 0}
+                    total={budget.total_cost}
+                    color="blue"
+                  />
+                )}
+                {!!budget.packaging_cost && (
+                  <CostBreakdownBar
+                    label="Embalagem"
+                    amount={budget.packaging_cost ?? 0}
+                    total={budget.total_cost}
+                    color="orange"
+                  />
+                )}
+                {!!budget.quality_control_cost && (
+                  <CostBreakdownBar
+                    label="Controle de Qualidade"
+                    amount={budget.quality_control_cost ?? 0}
+                    total={budget.total_cost}
+                    color="yellow"
+                  />
+                )}
+                {!!budget.failure_cost && (
+                  <CostBreakdownBar
+                    label="Falhas"
+                    amount={budget.failure_cost ?? 0}
+                    total={budget.total_cost}
+                    color="red"
+                  />
+                )}
               </div>
 
               <Separator />
