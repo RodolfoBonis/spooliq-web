@@ -4,6 +4,7 @@ import { Edit, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Model3DThumbnail } from './model3d-thumbnail'
+import { SliceBadge } from '@/components/slicer'
 import { formatFileSize } from '@/lib/utils/cdn-model'
 import type { Model3D } from '@/types/models'
 
@@ -22,6 +23,12 @@ export function Model3DCard({ model, onEdit, onDelete, onClick }: Model3DCardPro
     >
       <div className="relative">
         <Model3DThumbnail model={model} className="rounded-none" />
+        {/* Slice badge (top-left) when the model has stored slicer data */}
+        {model.slice_analysis && (
+          <div className="absolute left-2 top-2">
+            <SliceBadge analysis={model.slice_analysis} />
+          </div>
+        )}
         {/* Hover actions overlay */}
         <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
           {onEdit && (
