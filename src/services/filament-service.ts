@@ -122,8 +122,10 @@ export const filamentService = {
    * Get filament by ID
    */
   async getById(id: string): Promise<Filament> {
-    const { data } = await api.get<{ data: RawFilament }>(`/filaments/${id}`)
-    return normalizeFilament(data.data)
+    // The API returns the filament object itself (no `data` envelope); accept both.
+    const { data } = await api.get<RawFilament | { data: RawFilament }>(`/filaments/${id}`)
+    const raw = 'data' in data && data.data ? data.data : (data as RawFilament)
+    return normalizeFilament(raw)
   },
 
   /**
