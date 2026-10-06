@@ -111,5 +111,5 @@ sync lands, the self-healing merge in `prepare-release` is what keeps releases s
 ## Secrets used
 
 `GH_TOKEN`, `VERDACCIO_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`,
-`SPOOLIQ_CLIENT_ID`, `SPOOLIQ_CLIENT_SECRET`, `ARGOCD_SERVER`, `ARGOCD_TOKEN`,
+`ARGOCD_SERVER`, `ARGOCD_TOKEN`,
 `N8N_WEBHOOK_URL`, `N8N_API_TOKEN`, `CHAT_ID`, `THREAD_ID`.

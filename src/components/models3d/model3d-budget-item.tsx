@@ -1,9 +1,9 @@
 'use client'
 
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Download, Loader2 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Model3DThumbnail } from './model3d-thumbnail'
-import { useModel3D } from '@/lib/hooks/use-model3d'
+import { useModel3D, useDownloadModel3D } from '@/lib/hooks/use-model3d'
 
 interface Model3DBudgetItemProps {
   modelId: string
@@ -11,6 +11,7 @@ interface Model3DBudgetItemProps {
 
 export function Model3DBudgetItem({ modelId }: Model3DBudgetItemProps) {
   const { data: model, isLoading, isError } = useModel3D(modelId)
+  const { mutate: download, isPending: isDownloading } = useDownloadModel3D()
 
   if (isLoading) {
     return (
@@ -35,7 +36,19 @@ export function Model3DBudgetItem({ modelId }: Model3DBudgetItemProps) {
       <Model3DThumbnail model={model} className="h-10 w-10 shrink-0 rounded" />
       <div className="min-w-0">
         <p className="truncate text-sm font-medium">{model.name}</p>
-        <p className="text-xs uppercase text-neutral-500">{model.file_format.replace('.', '')}</p>
+        <button
+          type="button"
+          onClick={() => download({ id: model.id, file_name: model.file_name })}
+          disabled={isDownloading}
+          className="inline-flex items-center gap-1 text-xs text-primary-600 hover:underline disabled:opacity-60"
+        >
+          {isDownloading ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Download className="h-3 w-3" />
+          )}
+          <span className="uppercase">{model.file_format.replace('.', '')}</span>
+        </button>
       </div>
     </div>
   )

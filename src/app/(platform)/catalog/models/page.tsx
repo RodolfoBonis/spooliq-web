@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { Plus, Search, Grid3x3, List } from 'lucide-react'
+import { Plus, Search, Grid3x3, List, Download, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -21,7 +21,7 @@ import { TableSkeleton } from '@/components/common/loading-skeleton'
 import { EmptyState } from '@/components/common/empty-state'
 import { ConfirmationDialog } from '@/components/common/confirmation-dialog'
 import { useConfirmation } from '@/lib/hooks/use-confirmation'
-import { useModels3D, useDeleteModel3D } from '@/lib/hooks/use-model3d'
+import { useModels3D, useDeleteModel3D, useDownloadModel3D } from '@/lib/hooks/use-model3d'
 import {
   Model3DCard,
   Model3DTable,
@@ -52,6 +52,7 @@ export default function ModelsPage() {
     pageSize: 24,
   })
   const { mutate: deleteModel } = useDeleteModel3D()
+  const { mutate: downloadModel, isPending: isDownloading } = useDownloadModel3D()
   const { isOpen: isConfirmOpen, confirm, handleConfirm, handleCancel } = useConfirmation()
 
   const models = data?.data || []
@@ -198,7 +199,7 @@ export default function ModelsPage() {
               <div className="mt-4 space-y-4">
                 <div className="h-64 w-full rounded-lg overflow-hidden">
                   <Model3DViewer
-                    fileUrl={viewingModel.file_url}
+                    modelId={viewingModel.id}
                     format={viewingModel.file_format}
                     className="h-full w-full"
                   />
@@ -234,6 +235,18 @@ export default function ModelsPage() {
                   </div>
                 </dl>
                 <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => downloadModel({ id: viewingModel.id, file_name: viewingModel.file_name })}
+                    disabled={isDownloading}
+                  >
+                    {isDownloading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="mr-2 h-4 w-4" />
+                    )}
+                    Baixar
+                  </Button>
                   <Button
                     variant="outline"
                     onClick={() => { setEditingModel(viewingModel); setViewingModel(null) }}

@@ -61,7 +61,7 @@ jobs:
         run: |
           set +e
           npm run lint > lint_output.txt 2>&1
-          echo "status=$?" >> $GITHUB_OUTPUT
+          echo "status=$?" >> "$GITHUB_OUTPUT"
           set -e
 
       - name: Run TypeScript check
@@ -71,9 +71,9 @@ jobs:
           npx tsc --noEmit >> lint_output.txt 2>&1
           TYPECHECK_EXIT_CODE=$?
           if [ $TYPECHECK_EXIT_CODE -ne 0 ]; then
-            echo "status=1" >> $GITHUB_OUTPUT
+            echo "status=1" >> "$GITHUB_OUTPUT"
           else
-            echo "status=0" >> $GITHUB_OUTPUT
+            echo "status=0" >> "$GITHUB_OUTPUT"
           fi
           set -e
 
@@ -81,9 +81,9 @@ jobs:
         id: lint
         run: |
           if [ "${{ steps.eslint.outputs.status }}" != "0" ] || [ "${{ steps.typecheck.outputs.status }}" != "0" ]; then
-            echo "status=1" >> $GITHUB_OUTPUT
+            echo "status=1" >> "$GITHUB_OUTPUT"
           else
-            echo "status=0" >> $GITHUB_OUTPUT
+            echo "status=0" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Exit if lint failed
@@ -195,7 +195,7 @@ jobs:
         run: |
           set +e
           npm audit --omit=dev --audit-level=high > vulnerability_report.txt 2>&1
-          echo "status=$?" >> $GITHUB_OUTPUT
+          echo "status=$?" >> "$GITHUB_OUTPUT"
           set -e
 
       - name: Upload vulnerability artifacts
@@ -247,7 +247,7 @@ jobs:
             DURATION="${HOURS}h ${MINUTES}m ${SECONDS}s"
           fi
 
-          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+          echo "duration=$DURATION" >> "$GITHUB_OUTPUT"
 
       - name: Notify n8n Success
         run: |
@@ -262,7 +262,7 @@ jobs:
               "tag": null,
               "branch": "${{ github.ref }}",
               "actor": "${{ github.actor }}",
-              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'",
               "details": {
                 "build_time": "${{ steps.build-duration.outputs.duration }}",
                 "test_results": "all passed",
@@ -284,15 +284,15 @@ jobs:
         id: failure-analysis
         run: |
           if [[ "${{ needs.lint.result }}" != "success" ]]; then
-            echo "error_type=Lint/TypeScript errors found" >> $GITHUB_OUTPUT
+            echo "error_type=Lint/TypeScript errors found" >> "$GITHUB_OUTPUT"
           elif [[ "${{ needs.test.result }}" != "success" ]]; then
-            echo "error_type=Tests failed" >> $GITHUB_OUTPUT
+            echo "error_type=Tests failed" >> "$GITHUB_OUTPUT"
           elif [[ "${{ needs.build.result }}" != "success" ]]; then
-            echo "error_type=Build failed" >> $GITHUB_OUTPUT
+            echo "error_type=Build failed" >> "$GITHUB_OUTPUT"
           elif [[ "${{ needs.security_check.result }}" != "success" ]]; then
-            echo "error_type=Security vulnerabilities found" >> $GITHUB_OUTPUT
+            echo "error_type=Security vulnerabilities found" >> "$GITHUB_OUTPUT"
           else
-            echo "error_type=Unknown CI failure" >> $GITHUB_OUTPUT
+            echo "error_type=Unknown CI failure" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Notify n8n Failure
@@ -308,7 +308,7 @@ jobs:
               "tag": null,
               "branch": "${{ github.ref }}",
               "actor": "${{ github.actor }}",
-              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+              "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'",
               "details": {
                 "error_message": "${{ steps.failure-analysis.outputs.error_type }}",
                 "logs_url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",

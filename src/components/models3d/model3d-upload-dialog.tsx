@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useDropzone } from 'react-dropzone'
+import { useDropzone, type FileRejection } from 'react-dropzone'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Upload, X, File } from 'lucide-react'
@@ -21,6 +21,20 @@ import { Textarea } from '@/components/ui/textarea'
 import { useUploadModel3D } from '@/lib/hooks/use-model3d'
 import { uploadModel3DSchema, validateModel3DFile, type UploadModel3DFormData } from '@/lib/validations/model3d'
 import { UploadConflictError } from '@/services/model3d-service'
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
+
+/**
+ * MIME types browsers/OSes attach to .stl / .3mf files vary wildly, so accept the
+ * known ones AND fall back to the extension via `application/octet-stream`.
+ */
+const ACCEPTED_FILE_TYPES: Record<string, string[]> = {
+  'model/stl': ['.stl'],
+  'application/sla': ['.stl'],
+  'model/3mf': ['.3mf'],
+  'application/vnd.ms-package.3dmanufacturing-3dmodel+xml': ['.3mf'],
+  'application/octet-stream': ['.stl', '.3mf'],
+}
 
 interface Model3DUploadDialogProps {
   open: boolean
@@ -62,19 +76,39 @@ export function Model3DUploadDialog({ open, onOpenChange, customerId }: Model3DU
     }
   }, [form])
 
+  const onDropRejected = useCallback((rejections: FileRejection[]) => {
+    const code = rejections[0]?.errors[0]?.code
+    if (code === 'file-too-large') {
+      toast.error('Arquivo muito grande. O tamanho máximo é 50MB.')
+    } else if (code === 'file-invalid-type') {
+      toast.error('Formato inválido. Apenas arquivos .STL ou .3MF são aceitos.')
+    } else {
+      toast.error('Não foi possível adicionar o arquivo.')
+    }
+  }, [])
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'application/octet-stream': ['.stl', '.3mf'] },
+    onDropRejected,
+    accept: ACCEPTED_FILE_TYPES,
+    maxSize: MAX_FILE_SIZE,
     maxFiles: 1,
     multiple: false,
   })
 
-  const handleClose = () => {
-    form.reset()
-    setSelectedFile(null)
-    setFileError(null)
-    onOpenChange(false)
-  }
+  // Respect the boolean argument so the dialog can be opened/closed by Radix,
+  // resetting local state only when it actually closes.
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next) {
+        form.reset()
+        setSelectedFile(null)
+        setFileError(null)
+      }
+      onOpenChange(next)
+    },
+    [form, onOpenChange]
+  )
 
   const onSubmit = (values: UploadModel3DFormData) => {
     if (!selectedFile) {
@@ -92,12 +126,14 @@ export function Model3DUploadDialog({ open, onOpenChange, customerId }: Model3DU
     upload(formData, {
       onSuccess: () => {
         toast.success('Modelo 3D enviado com sucesso!')
-        handleClose()
+        handleOpenChange(false)
       },
       onError: (err) => {
         if (err instanceof UploadConflictError) {
-          toast.warning(`Arquivo já existe: "${err.existing.name}"`)
-          handleClose()
+          toast.warning(
+            err.existing ? `Arquivo já existe: "${err.existing.name}"` : err.message
+          )
+          handleOpenChange(false)
           return
         }
         toast.error(getApiErrorMessage(err, 'Erro ao enviar modelo 3D'))
@@ -106,7 +142,7 @@ export function Model3DUploadDialog({ open, onOpenChange, customerId }: Model3DU
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Novo Modelo 3D</DialogTitle>
@@ -129,6 +165,7 @@ export function Model3DUploadDialog({ open, onOpenChange, customerId }: Model3DU
                   <span className="font-medium">{selectedFile.name}</span>
                   <button
                     type="button"
+                    aria-label="Remover arquivo"
                     onClick={(e) => { e.stopPropagation(); setSelectedFile(null) }}
                     className="ml-1 text-neutral-400 hover:text-neutral-600"
                   >
@@ -179,7 +216,7 @@ export function Model3DUploadDialog({ open, onOpenChange, customerId }: Model3DU
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
               Cancelar
             </Button>
             <Button type="submit" disabled={isPending}>

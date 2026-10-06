@@ -1,17 +1,13 @@
 /**
- * Converts a CDN file URL to the proxied Next.js API route
+ * Path (relative to the axios `api` instance whose baseURL is `/api`) that streams
+ * a 3D model's binary file through the Next.js proxy
+ * (`/api/models3d/:id/file` → backend `GET /v1/models3d/:id/file`).
+ *
+ * Use this with the shared axios client so the Authorization header (injected by the
+ * request interceptor) is attached — a bare `<a href>` / loader URL would get a 401.
  */
-export function getModelFileUrl(url?: string): string | undefined {
-  if (!url) return undefined
-  return `/api/cdn/model?url=${encodeURIComponent(url)}`
-}
-
-/**
- * Converts a CDN thumbnail URL to the proxied Next.js API route (image proxy)
- */
-export function getModelThumbnailUrl(thumbnailUrl?: string): string | undefined {
-  if (!thumbnailUrl) return undefined
-  return `/api/cdn/image?url=${encodeURIComponent(thumbnailUrl)}`
+export function getModelFilePath(id: string): string {
+  return `/models3d/${id}/file`
 }
 
 /**
