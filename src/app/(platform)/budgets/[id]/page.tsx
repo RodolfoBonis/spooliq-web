@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge, STATUS_CONFIG } from '@/components/budgets/status-badge'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import { EmptyState } from '@/components/common/empty-state'
+import { Model3DBudgetItem } from '@/components/models3d'
 import { CostBreakdownBar } from '@/components/budgets/cost-breakdown-bar'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -244,6 +245,11 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                           <p className="text-sm text-neutral-600 mt-1">
                             {item.product_description}
                           </p>
+                        )}
+                        {item.model_3d_id && (
+                          <div className="mt-2">
+                            <Model3DBudgetItem modelId={item.model_3d_id} />
+                          </div>
                         )}
                       </div>
                       <div className="text-right">

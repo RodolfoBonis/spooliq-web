@@ -45,6 +45,27 @@ export async function DELETE(
   return proxyRequest(request, path, 'DELETE')
 }
 
+/**
+ * Decides whether a proxied response body must be forwarded as raw bytes
+ * (streamed) instead of decoded as text. 3D model files are served as
+ * `model/stl` / `model/3mf` (and the 3MF XML vendor type), so `model/` and the
+ * 3manufacturing vendor type MUST be treated as binary — otherwise `response.text()`
+ * corrupts the file.
+ */
+function isBinaryContentType(contentType: string): boolean {
+  return (
+    contentType.includes('application/pdf') ||
+    contentType.includes('application/octet-stream') ||
+    contentType.includes('image/') ||
+    contentType.includes('audio/') ||
+    contentType.includes('video/') ||
+    contentType.includes('model/') ||
+    contentType.includes('3dmanufacturing') ||
+    contentType.includes('application/zip') ||
+    contentType.includes('application/gzip')
+  )
+}
+
 async function proxyRequest(
   request: NextRequest,
   pathSegments: string[],
@@ -60,9 +81,9 @@ async function proxyRequest(
     const path = pathSegments.join('/')
     const hasTrailingSlash = request.nextUrl.pathname.endsWith('/')
     const targetPath = hasTrailingSlash ? `${path}/` : path
-    
+
     const targetUrl = `${API_BASE_URL}/${targetPath}${request.nextUrl.search}`
-    
+
     console.log('🔄 Proxy Request:', method, targetUrl)
 
     // Forward all headers except host
@@ -74,32 +95,32 @@ async function proxyRequest(
     })
 
     // Get request body if present
-    let body: any = undefined
+    let body: BodyInit | undefined = undefined
     if (method !== 'GET' && method !== 'HEAD') {
       const contentType = request.headers.get('content-type')
       if (contentType?.includes('application/json')) {
         body = JSON.stringify(await request.json())
       } else if (contentType?.includes('multipart/form-data')) {
         // For multipart data, pass the raw stream to preserve boundary
-        body = request.body
+        body = request.body ?? undefined
       } else {
         body = await request.text()
       }
     }
 
     // Make the proxied request (handle redirects manually to avoid leaking relative locations to the browser)
-    let fetchOptions: RequestInit & { duplex?: string } = {
+    const fetchOptions: RequestInit & { duplex?: string } = {
       method,
       headers,
       body,
       redirect: 'manual',
     }
-    
+
     // Add duplex option for streaming body (required for Node.js fetch)
     if (body && body instanceof ReadableStream) {
       fetchOptions.duplex = 'half'
     }
-    
+
     let response = await fetch(targetUrl, fetchOptions)
 
     // If backend responds with a redirect that uses a relative Location like "/v1/...",
@@ -116,18 +137,18 @@ async function proxyRequest(
         } else {
           absoluteLocation = new URL(location, API_BASE_URL).toString()
         }
-        let redirectOptions: RequestInit & { duplex?: string } = {
+        const redirectOptions: RequestInit & { duplex?: string } = {
           method: method === 'GET' ? 'GET' : method,
           headers,
           body: method === 'GET' || method === 'HEAD' ? undefined : body,
           redirect: 'follow',
         }
-        
+
         // Add duplex option for redirect too if needed
         if (body && body instanceof ReadableStream && method !== 'GET' && method !== 'HEAD') {
           redirectOptions.duplex = 'half'
         }
-        
+
         response = await fetch(absoluteLocation, redirectOptions)
       }
     }
@@ -142,27 +163,18 @@ async function proxyRequest(
       })
     }
 
-    // Forward response headers
+    // Forward response headers (includes content-type and content-length)
     const responseHeaders = new Headers()
     response.headers.forEach((value, key) => {
       responseHeaders.set(key, value)
     })
 
-    // Check if response is binary based on content-type
+    // Binary responses (PDFs, images, 3D model files, ...) must be forwarded as raw
+    // bytes. Stream the body straight through so large files (e.g. 50MB STL/3MF) are
+    // not buffered in memory, and content-type/content-length are preserved.
     const contentType = response.headers.get('content-type') || ''
-    const isBinary =
-      contentType.includes('application/pdf') ||
-      contentType.includes('application/octet-stream') ||
-      contentType.includes('image/') ||
-      contentType.includes('audio/') ||
-      contentType.includes('video/') ||
-      contentType.includes('application/zip') ||
-      contentType.includes('application/gzip')
-
-    // Return response - use arrayBuffer for binary, text for others
-    if (isBinary) {
-      const responseBody = await response.arrayBuffer()
-      return new NextResponse(responseBody, {
+    if (isBinaryContentType(contentType)) {
+      return new NextResponse(response.body, {
         status: response.status,
         statusText: response.statusText,
         headers: responseHeaders,
@@ -175,12 +187,12 @@ async function proxyRequest(
       statusText: response.statusText,
       headers: responseHeaders,
     })
-  } catch (error: any) {
+  } catch (error) {
     console.error('❌ Proxy Error:', error)
+    const message = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
-      { error: 'Proxy error', message: error.message },
+      { error: 'Proxy error', message },
       { status: 500 }
     )
   }
 }
-

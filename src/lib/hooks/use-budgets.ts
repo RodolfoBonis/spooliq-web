@@ -4,6 +4,15 @@ import type { BudgetFilters, BudgetPreview, CreateBudgetDTO, PreviewBudgetDTO, U
 import { toast } from 'sonner'
 import { getApiErrorMessage } from '@/lib/api/errors'
 
+/**
+ * User-facing overrides for budget error `code`s. The API already returns pt-BR `message`s,
+ * but mapping the machine-readable code keeps the copy stable regardless of backend wording.
+ */
+const BUDGET_ERROR_CODES = {
+  invalid_model3d_reference:
+    'O modelo 3D selecionado é inválido ou não existe. Selecione outro modelo.',
+} as const
+
 export function useBudgets(filters?: BudgetFilters) {
   return useQuery({
     queryKey: ['budgets', filters],
@@ -47,7 +56,7 @@ export function useCreateBudget() {
       toast.success('Orçamento criado com sucesso!')
     },
     onError: (error: unknown) => {
-      toast.error(getApiErrorMessage(error, 'Erro ao criar orçamento'))
+      toast.error(getApiErrorMessage(error, 'Erro ao criar orçamento', { byCode: BUDGET_ERROR_CODES }))
     },
   })
 }
@@ -64,7 +73,7 @@ export function useUpdateBudget() {
       toast.success('Orçamento atualizado com sucesso!')
     },
     onError: (error: unknown) => {
-      toast.error(getApiErrorMessage(error, 'Erro ao atualizar orçamento'))
+      toast.error(getApiErrorMessage(error, 'Erro ao atualizar orçamento', { byCode: BUDGET_ERROR_CODES }))
     },
   })
 }
@@ -124,4 +133,3 @@ export function useGeneratePDF() {
     },
   })
 }
-

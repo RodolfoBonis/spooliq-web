@@ -34,6 +34,7 @@ export function buildBudgetPreviewPayload(values: WatchedBudgetForm): PreviewBud
     if (filaments.length === 0) return
 
     items.push({
+      model_3d_id: item.model_3d_id || undefined,
       product_name: item.product_name?.trim() || `Item #${index + 1}`,
       product_quantity: Math.max(1, toWholeNumber(item.product_quantity)),
       print_time_hours: toWholeNumber(item.print_time_hours),
