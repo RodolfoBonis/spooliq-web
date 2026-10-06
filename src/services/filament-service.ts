@@ -7,6 +7,13 @@ export interface FilamentFilters {
   search?: string
   brand_id?: string
   material_id?: string
+  /** Filament color type (solid, gradient, ...). */
+  color_type?: string
+  /** Filament diameter in mm (e.g. 1.75, 2.85). */
+  diameter?: number
+  /** Price range in cents. */
+  min_price?: number
+  max_price?: number
   page?: number
   pageSize?: number
 }
@@ -55,22 +62,43 @@ function normalizeFilament(raw: RawFilament): Filament {
   }
 }
 
+/** Shared filter params for both list and search (the API now accepts the same keys on both). */
+function filamentListParams(filters?: FilamentFilters) {
+  const {
+    search,
+    brand_id,
+    material_id,
+    color_type,
+    diameter,
+    min_price,
+    max_price,
+    page,
+    pageSize,
+  } = filters || {}
+  return {
+    page,
+    pageSize,
+    q: search,
+    brand_id,
+    material_id,
+    color_type,
+    diameter,
+    min_price,
+    max_price,
+  }
+}
+
 export const filamentService = {
   /**
    * Search filaments with filters. Tolerant to both the new `{ data, total, ... }`
    * envelope and legacy arrays.
    */
   async search(filters?: FilamentFilters): Promise<PaginatedResponse<Filament>> {
-    const { search, brand_id, material_id, page, pageSize } = filters || {}
     const { data } = await api.get('/filaments/search', {
       params: buildListParams({
-        page,
-        pageSize,
-        q: search,
+        ...filamentListParams(filters),
         // `name` kept for backward-compat with the current search endpoint.
-        name: search,
-        brand_id,
-        material_id,
+        name: filters?.search,
       }),
     })
     const pageData = toPage<RawFilament>(data)
@@ -79,11 +107,12 @@ export const filamentService = {
 
   /**
    * List filaments. Tolerant to both the new `{ data, total, ... }` envelope and legacy arrays.
+   * The list endpoint now accepts the same filters as search (brand_id, material_id,
+   * color_type, diameter, min_price, max_price).
    */
   async list(filters?: FilamentFilters): Promise<PaginatedResponse<Filament>> {
-    const { search, brand_id, material_id, page, pageSize } = filters || {}
     const { data } = await api.get('/filaments/', {
-      params: buildListParams({ page, pageSize, q: search, brand_id, material_id }),
+      params: buildListParams(filamentListParams(filters)),
     })
     const pageData = toPage<RawFilament>(data)
     return { ...pageData, data: pageData.data.map(normalizeFilament) }
