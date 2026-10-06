@@ -232,7 +232,7 @@ export default function AdminCompaniesPage() {
                             onClick={() =>
                               updateStatus({ 
                                 organizationId: company.organization_id, 
-                                request: { status: 'ACTIVE' } 
+                                request: { status: 'active', reason: 'Ativada pelo administrador da plataforma' } 
                               })
                             }
                           >
@@ -242,18 +242,18 @@ export default function AdminCompaniesPage() {
                             onClick={() =>
                               updateStatus({ 
                                 organizationId: company.organization_id, 
-                                request: { status: 'overdue' } 
+                                request: { status: 'suspended', reason: 'Suspensa pelo administrador da plataforma' } 
                               })
                             }
                           >
-                            Marcar Atrasado
+                            Suspender
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-red-600"
                             onClick={() =>
                               updateStatus({ 
                                 organizationId: company.organization_id, 
-                                request: { status: 'cancelled' } 
+                                request: { status: 'cancelled', reason: 'Cancelada pelo administrador da plataforma' } 
                               })
                             }
                           >

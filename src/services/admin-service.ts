@@ -59,8 +59,10 @@ export interface AdminStats {
 }
 
 export interface UpdateCompanyStatusRequest {
-  status: 'trial' | 'ACTIVE' | 'overdue' | 'cancelled'
-  reason?: string
+  /** Must match the API's `oneof=trial active suspended cancelled permanent` (case-sensitive). */
+  status: 'trial' | 'active' | 'suspended' | 'cancelled' | 'permanent'
+  /** Required by the API. */
+  reason: string
   notes?: string
 }
 

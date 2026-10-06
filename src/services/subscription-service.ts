@@ -45,9 +45,15 @@ export const subscriptionService = {
         params: { page, page_size: pageSize },
       })
       const result = toPage<PaymentHistoryResponse['payments'][number]>(data, 'payments')
+      // Until the API exposes the owner's payment history, this route returns payment
+      // *methods*; keep only rows that are actually payments so the UI never shows cards
+      // as payments (amount/due_date would be undefined).
+      const payments = result.data.filter(
+        (row) => typeof row?.amount === 'number' && typeof row?.due_date === 'string'
+      )
       return {
-        payments: result.data,
-        total: result.total,
+        payments,
+        total: payments.length === result.data.length ? result.total : payments.length,
         page: result.page,
         page_size: result.pageSize,
       }

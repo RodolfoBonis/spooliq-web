@@ -8,7 +8,8 @@ import { isAxiosError } from 'axios'
 interface ApiErrorData {
   error?: string
   message?: string
-  code?: string
+  /** snake_case string on the new API; legacy HTTPError sent a numeric status here. */
+  code?: string | number
   fields?: Record<string, string>
 }
 
@@ -70,15 +71,15 @@ export function getApiErrorMessage(
   const { data, status } = getErrorData(error)
   if (!data && status === undefined) return fallback
 
-  const code = data?.code
+  const code = data?.code !== undefined ? String(data.code) : undefined
   if (code && opts.byCode?.[code]) return opts.byCode[code] as string
 
   if (status !== undefined && opts.byStatus?.[status]) return opts.byStatus[status] as string
 
-  const message = data?.message
+  const message = typeof data?.message === 'string' ? data.message : undefined
   if (message) return KNOWN_API_ERRORS[message.toLowerCase()] ?? message
 
-  const raw = data?.error
+  const raw = typeof data?.error === 'string' ? data.error : undefined
   if (raw) return KNOWN_API_ERRORS[raw.toLowerCase()] ?? raw
 
   return fallback

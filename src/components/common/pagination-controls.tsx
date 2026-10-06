@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 
 interface PaginationControlsProps {
@@ -23,6 +24,11 @@ export function PaginationControls({
   className,
 }: PaginationControlsProps) {
   const safeTotalPages = Math.max(1, totalPages)
+
+  // E.g. after deleting the last item of the last page: snap back to the last page.
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) onPageChange(totalPages)
+  }, [page, totalPages, onPageChange])
 
   if (hideWhenSingle && safeTotalPages <= 1) return null
 
