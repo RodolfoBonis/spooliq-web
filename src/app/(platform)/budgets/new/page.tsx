@@ -47,7 +47,6 @@ function newItem(order: number): CreateBudgetFormData['items'][number] {
     product_dimensions: '',
     print_time_hours: 0,
     print_time_minutes: 0,
-    cost_preset_id: undefined,
     setup_time_minutes: 0,
     manual_labor_minutes_total: 0,
     additional_notes: '',
@@ -293,9 +292,10 @@ export default function NewBudgetPage() {
                     id="budget-cost-preset"
                     value={field.value}
                     onChange={field.onChange}
-                    label="Custos (overhead e margem)"
+                    label="Custos (mão de obra, overhead e margem)"
                     placeholder="Selecione o preset de custo"
                     noneLabel={AUTO_PRESET_LABEL}
+                    description="Aplicado a todos os itens do orçamento."
                   />
                 )}
               />
@@ -519,24 +519,8 @@ export default function NewBudgetPage() {
 
               <Separator />
 
-              {/* Cost Preset & Additional Cost */}
+              {/* Labor time (rates come from the budget-level cost preset) */}
               <div className="space-y-4">
-                <Controller
-                  control={form.control}
-                  name={`items.${itemIndex}.cost_preset_id`}
-                  render={({ field }) => (
-                    <CostPresetSelect
-                      id={`item-${itemIndex}-cost-preset`}
-                      value={field.value}
-                      onChange={field.onChange}
-                      label="Preset de Custo do item (opcional)"
-                      placeholder="Selecione um preset"
-                      noneLabel="Usar o preset de custo do orçamento"
-                      description="Define as taxas de mão de obra e setup deste item."
-                    />
-                  )}
-                />
-
                 {/* Labor Time Card */}
                 <Card className="bg-blue-50 border-blue-200">
                   <CardHeader className="pb-3">
