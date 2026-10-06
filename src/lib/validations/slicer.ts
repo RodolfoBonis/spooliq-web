@@ -1,5 +1,5 @@
-/** Max sliced-file size accepted by the backend (200MB). */
-export const MAX_SLICE_FILE_SIZE = 200 * 1024 * 1024
+/** Max sliced-file size accepted by the backend (95MB: Cloudflare caps bodies at 100MB). */
+export const MAX_SLICE_FILE_SIZE = 95 * 1024 * 1024
 
 /** Accepted extensions, longest-first so `.gcode.3mf` wins over `.3mf`. */
 const ALLOWED_SLICE_EXTENSIONS = ['.gcode.3mf', '.gcode', '.3mf'] as const
@@ -34,7 +34,7 @@ export function validateSliceFile(file: File): string | null {
     return `Formato inválido. Envie um arquivo ${SLICE_FORMATS_LABEL}.`
   }
   if (file.size > MAX_SLICE_FILE_SIZE) {
-    return 'Arquivo muito grande. O tamanho máximo é 200MB.'
+    return 'Arquivo muito grande. O tamanho máximo é 95MB.'
   }
   return null
 }

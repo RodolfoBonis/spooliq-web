@@ -122,7 +122,7 @@ export function SliceImportDialog({
   const onDropRejected = useCallback((rejections: FileRejection[]) => {
     const code = rejections[0]?.errors[0]?.code
     if (code === 'file-too-large') {
-      toast.error('Arquivo muito grande. O tamanho máximo é 200MB.')
+      toast.error('Arquivo muito grande. O tamanho máximo é 95MB.')
     } else if (code === 'file-invalid-type') {
       toast.error(`Formato inválido. Envie um arquivo ${SLICE_FORMATS_LABEL}.`)
     } else {
@@ -190,7 +190,7 @@ export function SliceImportDialog({
                   {isDragActive ? 'Solte aqui...' : 'Arraste ou clique para selecionar'}
                 </p>
                 <p className="mt-1 text-xs text-neutral-400">
-                  {SLICE_FORMATS_LABEL} — máximo 200MB
+                  {SLICE_FORMATS_LABEL} — máximo 95MB
                 </p>
               </div>
               {fileError && <p className="mt-2 text-xs text-red-600">{fileError}</p>}
