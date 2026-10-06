@@ -26,8 +26,10 @@ import { createBudgetSchema, type CreateBudgetFormData } from '@/lib/validations
 import { optionalNumber } from '@/lib/validations/preset'
 import { formatCurrency, getColorPreviewStyle } from '@/lib/utils/format'
 import { buildBudgetPreviewPayload } from '@/lib/utils/budget-preview'
-import { Plus, Trash2, Save, ArrowLeft, Settings, Users, Info, Clock, Loader2 } from 'lucide-react'
+import { Plus, Trash2, Save, ArrowLeft, Settings, Users, Info, Clock, Loader2, FileUp } from 'lucide-react'
 import type { Filament } from '@/types/models'
+import { toast } from 'sonner'
+import { SliceImportDialog, SliceModelPrompt, type SliceApplyPayload } from '@/components/slicer'
 import {
   Tooltip,
   TooltipContent,
@@ -62,6 +64,9 @@ export default function NewBudgetPage() {
   const { mutate: createBudget, isPending } = useCreateBudget()
   const { data: profiles } = useProfiles()
   const [selectedFilaments, setSelectedFilaments] = useState<Record<string, Filament>>({})
+  // Target is kept while the dialog animates closed so it doesn't flip modes mid-exit.
+  const [sliceImport, setSliceImport] = useState<{ itemIndex: number; modelId?: string } | null>(null)
+  const [sliceOpen, setSliceOpen] = useState(false)
 
   const form = useForm<CreateBudgetFormData>({
     resolver: zodResolver(createBudgetSchema),
@@ -85,6 +90,29 @@ export default function NewBudgetPage() {
   })
 
   const values = useWatch({ control: form.control })
+
+  // Fill a budget item from a slicer analysis: print time + replacing its filaments.
+  // setValue updates the watched values, so the debounced server preview re-runs.
+  const applySliceToItem = useCallback(
+    (itemIndex: number, payload: SliceApplyPayload) => {
+      const shouldValidate = form.formState.isSubmitted
+      form.setValue(`items.${itemIndex}.print_time_hours`, payload.print_time_hours, { shouldValidate })
+      form.setValue(`items.${itemIndex}.print_time_minutes`, payload.print_time_minutes, { shouldValidate })
+      const filaments = payload.filaments.map((f) => ({
+        filament_id: f.filament.id,
+        quantity: f.quantity,
+        order: f.order,
+      }))
+      form.setValue(`items.${itemIndex}.filaments`, filaments, { shouldValidate })
+      setSelectedFilaments((prev) => {
+        const next = { ...prev }
+        for (const f of payload.filaments) next[f.filament.id] = f.filament
+        return next
+      })
+      toast.success('Item preenchido a partir do fatiamento.')
+    },
+    [form]
+  )
 
   // Choosing a profile fills the presets; the user can still override each one.
   const applyProfile = useCallback(
@@ -446,7 +474,18 @@ export default function NewBudgetPage() {
 
               {/* Filaments */}
               <div>
-                <Label className="mb-2 block">Filamentos *</Label>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <Label className="block">Filamentos *</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setSliceImport({ itemIndex }); setSliceOpen(true) }}
+                  >
+                    <FileUp className="mr-2 h-4 w-4" />
+                    Importar arquivo fatiado
+                  </Button>
+                </div>
                 <div className="space-y-3">
                   {watchedFilaments.map((f, fIndex) => {
                     const filament = f?.filament_id ? getFilament(f.filament_id) : undefined
@@ -527,6 +566,11 @@ export default function NewBudgetPage() {
                     customerId={values.customer_id}
                   />
                 </div>
+
+                <SliceModelPrompt
+                  modelId={watchedItem?.model_3d_id}
+                  onImport={() => { setSliceImport({ itemIndex, modelId: watchedItem?.model_3d_id }); setSliceOpen(true) }}
+                />
 
                 {form.formState.errors.items?.[itemIndex]?.filaments && (
                   <p className="text-sm text-red-600 mt-1">
@@ -766,6 +810,15 @@ export default function NewBudgetPage() {
           </CardContent>
         </Card>
       </form>
+
+      <SliceImportDialog
+        open={sliceOpen}
+        onOpenChange={setSliceOpen}
+        modelId={sliceImport?.modelId}
+        onApply={(payload) => {
+          if (sliceImport) applySliceToItem(sliceImport.itemIndex, payload)
+        }}
+      />
     </div>
   )
 }
