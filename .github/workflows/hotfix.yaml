@@ -31,6 +31,16 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GH_TOKEN }}
 
+      - name: Validate inputs
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ -n "$INPUT_VERSION" ] && [[ ! "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "ERROR: version must match X.Y.Z (got: '$INPUT_VERSION')"
+            exit 1
+          fi
+          echo "✓ Inputs validated"
+
       - name: Configure Git
         run: |
           git config --global user.name "GitHub Actions"
@@ -38,9 +48,11 @@ jobs:
 
       - name: Determine version
         id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          if [ -n "${{ inputs.version }}" ]; then
-            VERSION="${{ inputs.version }}"
+          if [ -n "$INPUT_VERSION" ]; then
+            VERSION="$INPUT_VERSION"
           else
             # Get current version from package.json
             CURRENT_VERSION=$(node -p "require('./package.json').version")
@@ -51,50 +63,64 @@ jobs:
             fi
 
             # Parse version components
-            MAJOR=$(echo $CURRENT_VERSION | cut -d. -f1)
-            MINOR=$(echo $CURRENT_VERSION | cut -d. -f2)
-            PATCH=$(echo $CURRENT_VERSION | cut -d. -f3)
+            MAJOR=$(echo "$CURRENT_VERSION" | cut -d. -f1)
+            MINOR=$(echo "$CURRENT_VERSION" | cut -d. -f2)
+            PATCH=$(echo "$CURRENT_VERSION" | cut -d. -f3)
 
             # Increment patch version
             PATCH=$((PATCH + 1))
             VERSION="${MAJOR}.${MINOR}.${PATCH}"
           fi
 
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "ERROR: computed version must match X.Y.Z (got: '$VERSION')"
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "New hotfix version: ${VERSION}"
 
       - name: Create hotfix branch
         id: create_branch
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          BRANCH="hotfix/v${{ steps.version.outputs.version }}"
-          git checkout -b $BRANCH
-          echo "branch=${BRANCH}" >> $GITHUB_OUTPUT
+          BRANCH="hotfix/v${VERSION}"
+          git checkout -b "$BRANCH"
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
 
       - name: Update package.json version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           # npm version bumps both package.json and package-lock.json
-          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+          npm version "$VERSION" --no-git-tag-version
 
       - name: Commit version change
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           git add package.json package-lock.json
-          git commit -m "chore: bump version to ${{ steps.version.outputs.version }} for hotfix"
+          git commit -m "chore: bump version to ${VERSION} for hotfix"
 
       - name: Create and push tag
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          DESCRIPTION: ${{ inputs.description }}
+          HOTFIX_BRANCH: ${{ steps.create_branch.outputs.branch }}
         run: |
-          TAG="v${{ steps.version.outputs.version }}"
+          TAG="v${VERSION}"
 
           echo "Creating hotfix tag $TAG..."
-          git tag -a "$TAG" -m "Hotfix $TAG: ${{ inputs.description }}"
+          git tag -a "$TAG" -m "Hotfix $TAG: ${DESCRIPTION}"
 
           echo "Pushing branch and tag..."
-          git push origin ${{ steps.create_branch.outputs.branch }}
+          git push origin "$HOTFIX_BRANCH"
           git push origin "$TAG"
 
           echo "✓ Hotfix tag $TAG created and pushed"
-          echo "✓ Branch ${{ steps.create_branch.outputs.branch }} pushed"
+          echo "✓ Branch $HOTFIX_BRANCH pushed"
 
       - name: Ensure labels exist
         env:
@@ -108,41 +134,42 @@ jobs:
         id: pr
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          DESCRIPTION: ${{ inputs.description }}
+          HOTFIX_BRANCH: ${{ steps.create_branch.outputs.branch }}
         run: |
+          # Build the PR body from a file so the description (free-form user
+          # input) is never evaluated by the shell.
+          {
+            printf '## 🚨 Hotfix v%s\n\n' "$VERSION"
+            printf '### Description\n'
+            printf '%s\n' "$DESCRIPTION"
+            printf '\n### Deployment Process\n'
+            printf '1. ✅ This PR will be automatically deployed to **production** once merged\n'
+            printf '2. 🏷️ Tag `v%s` already created\n' "$VERSION"
+            printf '3. 🔄 A backport PR to `develop` will be created automatically after merge\n'
+            printf '4. 📢 Notifications will be sent via n8n/Telegram\n'
+            printf '\n### Checklist\n'
+            printf -- '- [ ] Code changes tested locally\n'
+            printf -- '- [ ] No breaking changes introduced\n'
+            printf -- '- [ ] Emergency fix validated\n'
+            printf -- '- [ ] Ready for immediate production deployment\n'
+            printf '\n### Post-Merge Actions\n'
+            printf -- '- Release workflow will automatically deploy to production\n'
+            printf -- '- Backport PR will sync changes to develop branch\n'
+            printf '\n---\n'
+            printf '🤖 _This PR was created automatically by the hotfix workflow_\n'
+          } > /tmp/pr_body.md
+
           PR_URL=$(gh pr create \
             --base main \
-            --head ${{ steps.create_branch.outputs.branch }} \
-            --title "🚨 Hotfix v${{ steps.version.outputs.version }}: ${{ inputs.description }}" \
+            --head "$HOTFIX_BRANCH" \
+            --title "🚨 Hotfix v${VERSION}: ${DESCRIPTION}" \
             --label "hotfix,priority:critical,automated" \
-            --body "$(cat <<EOF
-          ## 🚨 Hotfix v${{ steps.version.outputs.version }}
+            --body-file /tmp/pr_body.md)
 
-          ### Description
-          ${{ inputs.description }}
-
-          ### Deployment Process
-          1. ✅ This PR will be automatically deployed to **production** once merged
-          2. 🏷️ Tag \`v${{ steps.version.outputs.version }}\` already created
-          3. 🔄 A backport PR to \`develop\` will be created automatically after merge
-          4. 📢 Notifications will be sent via n8n/Telegram
-
-          ### Checklist
-          - [ ] Code changes tested locally
-          - [ ] No breaking changes introduced
-          - [ ] Emergency fix validated
-          - [ ] Ready for immediate production deployment
-
-          ### Post-Merge Actions
-          - Release workflow will automatically deploy to production
-          - Backport PR will sync changes to develop branch
-
-          ---
-          🤖 _This PR was created automatically by the hotfix workflow_
-          EOF
-          )")
-
-          echo "number=$(basename "$PR_URL")" >> $GITHUB_OUTPUT
-          echo "url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "number=$(basename "$PR_URL")" >> "$GITHUB_OUTPUT"
+          echo "url=$PR_URL" >> "$GITHUB_OUTPUT"
 
       - name: Notify hotfix created
         env:
@@ -150,13 +177,19 @@ jobs:
           N8N_API_TOKEN: ${{ secrets.N8N_API_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
           THREAD_ID: ${{ secrets.THREAD_ID }}
+          VERSION: ${{ steps.version.outputs.version }}
+          DESCRIPTION: ${{ inputs.description }}
+          HOTFIX_BRANCH: ${{ steps.create_branch.outputs.branch }}
+          ACTOR: ${{ github.actor }}
           PR_URL: ${{ steps.pr.outputs.url }}
         run: |
-          curl -X POST "$N8N_WEBHOOK_URL" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $N8N_API_TOKEN" \
-            -d "{
-              \"chatId\": \"$CHAT_ID\",
-              \"threadId\": \"$THREAD_ID\",
-              \"message\": \"🚨 Hotfix v${{ steps.version.outputs.version }} Created\n\n📋 Description: ${{ inputs.description }}\n🌿 Branch: ${{ steps.create_branch.outputs.branch }}\n👤 Created by: ${{ github.actor }}\n🔗 PR: $PR_URL\"
-            }"
+          MESSAGE="🚨 Hotfix v${VERSION} Created\n\n📋 Description: ${DESCRIPTION}\n🌿 Branch: ${HOTFIX_BRANCH}\n👤 Created by: ${ACTOR}\n🔗 PR: ${PR_URL}"
+          jq -n \
+            --arg chatId "$CHAT_ID" \
+            --arg threadId "$THREAD_ID" \
+            --arg message "$MESSAGE" \
+            '{chatId: $chatId, threadId: $threadId, message: $message}' \
+          | curl -X POST "$N8N_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer $N8N_API_TOKEN" \
+              -d @- || echo "Notification failed (non-critical)"
