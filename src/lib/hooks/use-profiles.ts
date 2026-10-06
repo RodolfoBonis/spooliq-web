@@ -53,7 +53,7 @@ export function useDeleteProfile() {
       toast.success('Perfil de impressão excluído com sucesso!')
     },
     onError: (error: unknown) => {
-      toast.error(getApiErrorMessage(error, 'Erro ao excluir perfil', { byStatus: { 403: FORBIDDEN_DEFAULT } }))
+      toast.error(getApiErrorMessage(error, 'Erro ao excluir perfil', { byCode: { insufficient_role: FORBIDDEN_DEFAULT } }))
     },
   })
 }
@@ -68,7 +68,7 @@ export function useSetDefaultProfile() {
     },
     onError: (error: unknown) => {
       toast.error(
-        getApiErrorMessage(error, 'Erro ao definir perfil padrão', { byStatus: { 403: FORBIDDEN_DEFAULT } })
+        getApiErrorMessage(error, 'Erro ao definir perfil padrão', { byCode: { insufficient_role: FORBIDDEN_DEFAULT } })
       )
     },
   })
