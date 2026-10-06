@@ -33,6 +33,8 @@ import { Card } from '@/components/ui/card'
 import { ConfirmationDialog } from '@/components/common/confirmation-dialog'
 import { TableSkeleton } from '@/components/common/loading-skeleton'
 import { EmptyState } from '@/components/common/empty-state'
+import { PaginationControls } from '@/components/common/pagination-controls'
+import { useDebouncedValue } from '@/lib/hooks/use-debounced-value'
 
 import { useBrands, useCreateBrand, useUpdateBrand, useDeleteBrand } from '@/lib/hooks/use-brands'
 import { brandSchema, type BrandFormData } from '@/lib/validations/catalog'
@@ -42,7 +44,10 @@ import type { Brand } from '@/types/models'
 
 export default function BrandsPage() {
   const [search, setSearch] = useState('')
-  const { data, isLoading } = useBrands({ search, page: 1, pageSize: 50 })
+  const [page, setPage] = useState(1)
+  const debouncedSearch = useDebouncedValue(search, 300)
+
+  const { data, isLoading } = useBrands({ search: debouncedSearch, page, pageSize: 12 })
   const { mutate: createBrand, isPending: isCreating } = useCreateBrand()
   const { mutate: updateBrand, isPending: isUpdating } = useUpdateBrand()
   const { mutate: deleteBrand, isPending: isDeleting } = useDeleteBrand()
@@ -131,7 +136,10 @@ export default function BrandsPage() {
           <Input
             placeholder="Buscar marcas..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(1)
+            }}
             className="pl-10"
           />
         </div>
@@ -196,6 +204,14 @@ export default function BrandsPage() {
             </TableBody>
           </Table>
         </Card>
+      )}
+
+      {!isLoading && brands.length > 0 && (
+        <PaginationControls
+          page={page}
+          totalPages={data?.totalPages ?? 1}
+          onPageChange={setPage}
+        />
       )}
 
       {/* Create/Edit Dialog */}

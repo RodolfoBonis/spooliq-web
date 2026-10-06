@@ -1,4 +1,5 @@
 import { api } from '@/lib/api/client'
+import { buildListParams, toPage } from '@/lib/api/pagination'
 import type { PrintProfile } from '@/types/models'
 
 export interface CreateProfileDTO {
@@ -15,8 +16,8 @@ export type UpdateProfileDTO = Partial<CreateProfileDTO>
 
 export const profileService = {
   async list(): Promise<PrintProfile[]> {
-    const { data } = await api.get<PrintProfile[]>('/profiles')
-    return data ?? []
+    const { data } = await api.get('/profiles', { params: buildListParams({ pageSize: 100 }) })
+    return toPage<PrintProfile>(data).data
   },
 
   async getById(id: string): Promise<PrintProfile> {

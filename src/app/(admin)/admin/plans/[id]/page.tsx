@@ -38,6 +38,7 @@ import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import subscriptionPlansService from '@/services/subscription-plans-service'
 import { toast } from 'sonner'
+import { getApiErrorMessage } from '@/lib/api/errors'
 import type { SubscriptionPlanModel, PlanFeature } from '@/types/models'
 import type { PlanStats, PlanCompaniesResponse, FinancialReport, CanDeleteResponse } from '@/services/subscription-plans-service'
 import { formatDate } from '@/lib/utils/format'
@@ -144,8 +145,8 @@ export default function PlanDetailsPage() {
       setIsEditing(false)
       setEditedPlan({})
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Erro ao atualizar plano')
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao atualizar plano'))
     },
   })
 
@@ -804,8 +805,8 @@ export default function PlanDetailsPage() {
                       await subscriptionPlansService.deletePlan(planId)
                       toast.success('Plano deletado com sucesso!')
                       router.push('/admin/plans')
-                    } catch (error: any) {
-                      toast.error(error?.response?.data?.message || 'Erro ao deletar plano')
+                    } catch (error: unknown) {
+                      toast.error(getApiErrorMessage(error, 'Erro ao deletar plano'))
                     }
                   }}
                 >

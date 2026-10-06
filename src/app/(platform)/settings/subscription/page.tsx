@@ -47,6 +47,7 @@ export default function SubscriptionPage() {
     queryKey: ['payment-history'],
     queryFn: () => subscriptionService.getPaymentHistory(),
     enabled: !!user && user.roles.includes('Owner'),
+    retry: false,
   })
 
   // Fetch payment methods

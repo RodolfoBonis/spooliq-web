@@ -1,11 +1,24 @@
 import { isAxiosError } from 'axios'
 
 /**
- * Known backend error messages (English) mapped to user-facing pt-BR text.
- * Keys must match the exact `error` string returned by the API.
+ * Standardized API error body (backend v2.9.0+):
+ * `{ error, message, code, fields? }`, all messages already in pt-BR.
+ * Older responses only carry `error`/`message` in English.
  */
-// Some API errors are already in pt-BR (e.g. "este preset está em uso por um perfil de
-// impressão..." and default-conflict 409s) and are shown as-is.
+interface ApiErrorData {
+  error?: string
+  message?: string
+  /** snake_case string on the new API; legacy HTTPError sent a numeric status here. */
+  code?: string | number
+  fields?: Record<string, string>
+}
+
+/**
+ * Known backend error messages (English) mapped to user-facing pt-BR text.
+ * Keys must match the exact `error`/`message` string returned by the API, lowercased.
+ *
+ * TODO(api-v2.9.0): remove this map once the API ships pt-BR `message` + `code` everywhere.
+ */
 const KNOWN_API_ERRORS: Record<string, string> = {
   'preset not found': 'Preset não encontrado ou inválido. Selecione outro preset.',
   'default presets cannot be deleted':
@@ -29,22 +42,58 @@ const KNOWN_API_ERRORS: Record<string, string> = {
   'invalid status transition': 'Essa mudança de status não é permitida.',
 }
 
+/** Overrides keyed by machine-readable `code` (new) or HTTP status (fallback). */
+export interface ApiErrorOptions {
+  byCode?: Partial<Record<string, string>>
+  byStatus?: Partial<Record<number, string>>
+}
+
+function getErrorData(error: unknown): { data?: ApiErrorData; status?: number } {
+  if (!isAxiosError<ApiErrorData>(error)) return {}
+  return { data: error.response?.data, status: error.response?.status }
+}
+
 /**
  * Extracts a user-facing message from an API error.
- * Order: per-status override → known backend message translation → raw backend message → fallback.
+ *
+ * Resolution order:
+ * 1. `opts.byCode[code]` — caller override for the backend's machine-readable code;
+ * 2. `opts.byStatus[status]` — caller override for the HTTP status;
+ * 3. `data.message` — pt-BR message from the standardized API;
+ * 4. `data.error` — legacy/raw message (translated via {@link KNOWN_API_ERRORS} when known);
+ * 5. `fallback`.
  */
 export function getApiErrorMessage(
   error: unknown,
   fallback: string,
-  byStatus: Partial<Record<number, string>> = {}
+  opts: ApiErrorOptions = {}
 ): string {
-  if (!isAxiosError<{ error?: string; message?: string }>(error)) return fallback
+  const { data, status } = getErrorData(error)
+  if (!data && status === undefined) return fallback
 
-  const status = error.response?.status
-  if (status !== undefined && byStatus[status]) return byStatus[status]
+  const code = data?.code !== undefined ? String(data.code) : undefined
+  if (code && opts.byCode?.[code]) return opts.byCode[code] as string
 
-  const raw = error.response?.data?.error || error.response?.data?.message
-  if (!raw) return fallback
+  if (status !== undefined && opts.byStatus?.[status]) return opts.byStatus[status] as string
 
-  return KNOWN_API_ERRORS[raw.toLowerCase()] ?? raw
+  const message = typeof data?.message === 'string' ? data.message : undefined
+  if (message) return KNOWN_API_ERRORS[message.toLowerCase()] ?? message
+
+  const raw = typeof data?.error === 'string' ? data.error : undefined
+  if (raw) return KNOWN_API_ERRORS[raw.toLowerCase()] ?? raw
+
+  return fallback
+}
+
+/**
+ * Returns the field-level validation errors (`fields`) from a standardized API error,
+ * or `undefined` when none are present. Use with react-hook-form's `setError`.
+ */
+export function getApiFieldErrors(error: unknown): Record<string, string> | undefined {
+  const { data } = getErrorData(error)
+  const fields = data?.fields
+  if (fields && typeof fields === 'object' && Object.keys(fields).length > 0) {
+    return fields
+  }
+  return undefined
 }

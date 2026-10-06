@@ -1,4 +1,6 @@
 import api from '@/lib/api/client'
+import { buildListParams, toPage } from '@/lib/api/pagination'
+import type { PaginatedResponse } from '@/types/api'
 import type { Filament, ColorType, ColorData } from '@/types/models'
 
 export interface FilamentFilters {
@@ -38,121 +40,79 @@ export interface UpdateFilamentDTO {
   is_active?: boolean
 }
 
+/** Raw filament as returned by the API; list/search endpoints embed brand/material objects. */
+interface RawFilament extends Partial<Filament> {
+  id: string
+  brand?: { name?: string } | null
+  material?: { name?: string } | null
+}
+
+function normalizeFilament(raw: RawFilament): Filament {
+  return {
+    ...(raw as Filament),
+    brand_name: raw.brand_name ?? raw.brand?.name ?? '',
+    material_name: raw.material_name ?? raw.material?.name ?? '',
+  }
+}
+
 export const filamentService = {
   /**
-   * Search filaments with filters
+   * Search filaments with filters. Tolerant to both the new `{ data, total, ... }`
+   * envelope and legacy arrays.
    */
-  async search(filters?: FilamentFilters): Promise<{ data: Filament[]; total: number }> {
-    const { search, brand_id, material_id, pageSize } = filters || {}
-    const params = new URLSearchParams()
-    if (search) params.append('name', search)
-    if (brand_id) params.append('brand_id', brand_id)
-    if (material_id) params.append('material_id', material_id)
-    if (pageSize) params.append('limit', pageSize.toString())
-
-    const response = await api.get<{ 
-      data: Array<any>; 
-      total: number 
-    }>(`/filaments/search?${params.toString()}`)
-
-    // Map backend response to frontend format
-    const filaments: Filament[] = response.data.data.map((item: any) => ({
-      ...item,
-      brand_name: item.brand?.name || '',
-      material_name: item.material?.name || '',
-    }))
-
-    return { data: filaments, total: response.data.total }
+  async search(filters?: FilamentFilters): Promise<PaginatedResponse<Filament>> {
+    const { search, brand_id, material_id, page, pageSize } = filters || {}
+    const { data } = await api.get('/filaments/search', {
+      params: buildListParams({
+        page,
+        pageSize,
+        q: search,
+        // `name` kept for backward-compat with the current search endpoint.
+        name: search,
+        brand_id,
+        material_id,
+      }),
+    })
+    const pageData = toPage<RawFilament>(data)
+    return { ...pageData, data: pageData.data.map(normalizeFilament) }
   },
 
   /**
-   * List filaments
+   * List filaments. Tolerant to both the new `{ data, total, ... }` envelope and legacy arrays.
    */
-  async list(filters?: FilamentFilters): Promise<{ data: Filament[]; total: number }> {
-    const { search, brand_id, material_id, pageSize } = filters || {}
-    const params = new URLSearchParams()
-    if (search) params.append('search', search)
-    if (brand_id) params.append('brand_id', brand_id)
-    if (material_id) params.append('material_id', material_id)
-    if (pageSize) params.append('pageSize', pageSize.toString())
-
-    const response = await api.get<{ 
-      data: Array<any>; 
-      total: number 
-    }>(`/filaments/?${params.toString()}`)
-
-    // Map backend response to frontend format
-    const filaments: Filament[] = response.data.data.map((item: any) => ({
-      ...item,
-      brand_name: item.brand?.name || '',
-      material_name: item.material?.name || '',
-    }))
-
-    return { data: filaments, total: response.data.total }
+  async list(filters?: FilamentFilters): Promise<PaginatedResponse<Filament>> {
+    const { search, brand_id, material_id, page, pageSize } = filters || {}
+    const { data } = await api.get('/filaments/', {
+      params: buildListParams({ page, pageSize, q: search, brand_id, material_id }),
+    })
+    const pageData = toPage<RawFilament>(data)
+    return { ...pageData, data: pageData.data.map(normalizeFilament) }
   },
 
   /**
    * Get filament by ID
    */
   async getById(id: string): Promise<Filament> {
-    const { data } = await api.get<{ data: any }>(`/filaments/${id}`)
-    
-    // Map backend response to frontend format
-    return {
-      ...data.data,
-      brand_name: data.data.brand?.name || '',
-      material_name: data.data.material?.name || '',
-    }
+    const { data } = await api.get<{ data: RawFilament }>(`/filaments/${id}`)
+    return normalizeFilament(data.data)
   },
 
   /**
    * Create new filament
    */
   async create(filamentData: CreateFilamentDTO): Promise<Filament> {
-    try {
-      // Backend returns FilamentEntity directly (no wrapper object)
-      const { data: filament } = await api.post<any>(
-        '/filaments/',
-        filamentData
-      )
-      
-      console.log('Create filament response:', filament)
-      
-      // Create endpoint returns FilamentEntity without brand/material nested objects
-      // We need to fetch the full filament data to get brand_name and material_name
-      // For now, return empty strings and let the list refresh populate them
-      const mappedData: Filament = {
-        ...filament,
-        brand_name: '', // Will be populated when list refreshes
-        material_name: '', // Will be populated when list refreshes
-      }
-      
-      console.log('Mapped filament data:', mappedData)
-      
-      return mappedData
-    } catch (error) {
-      console.error('Error creating filament:', error)
-      throw error
-    }
+    // Backend returns FilamentEntity directly (no wrapper object), without nested
+    // brand/material — brand_name/material_name are populated when the list refreshes.
+    const { data } = await api.post<RawFilament>('/filaments/', filamentData)
+    return normalizeFilament(data)
   },
 
   /**
    * Update filament
    */
   async update(id: string, filamentData: UpdateFilamentDTO): Promise<Filament> {
-    // Backend returns FilamentEntity directly (no wrapper object)
-    const { data: filament } = await api.put<any>(
-      `/filaments/${id}`,
-      filamentData
-    )
-    
-    // Update endpoint returns FilamentEntity without brand/material nested objects
-    // Empty strings will be populated when list refreshes
-    return {
-      ...filament,
-      brand_name: '', // Will be populated when list refreshes
-      material_name: '', // Will be populated when list refreshes
-    }
+    const { data } = await api.put<RawFilament>(`/filaments/${id}`, filamentData)
+    return normalizeFilament(data)
   },
 
   /**
@@ -164,4 +124,3 @@ export const filamentService = {
 }
 
 export default filamentService
-

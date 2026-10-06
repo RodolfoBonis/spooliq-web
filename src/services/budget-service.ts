@@ -1,4 +1,5 @@
 import { api } from '@/lib/api/client'
+import { buildListParams, toPage } from '@/lib/api/pagination'
 import type { Budget, BudgetItem, BudgetItemFilament, BudgetWithDetails } from '@/types/models'
 
 export interface BudgetFilters {
@@ -7,6 +8,8 @@ export interface BudgetFilters {
   status?: string
   customer_id?: string
   search?: string
+  from?: string
+  to?: string
 }
 
 export interface BudgetListItem extends Budget {
@@ -91,16 +94,25 @@ export interface UpdateBudgetStatusDTO {
 
 export const budgetService = {
   async list(filters?: BudgetFilters): Promise<BudgetListResponse> {
-    const params = new URLSearchParams()
-    
-    if (filters?.page) params.append('page', filters.page.toString())
-    if (filters?.pageSize) params.append('pageSize', filters.pageSize.toString())
-    if (filters?.status) params.append('status', filters.status)
-    if (filters?.customer_id) params.append('customer_id', filters.customer_id)
-    if (filters?.search) params.append('search', filters.search)
-
-    const { data } = await api.get<BudgetListResponse>(`/budgets?${params.toString()}`)
-    return data
+    const { data } = await api.get('/budgets', {
+      params: buildListParams({
+        page: filters?.page,
+        pageSize: filters?.pageSize,
+        q: filters?.search,
+        status: filters?.status,
+        customer_id: filters?.customer_id,
+        from: filters?.from,
+        to: filters?.to,
+      }),
+    })
+    const pageData = toPage<BudgetListItem>(data)
+    return {
+      data: pageData.data,
+      total: pageData.total,
+      page: pageData.page,
+      page_size: pageData.pageSize,
+      total_pages: pageData.totalPages,
+    }
   },
 
   async getById(id: string): Promise<BudgetWithDetails> {

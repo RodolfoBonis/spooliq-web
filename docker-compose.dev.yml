@@ -34,6 +34,12 @@ services:
     networks:
       - spooliq-network
     command: npm run dev
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/healthz', (r) => {r.statusCode === 200 ? process.exit(0) : process.exit(1)})"]
+      interval: 30s
+      timeout: 3s
+      start_period: 20s
+      retries: 3
 
 networks:
   spooliq-network:

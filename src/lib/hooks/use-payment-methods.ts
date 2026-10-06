@@ -2,9 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import paymentMethodService, {
   type AddPaymentMethodRequest,
-  type PaymentMethodResponse,
-  type ListPaymentMethodsResponse,
 } from '@/services/payment-method-service'
+import { getApiErrorMessage } from '@/lib/api/errors'
 
 export function usePaymentMethods() {
   return useQuery({
@@ -19,15 +18,13 @@ export function useAddPaymentMethod() {
   return useMutation({
     mutationFn: (data: AddPaymentMethodRequest) =>
       paymentMethodService.addPaymentMethod(data),
-    onSuccess: (data: PaymentMethodResponse) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payment-methods'] })
       toast.success('Método de pagamento adicionado com sucesso!')
     },
-    onError: (error: any) => {
-      console.error('Error adding payment method:', error)
+    onError: (error: unknown) => {
       toast.error(
-        error?.response?.data?.message ||
-          'Erro ao adicionar método de pagamento. Tente novamente.'
+        getApiErrorMessage(error, 'Erro ao adicionar método de pagamento. Tente novamente.')
       )
     },
   })
@@ -42,12 +39,8 @@ export function useSetPrimaryPaymentMethod() {
       queryClient.invalidateQueries({ queryKey: ['payment-methods'] })
       toast.success('Método de pagamento principal atualizado!')
     },
-    onError: (error: any) => {
-      console.error('Error setting primary payment method:', error)
-      toast.error(
-        error?.response?.data?.message ||
-          'Erro ao definir método principal. Tente novamente.'
-      )
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao definir método principal. Tente novamente.'))
     },
   })
 }
@@ -61,12 +54,8 @@ export function useDeletePaymentMethod() {
       queryClient.invalidateQueries({ queryKey: ['payment-methods'] })
       toast.success('Método de pagamento removido com sucesso!')
     },
-    onError: (error: any) => {
-      console.error('Error deleting payment method:', error)
-      toast.error(
-        error?.response?.data?.message ||
-          'Erro ao remover método de pagamento. Tente novamente.'
-      )
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao remover método de pagamento. Tente novamente.'))
     },
   })
 }

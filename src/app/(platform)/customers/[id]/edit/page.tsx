@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { getApiErrorMessage } from '@/lib/api/errors'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -72,8 +73,8 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
           toast.success('Cliente atualizado com sucesso!')
           router.push(`/customers/${id}`)
         },
-        onError: (error: any) => {
-          toast.error(error.response?.data?.message || 'Erro ao atualizar cliente')
+        onError: (error: unknown) => {
+          toast.error(getApiErrorMessage(error, 'Erro ao atualizar cliente'))
         },
       }
     )

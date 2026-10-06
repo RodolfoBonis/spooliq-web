@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -14,21 +15,30 @@ import {
 import { Card } from '@/components/ui/card'
 import { BudgetCard } from '@/components/budgets/budget-card'
 import { EmptyState } from '@/components/common/empty-state'
+import { PaginationControls } from '@/components/common/pagination-controls'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useBudgets, useDeleteBudget, useGeneratePDF } from '@/lib/hooks/use-budgets'
+import { useDebouncedValue } from '@/lib/hooks/use-debounced-value'
 import { Plus, Search, FileText } from 'lucide-react'
 import type { BudgetStatus } from '@/types/models'
 
-export default function BudgetsPage() {
-  const [search, setSearch] = useState('')
+const PAGE_SIZE = 12
+
+function BudgetsPageContent() {
+  const searchParams = useSearchParams()
+  const initialSearch = searchParams.get('search') ?? ''
+
+  const [search, setSearch] = useState(initialSearch)
   const [statusFilter, setStatusFilter] = useState<BudgetStatus | 'all'>('all')
   const [page, setPage] = useState(1)
 
+  const debouncedSearch = useDebouncedValue(search, 300)
+
   const { data, isLoading } = useBudgets({
-    search: search || undefined,
+    search: debouncedSearch || undefined,
     status: statusFilter !== 'all' ? statusFilter : undefined,
     page,
-    pageSize: 12,
+    pageSize: PAGE_SIZE,
   })
 
   const { mutate: deleteBudget } = useDeleteBudget()
@@ -62,7 +72,7 @@ export default function BudgetsPage() {
   }
 
   const budgets = data?.data || []
-  const total = data?.total || 0
+  const totalPages = data?.total_pages || 1
 
   return (
     <div className="container py-6">
@@ -160,31 +170,17 @@ export default function BudgetsPage() {
             ))}
           </div>
 
-          {/* Pagination */}
-          {total > 12 && (
-            <div className="flex items-center justify-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                Anterior
-              </Button>
-              <span className="text-sm text-neutral-600">
-                Página {page} de {Math.ceil(total / 12)}
-              </span>
-              <Button
-                variant="outline"
-                onClick={() => setPage((p) => p + 1)}
-                disabled={page >= Math.ceil(total / 12)}
-              >
-                Próxima
-              </Button>
-            </div>
-          )}
+          <PaginationControls page={page} totalPages={totalPages} onPageChange={setPage} />
         </>
       )}
     </div>
   )
 }
 
+export default function BudgetsPage() {
+  return (
+    <Suspense fallback={null}>
+      <BudgetsPageContent />
+    </Suspense>
+  )
+}

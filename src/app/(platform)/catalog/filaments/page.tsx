@@ -37,6 +37,8 @@ import { TableSkeleton } from '@/components/common/loading-skeleton';
 import { EmptyState } from '@/components/common/empty-state';
 import { ConfirmationDialog } from '@/components/common/confirmation-dialog';
 import { useConfirmation } from '@/lib/hooks/use-confirmation';
+import { useDebouncedValue } from '@/lib/hooks/use-debounced-value';
+import { PaginationControls } from '@/components/common/pagination-controls';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createFilamentSchema, updateFilamentSchema } from '@/lib/validations/catalog';
@@ -45,6 +47,7 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import { ColorPicker } from '@/components/form/color-picker';
 import { getColorPreviewStyle } from '@/lib/utils/format';
+import { getApiErrorMessage } from '@/lib/api/errors';
 
 type CreateFilamentForm = z.infer<typeof createFilamentSchema>;
 type UpdateFilamentForm = z.infer<typeof updateFilamentSchema>;
@@ -56,6 +59,8 @@ export default function FilamentsPage() {
   const [brandFilter, setBrandFilter] = useState('');
   const [materialFilter, setMaterialFilter] = useState('');
   const [diameterFilter, setDiameterFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingFilament, setEditingFilament] = useState<Filament | null>(null);
@@ -66,12 +71,14 @@ export default function FilamentsPage() {
   
   const filterRef = useRef<HTMLDivElement>(null);
 
-  const { data: filamentsData, isLoading } = useFilaments({ 
-    search,
+  const { data: filamentsData, isLoading } = useFilaments({
+    search: debouncedSearch,
     brand_id: brandFilter && brandFilter !== 'all' ? brandFilter : undefined,
     material_id: materialFilter && materialFilter !== 'all' ? materialFilter : undefined,
-    pageSize: 50 
+    page,
+    pageSize: 24,
   });
+
   const { data: brandsData } = useBrands({ pageSize: 100 });
   const { data: materialsData } = useMaterials({ pageSize: 100 });
   const { mutate: createFilament, isPending: isCreating } = useCreateFilament();
@@ -149,8 +156,8 @@ export default function FilamentsPage() {
         createForm.reset();
         setCreateColorName('');
       },
-      onError: (error: any) => {
-        toast.error(error.response?.data?.error || 'Erro ao criar filamento');
+      onError: (error: unknown) => {
+        toast.error(getApiErrorMessage(error, 'Erro ao criar filamento'));
       },
     });
   };
@@ -169,8 +176,8 @@ export default function FilamentsPage() {
           setEditColorName('');
           editForm.reset();
         },
-        onError: (error: any) => {
-          toast.error(error.response?.data?.error || 'Erro ao atualizar filamento');
+        onError: (error: unknown) => {
+          toast.error(getApiErrorMessage(error, 'Erro ao atualizar filamento'));
         },
       }
     );
@@ -183,8 +190,8 @@ export default function FilamentsPage() {
         onSuccess: () => {
           toast.success('Filamento deletado com sucesso!');
         },
-        onError: (error: any) => {
-          toast.error(error.response?.data?.error || 'Erro ao deletar filamento');
+        onError: (error: unknown) => {
+          toast.error(getApiErrorMessage(error, 'Erro ao deletar filamento'));
         },
       });
     });
@@ -222,6 +229,7 @@ export default function FilamentsPage() {
     setBrandFilter('');
     setMaterialFilter('');
     setDiameterFilter('');
+    setPage(1);
   };
 
   const hasActiveFilters = search || (brandFilter && brandFilter !== 'all') || (materialFilter && materialFilter !== 'all') || (diameterFilter && diameterFilter !== 'all');
@@ -274,7 +282,10 @@ export default function FilamentsPage() {
                   id="search"
                   placeholder="Nome do filamento..."
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
                   className="pl-9"
                 />
               </div>
@@ -282,7 +293,7 @@ export default function FilamentsPage() {
 
             <div className="space-y-2">
               <Label htmlFor="brand-filter">Marca</Label>
-              <Select value={brandFilter || undefined} onValueChange={setBrandFilter}>
+              <Select value={brandFilter || undefined} onValueChange={(v) => { setBrandFilter(v); setPage(1); }}>
                 <SelectTrigger id="brand-filter">
                   <SelectValue placeholder="Todas as marcas" />
                 </SelectTrigger>
@@ -299,7 +310,7 @@ export default function FilamentsPage() {
 
             <div className="space-y-2">
               <Label htmlFor="material-filter">Material</Label>
-              <Select value={materialFilter || undefined} onValueChange={setMaterialFilter}>
+              <Select value={materialFilter || undefined} onValueChange={(v) => { setMaterialFilter(v); setPage(1); }}>
                 <SelectTrigger id="material-filter">
                   <SelectValue placeholder="Todos os materiais" />
                 </SelectTrigger>
@@ -316,7 +327,7 @@ export default function FilamentsPage() {
 
             <div className="space-y-2">
               <Label htmlFor="diameter-filter">Diâmetro</Label>
-              <Select value={diameterFilter || undefined} onValueChange={setDiameterFilter}>
+              <Select value={diameterFilter || undefined} onValueChange={(v) => { setDiameterFilter(v); setPage(1); }}>
                 <SelectTrigger id="diameter-filter">
                   <SelectValue placeholder="Todos os diâmetros" />
                 </SelectTrigger>
@@ -494,6 +505,14 @@ export default function FilamentsPage() {
             </TableBody>
           </Table>
         </div>
+      )}
+
+      {!isLoading && filteredFilaments.length > 0 && (
+        <PaginationControls
+          page={page}
+          totalPages={filamentsData?.totalPages ?? 1}
+          onPageChange={setPage}
+        />
       )}
 
       {/* Confirmation Dialog */}
