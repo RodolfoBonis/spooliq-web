@@ -190,6 +190,25 @@ export interface GoalsAlertsData {
 }
 
 // ============================================================================
+// Low Stock (Phase 4C) — matches GET /dashboard/low-stock
+// ============================================================================
+
+export interface LowStockFilament {
+  id: string;
+  name: string;
+  color: string;
+  color_hex?: string;
+  brand_name?: string;
+  material_name?: string;
+  stock_grams: number;
+  low_stock_threshold_grams: number;
+}
+
+export interface LowStockData {
+  data: LowStockFilament[];
+}
+
+// ============================================================================
 // API Response Types
 // ============================================================================
 

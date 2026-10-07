@@ -212,6 +212,8 @@ export interface BudgetWithDetails extends Budget {
   total_print_time_hours: number
   total_print_time_minutes: number
   total_print_time_display: string
+  /** Insufficient-stock warnings (Phase 4C). Empty array when there are none. */
+  stock_warnings?: StockWarning[]
 }
 
 export interface Customer {
@@ -284,8 +286,53 @@ export interface Filament {
   price_per_kg: number // cents
   description?: string
   is_active: boolean
+
+  // Stock control (Phase 4C). Optional because the web is deployed before the API.
+  track_stock?: boolean
+  stock_grams?: number // may be negative
+  low_stock_threshold_grams?: number | null
+  is_low_stock?: boolean
+
   created_at: string
   updated_at: string
+}
+
+// Stock control (Phase 4C) ---------------------------------------------------
+
+/** A stock movement type. `consumption` is created automatically on budget completion. */
+export type StockMovementType = 'purchase' | 'adjustment' | 'waste' | 'consumption'
+
+/** A single stock ledger entry for a filament. Grams are signed as stored. */
+export interface StockMovement {
+  id: string
+  filament_id: string
+  type: StockMovementType
+  /** Signed as stored: purchase +, waste/consumption −, adjustment ±. */
+  grams: number
+  unit_price_per_kg?: number | null // cents
+  budget_id?: string | null
+  budget_quote_number?: number | null
+  note?: string | null
+  created_by?: string
+  created_at: string
+}
+
+/** The subset of filament fields echoed back after a stock mutation. */
+export interface StockMovementFilamentState {
+  id: string
+  stock_grams: number
+  track_stock: boolean
+  low_stock_threshold_grams: number | null
+  is_low_stock: boolean
+}
+
+/** A single insufficient-stock warning attached to a budget/preview. Informational only. */
+export interface StockWarning {
+  filament_id: string
+  filament_name: string
+  color: string
+  required_grams: number
+  available_grams: number
 }
 
 export interface Brand {
