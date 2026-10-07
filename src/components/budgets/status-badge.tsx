@@ -1,13 +1,15 @@
 import { Badge } from '@/components/ui/badge'
 import type { BudgetStatus } from '@/types/models'
-import { 
-  Pencil, 
-  Send, 
-  CheckCircle, 
-  XCircle, 
-  Printer, 
+import {
+  Pencil,
+  Send,
+  CheckCircle,
+  XCircle,
+  Printer,
   CheckCheck,
-  type LucideIcon 
+  Clock,
+  Ban,
+  type LucideIcon,
 } from 'lucide-react'
 
 interface StatusConfig {
@@ -41,6 +43,18 @@ const STATUS_CONFIG: Record<BudgetStatus, StatusConfig> = {
     color: '#d93025',
     bgColor: 'bg-red-100 text-red-700',
     icon: XCircle,
+  },
+  expired: {
+    label: 'Expirado',
+    color: '#d97706',
+    bgColor: 'bg-amber-100 text-amber-700',
+    icon: Clock,
+  },
+  cancelled: {
+    label: 'Cancelado',
+    color: '#991b1b',
+    bgColor: 'bg-neutral-200 text-red-700',
+    icon: Ban,
   },
   printing: {
     label: 'Imprimindo',
@@ -76,4 +90,3 @@ export function StatusBadge({ status, showIcon = true, className }: StatusBadgeP
 
 // Export the status config for use in other components
 export { STATUS_CONFIG }
-

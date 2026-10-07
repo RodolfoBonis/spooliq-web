@@ -33,6 +33,13 @@ export interface Company {
   state?: string
   zip_code?: string
 
+  // Fiscal
+  default_tax_rate?: number // % applied "por dentro" to budgets without an explicit tax_rate
+
+  // Commercial defaults (Phase 4B)
+  default_quote_validity_days?: number // 1–365; default 15. Used when a budget is sent without valid_until
+  default_payment_terms?: string | null // max 500; prefilled on new budgets
+
   // Subscription fields
   subscription_status: SubscriptionStatus
   is_platform_company: boolean
@@ -48,11 +55,16 @@ export interface Company {
   updated_at: string
 }
 
+/** How a manual discount is applied on top of the computed base price. */
+export type DiscountType = 'percent' | 'fixed'
+
 export type BudgetStatus =
   | 'draft'
   | 'sent'
   | 'approved'
   | 'rejected'
+  | 'expired'
+  | 'cancelled'
   | 'printing'
   | 'completed'
 
@@ -63,6 +75,14 @@ export interface Budget {
   description?: string
   customer_id: string
   status: BudgetStatus
+
+  // Public approval link / quote metadata (Phase 4B)
+  quote_number?: number // sequential human-friendly quote number (display as #0001)
+  valid_until?: string | null // ISO 8601; quote expiration
+  public_token?: string | null // token for the public approval link (null = not shared)
+  customer_response_at?: string | null // ISO 8601; when the customer approved/rejected
+  customer_response_name?: string | null // name the customer typed when responding
+  rejection_reason?: string | null // optional reason provided on rejection
 
   // Presets
   machine_preset_id?: string
@@ -77,6 +97,13 @@ export interface Budget {
   // Flags
   include_energy_cost: boolean
   include_waste_cost: boolean
+  // Phase 4A pricing inputs (echoed back in the response). Optional for backward compatibility.
+  include_machine_cost?: boolean
+  discount_type?: DiscountType | null
+  discount_value?: number // percent 0-100, or REAIS when discount_type === 'fixed'
+  include_shipping?: boolean
+  shipping_override?: number | null // cents; overrides the computed shipping when set
+  tax_rate?: number | null // % 0-99.99; null means the company default is used
 
   // Calculated costs (in cents)
   filament_cost: number
@@ -84,8 +111,19 @@ export interface Budget {
   energy_cost: number
   setup_cost: number // Sum of all items setup costs
   labor_cost: number // Sum of all items manual labor costs
+  // Phase 4A cost lines (cents). Optional: older budgets / pre-deploy API omit them.
+  machine_cost?: number
+  post_processing_cost?: number
+  packaging_cost?: number
+  quality_control_cost?: number
+  failure_cost?: number
   overhead_cost: number // Overhead from CostPreset
   profit_amount: number // Profit margin from CostPreset
+  base_price?: number // Sale price before discount/shipping/taxes (cents)
+  discount_amount?: number // Applied discount (cents)
+  shipping_cost?: number // Applied shipping (cents)
+  tax_rate_applied?: number // % actually applied (resolved tax_rate or company default)
+  tax_amount?: number // Tax embedded in the total "por dentro" (cents)
   total_cost: number
 
   // Commercial info
@@ -119,6 +157,9 @@ export interface BudgetItem {
   cost_preset_id?: string
   setup_time_minutes: number // Setup time in minutes (one-time per product)
   manual_labor_minutes_total: number // Total manual labor time for ALL units
+  // Phase 4A labor inputs (minutes, total for all units). Optional for backward compatibility.
+  post_processing_minutes?: number
+  support_removal_minutes?: number
   additional_notes?: string
 
   // Calculated costs (in cents)
@@ -127,6 +168,13 @@ export interface BudgetItem {
   energy_cost: number
   setup_cost: number // Calculated setup cost
   manual_labor_cost: number // Calculated manual labor cost
+  // Phase 4A per-item cost lines (cents). Optional: older items / pre-deploy API omit them.
+  machine_cost?: number
+  post_processing_cost?: number
+  support_removal_cost?: number
+  packaging_cost?: number
+  quality_control_cost?: number
+  failure_cost?: number
   item_total_cost: number
   unit_price: number // COST per unit (no markup), cents
   sale_unit_price?: number // SALE price per unit (cost + share of overhead/profit), cents
@@ -366,6 +414,8 @@ export interface CostPreset {
   post_processing_cost_per_hour: number // reais
   support_removal_cost_per_hour: number // reais
   quality_control_cost_per_item: number // reais
+  failure_rate_percentage?: number // 0-100: expected failure/scrap rate
+  waste_grams_per_color_change?: number // grams wasted per AMS color change (default 15)
   created_at?: string
   updated_at?: string
 }
@@ -638,4 +688,54 @@ export interface UploadConflictResponse {
   error?: string
   /** The already-existing model that caused the conflict (may be absent). */
   existing?: Model3D
+}
+
+// Public Budget (Phase 4B) — unauthenticated view returned by /public/budgets/:token.
+// All monetary fields are in CENTS; tax_rate_applied is a percentage.
+export interface PublicBudgetItem {
+  product_name: string
+  product_description?: string | null
+  product_quantity: number
+  product_dimensions?: string | null
+  unit_price: number // cents
+  total_price: number // cents
+}
+
+export interface PublicBudgetCompany {
+  name: string
+  trade_name?: string | null
+  logo_url?: string | null
+  email?: string | null
+  phone?: string | null
+  whatsapp?: string | null
+  instagram?: string | null
+  website?: string | null
+  city?: string | null
+  state?: string | null
+}
+
+export interface PublicBudget {
+  quote_number: number | null
+  name: string
+  description?: string | null
+  status: BudgetStatus
+  valid_until?: string | null // ISO 8601
+  is_expired: boolean
+  can_respond: boolean
+  created_at: string
+  customer_response_at?: string | null
+  customer_response_name?: string | null
+  rejection_reason?: string | null
+  customer: { name: string }
+  company: PublicBudgetCompany
+  items: PublicBudgetItem[]
+  base_price: number // cents
+  discount_amount: number // cents
+  shipping_cost: number // cents
+  tax_amount: number // cents
+  tax_rate_applied: number // percentage (e.g. 6 = 6%)
+  total: number // cents
+  delivery_days?: number | null
+  payment_terms?: string | null
+  notes?: string | null
 }

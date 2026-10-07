@@ -14,7 +14,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { StatusBadge } from './status-badge'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
-import { formatCurrency, formatDateShort } from '@/lib/utils/format'
+import { formatCurrency, formatDateShort, formatQuoteNumber } from '@/lib/utils/format'
 import type { Budget } from '@/types/models'
 import {
   MoreVertical,
@@ -59,6 +59,11 @@ export function BudgetCard({ budget, onDelete, onGeneratePDF }: BudgetCardProps)
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
+              {formatQuoteNumber(budget.quote_number) && (
+                <span className="block text-xs font-mono text-neutral-400">
+                  {formatQuoteNumber(budget.quote_number)}
+                </span>
+              )}
               <Link
                 href={`/budgets/${budget.id}`}
                 className="text-lg font-semibold text-neutral-900 hover:text-primary-600 transition-colors"
