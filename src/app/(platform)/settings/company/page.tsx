@@ -8,6 +8,7 @@ import { CDNImage } from '@/components/ui/cdn-image'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Form,
   FormControl,
@@ -45,6 +46,8 @@ export default function CompanySettingsPage() {
       state: '',
       zip_code: '',
       default_tax_rate: undefined,
+      default_quote_validity_days: undefined,
+      default_payment_terms: '',
     },
   })
 
@@ -67,6 +70,8 @@ export default function CompanySettingsPage() {
         state: company.state || '',
         zip_code: company.zip_code || '',
         default_tax_rate: company.default_tax_rate ?? undefined,
+        default_quote_validity_days: company.default_quote_validity_days ?? undefined,
+        default_payment_terms: company.default_payment_terms || '',
       })
       if (company.logo_url) {
         setLogoPreview(company.logo_url)
@@ -399,6 +404,69 @@ export default function CompanySettingsPage() {
                     )}
                   />
                 </div>
+              </div>
+
+              <Separator />
+
+              {/* Commercial defaults (Phase 4B) */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-neutral-900">Orçamentos</h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="default_quote_validity_days"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Validade padrão do orçamento (dias)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="365"
+                            step="1"
+                            placeholder="Ex: 15"
+                            value={field.value ?? ''}
+                            onChange={(e) =>
+                              field.onChange(
+                                e.target.value === '' ? undefined : Number(e.target.value)
+                              )
+                            }
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Usada para calcular a data &quot;Válido até&quot; quando um orçamento é
+                          enviado sem uma data específica. Padrão: 15 dias.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="default_payment_terms"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Condições de pagamento padrão</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={3}
+                          maxLength={500}
+                          placeholder="Ex: 50% de entrada e 50% na entrega"
+                          {...field}
+                          value={field.value ?? ''}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Pré-preenchida ao criar um novo orçamento. Máximo de 500 caracteres.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className="flex justify-end">

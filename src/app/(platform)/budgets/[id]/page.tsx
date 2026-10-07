@@ -34,6 +34,8 @@ import {
   formatWeight,
   getColorPreviewStyle,
 } from '@/lib/utils/format'
+import { getAllowedTransitions, isShareable } from '@/lib/budgets/status'
+import { ShareBudgetDialog } from '@/components/budgets/share-budget-dialog'
 import {
   ArrowLeft,
   Edit,
@@ -46,6 +48,9 @@ import {
   Package,
   DollarSign,
   AlertCircle,
+  Share2,
+  CalendarClock,
+  MessageSquare,
 } from 'lucide-react'
 import type { BudgetStatus, BudgetWithDetails } from '@/types/models'
 
@@ -65,6 +70,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
   const { mutate: generatePDF, isPending: isGeneratingPDF } = useGeneratePDF()
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showShareDialog, setShowShareDialog] = useState(false)
 
   if (isLoading) {
     return (
@@ -113,7 +119,6 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
   }
 
   const handleChangeStatus = (status: BudgetStatus) => {
-    if (status === 'draft') return // Cannot change back to draft
     updateStatus({ id: id, data: { status } })
   }
 
@@ -138,6 +143,11 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
         <div className="flex-1">
           <div className="flex items-start justify-between">
             <div>
+              {budget.quote_number != null && (
+                <p className="text-sm font-mono text-neutral-400">
+                  Orçamento nº {String(budget.quote_number).padStart(4, '0')}
+                </p>
+              )}
               <h1 className="text-3xl font-bold text-neutral-900">{budget.name}</h1>
               {budget.description && (
                 <p className="text-neutral-600 mt-1">{budget.description}</p>
@@ -181,11 +191,17 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <div className="flex items-center gap-4 mt-4">
+          <div className="flex flex-wrap items-center gap-4 mt-4">
             <StatusBadge status={budget.status} />
             <span className="text-sm text-neutral-500">
               Criado em {formatDateShort(budget.created_at)}
             </span>
+            {budget.valid_until && (
+              <span className="flex items-center gap-1 text-sm text-neutral-500">
+                <CalendarClock className="h-4 w-4" />
+                Válido até {formatDateShort(budget.valid_until)}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -502,34 +518,84 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                 {isGeneratingPDF ? 'Gerando...' : 'Baixar PDF'}
               </Button>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full">
-                    Mudar Status
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56">
-                  {Object.keys(STATUS_CONFIG).map((status) => {
-                    const config = STATUS_CONFIG[status as BudgetStatus]
-                    if (!config || !config.icon) {
-                      return null
-                    }
-                    const Icon = config.icon
-                    return (
-                      <DropdownMenuItem
-                        key={status}
-                        onClick={() => handleChangeStatus(status as BudgetStatus)}
-                        disabled={status === budget.status}
+              {isShareable(budget.status) && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowShareDialog(true)}
+                >
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Compartilhar
+                </Button>
+              )}
+
+              {(() => {
+                const transitions = getAllowedTransitions(budget.status)
+                return (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        disabled={transitions.length === 0}
                       >
-                        <Icon className="mr-2 h-4 w-4" />
-                        {config.label}
-                      </DropdownMenuItem>
-                    )
-                  }).filter(Boolean)}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                        Mudar Status
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56">
+                      {transitions.map((status) => {
+                        const config = STATUS_CONFIG[status]
+                        const Icon = config.icon
+                        return (
+                          <DropdownMenuItem
+                            key={status}
+                            onClick={() => handleChangeStatus(status)}
+                          >
+                            <Icon className="mr-2 h-4 w-4" />
+                            {config.label}
+                          </DropdownMenuItem>
+                        )
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )
+              })()}
             </CardContent>
           </Card>
+
+          {/* Customer response (Phase 4B) */}
+          {budget.customer_response_at && (() => {
+            const isRejected = budget.status === 'rejected' || !!budget.rejection_reason
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <MessageSquare className="h-5 w-5" />
+                    Resposta do cliente
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <p className={isRejected ? 'font-semibold text-red-700' : 'font-semibold text-emerald-700'}>
+                    {isRejected ? 'Orçamento recusado' : 'Orçamento aprovado'}
+                  </p>
+                  {budget.customer_response_name && (
+                    <p className="text-neutral-700">
+                      por <strong>{budget.customer_response_name}</strong>
+                    </p>
+                  )}
+                  <p className="text-neutral-500">
+                    em {formatDateShort(budget.customer_response_at)}
+                  </p>
+                  {budget.rejection_reason && (
+                    <div className="mt-2 p-3 bg-neutral-50 rounded-lg">
+                      <p className="text-neutral-500">Motivo</p>
+                      <p className="text-neutral-800">{budget.rejection_reason}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })()}
 
           {/* Cost Breakdown */}
           <Card>
@@ -781,6 +847,12 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
           </Card>
         </div>
       </div>
+
+      <ShareBudgetDialog
+        budget={budget}
+        open={showShareDialog}
+        onOpenChange={setShowShareDialog}
+      />
 
       <ConfirmDialog
         open={showDeleteDialog}

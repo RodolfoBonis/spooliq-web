@@ -54,6 +54,8 @@ export const createBudgetObject = z.object({
   delivery_days: z.number().positive().optional(),
   payment_terms: z.string().optional(),
   notes: z.string().optional(),
+  // Date-only string (YYYY-MM-DD) from the <input type="date">; converted to ISO on submit.
+  valid_until: z.string().optional(),
   items: z.array(budgetItemSchema).min(1, 'Adicione pelo menos um item'),
 })
 
@@ -80,7 +82,7 @@ export const updateBudgetSchema = createBudgetObject.partial()
 
 // Update Status schema
 export const updateBudgetStatusSchema = z.object({
-  status: z.enum(['sent', 'approved', 'rejected', 'printing', 'completed']),
+  status: z.enum(['sent', 'approved', 'rejected', 'printing', 'completed', 'expired', 'cancelled']),
   notes: z.string().optional(),
 })
 

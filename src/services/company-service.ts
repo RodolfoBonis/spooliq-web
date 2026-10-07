@@ -14,6 +14,8 @@ export interface UpdateCompanyDTO {
   state?: string
   zip_code?: string
   default_tax_rate?: number // % applied "por dentro" to budgets by default
+  default_quote_validity_days?: number // 1–365; default 15
+  default_payment_terms?: string | null // max 500
 }
 
 export const companyService = {
