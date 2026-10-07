@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Edit, Trash2, Grid3x3, List, Filter } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Grid3x3, List, Filter, Boxes, AlertTriangle } from 'lucide-react';
 import { useFilaments, useCreateFilament, useUpdateFilament, useDeleteFilament } from '@/lib/hooks/use-filaments';
 import { useBrands } from '@/lib/hooks/use-brands';
 import { useMaterials } from '@/lib/hooks/use-materials';
@@ -46,12 +46,33 @@ import type { Filament, ColorType, ColorData } from '@/types/models';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { ColorPicker } from '@/components/form/color-picker';
-import { getColorPreviewStyle } from '@/lib/utils/format';
+import { getColorPreviewStyle, formatGrams } from '@/lib/utils/format';
+import { Badge } from '@/components/ui/badge';
+import { FilamentStockDialog } from '@/components/catalog/filament-stock-dialog';
 import { getApiErrorMessage } from '@/lib/api/errors';
 
 type CreateFilamentForm = z.infer<typeof createFilamentSchema>;
 type UpdateFilamentForm = z.infer<typeof updateFilamentSchema>;
 type ViewMode = 'list' | 'grid';
+
+/** Renders a filament's stock: "—" when untracked, otherwise the balance plus a
+ *  low-stock badge. */
+function StockIndicator({ filament }: { filament: Filament }) {
+  if (!filament.track_stock) {
+    return <span className="text-neutral-400">—</span>;
+  }
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span className="font-medium">{formatGrams(filament.stock_grams ?? 0)}</span>
+      {filament.is_low_stock && (
+        <Badge variant="destructive" className="gap-1">
+          <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+          Estoque baixo
+        </Badge>
+      )}
+    </span>
+  );
+}
 
 export default function FilamentsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -68,6 +89,9 @@ export default function FilamentsPage() {
   const [editColorName, setEditColorName] = useState('');
   const [isFilterSticky, setIsFilterSticky] = useState(false);
   const [showFab, setShowFab] = useState(false);
+  const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [stockFilament, setStockFilament] = useState<Filament | null>(null);
+  const [isStockOpen, setIsStockOpen] = useState(false);
   
   const filterRef = useRef<HTMLDivElement>(null);
 
@@ -76,6 +100,7 @@ export default function FilamentsPage() {
     brand_id: brandFilter && brandFilter !== 'all' ? brandFilter : undefined,
     material_id: materialFilter && materialFilter !== 'all' ? materialFilter : undefined,
     diameter: diameterFilter && diameterFilter !== 'all' ? parseFloat(diameterFilter) : undefined,
+    low_stock: lowStockOnly || undefined,
     page,
     pageSize: 24,
   });
@@ -222,16 +247,23 @@ export default function FilamentsPage() {
     }).format(cents / 100);
   };
 
+  // Open stock dialog
+  const openStockDialog = (filament: Filament) => {
+    setStockFilament(filament);
+    setIsStockOpen(true);
+  };
+
   // Clear filters
   const clearFilters = () => {
     setSearch('');
     setBrandFilter('');
     setMaterialFilter('');
     setDiameterFilter('');
+    setLowStockOnly(false);
     setPage(1);
   };
 
-  const hasActiveFilters = search || (brandFilter && brandFilter !== 'all') || (materialFilter && materialFilter !== 'all') || (diameterFilter && diameterFilter !== 'all');
+  const hasActiveFilters = search || (brandFilter && brandFilter !== 'all') || (materialFilter && materialFilter !== 'all') || (diameterFilter && diameterFilter !== 'all') || lowStockOnly;
 
   return (
     <div className="container py-6 space-y-6">
@@ -337,6 +369,21 @@ export default function FilamentsPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="low-stock-filter">Estoque</Label>
+              <Button
+                id="low-stock-filter"
+                type="button"
+                variant={lowStockOnly ? 'default' : 'outline'}
+                className={`w-full justify-start ${lowStockOnly ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}`}
+                onClick={() => { setLowStockOnly((v) => !v); setPage(1); }}
+                aria-pressed={lowStockOnly}
+              >
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                Estoque baixo
+              </Button>
+            </div>
           </div>
         </CardContent>
         </Card>
@@ -401,6 +448,14 @@ export default function FilamentsPage() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={() => openStockDialog(filament)}
+                      title="Estoque"
+                    >
+                      <Boxes className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => openEditDialog(filament)}
                     >
                       <Edit className="h-4 w-4" />
@@ -432,6 +487,10 @@ export default function FilamentsPage() {
                   <span className="text-neutral-600">Diâmetro:</span>
                   <span className="font-medium">{filament.diameter}mm</span>
                 </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-neutral-600">Estoque:</span>
+                  <StockIndicator filament={filament} />
+                </div>
               </CardContent>
               <CardFooter>
                 <div className="w-full text-center">
@@ -456,6 +515,7 @@ export default function FilamentsPage() {
                 <TableHead>Marca</TableHead>
                 <TableHead>Material</TableHead>
                 <TableHead>Diâmetro</TableHead>
+                <TableHead>Estoque</TableHead>
                 <TableHead>Preço/kg</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -480,9 +540,18 @@ export default function FilamentsPage() {
                   <TableCell>{filament.brand_name || '-'}</TableCell>
                   <TableCell>{filament.material_name || '-'}</TableCell>
                   <TableCell>{filament.diameter}mm</TableCell>
+                  <TableCell><StockIndicator filament={filament} /></TableCell>
                   <TableCell>{formatPrice(filament.price_per_kg)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openStockDialog(filament)}
+                        title="Estoque"
+                      >
+                        <Boxes className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -794,6 +863,16 @@ export default function FilamentsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Stock Dialog */}
+      <FilamentStockDialog
+        filament={stockFilament}
+        open={isStockOpen}
+        onOpenChange={(open) => {
+          setIsStockOpen(open);
+          if (!open) setStockFilament(null);
+        }}
+      />
 
       {/* Floating Action Button */}
       <div

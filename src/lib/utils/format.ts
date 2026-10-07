@@ -82,6 +82,37 @@ export function formatWeight(grams: number): string {
 }
 
 /**
+ * Format a stock quantity in grams for display.
+ *
+ * - `< 1000 g` (absolute) → grouped grams, e.g. "999 g", "-150 g".
+ * - `>= 1000 g` (absolute) → kilograms with 2 decimals, e.g. "1,23 kg".
+ *
+ * @param grams Weight in grams (may be negative).
+ */
+export function formatGrams(grams: number): string {
+  const abs = Math.abs(grams)
+  if (abs >= 1000) {
+    const kg = grams / 1000
+    return `${kg.toLocaleString('pt-BR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 3,
+    })} kg`
+  }
+  return `${grams.toLocaleString('pt-BR')} g`
+}
+
+/**
+ * Format a signed stock movement in grams, always showing the sign.
+ * Positive values are prefixed with "+"; negatives keep their "-".
+ *
+ * @param grams Signed weight in grams.
+ */
+export function formatGramsSigned(grams: number): string {
+  const formatted = formatGrams(grams)
+  return grams > 0 ? `+${formatted}` : formatted
+}
+
+/**
  * Get CSS style for color preview
  */
 export function getColorPreviewStyle(colorType: ColorType, colorData: ColorData): React.CSSProperties {
@@ -284,4 +315,44 @@ export function getInitials(name: string): string {
   }
   
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
+}
+
+/**
+ * Convert a date-only value from an <input type="date"> (YYYY-MM-DD) into an ISO
+ * 8601 datetime at the end of that local day. Returns undefined for empty/invalid
+ * input. Used for the budget "Válido até" field.
+ */
+export function endOfDayISO(dateOnly: string | null | undefined): string | undefined {
+  if (!dateOnly) return undefined
+  const date = new Date(`${dateOnly}T23:59:59`)
+  if (isNaN(date.getTime())) return undefined
+  return date.toISOString()
+}
+
+/**
+ * Convert an ISO 8601 datetime into the YYYY-MM-DD value expected by an
+ * <input type="date">. Returns '' for empty/invalid input.
+ */
+export function isoToDateInput(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (isNaN(date.getTime())) return ''
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+/**
+ * Format a sequential quote number for display, e.g. 1 -> "#0001".
+ * Returns '' when the number is missing (older budgets created before Phase 4B).
+ */
+export function formatQuoteNumberPadded(quoteNumber: number | null | undefined): string {
+  if (quoteNumber == null) return ''
+  return String(quoteNumber).padStart(4, '0')
+}
+
+export function formatQuoteNumber(quoteNumber: number | null | undefined): string {
+  if (quoteNumber == null) return ''
+  return `#${String(quoteNumber).padStart(4, '0')}`
 }
