@@ -14,14 +14,13 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { StatusBadge } from './status-badge'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
-import { formatCurrency, formatDateShort } from '@/lib/utils/format'
+import { formatCurrency, formatDateShort, formatQuoteNumber } from '@/lib/utils/format'
 import type { Budget } from '@/types/models'
 import {
   MoreVertical,
   Eye,
   Edit,
   Trash2,
-  FileText,
   Download,
 } from 'lucide-react'
 
@@ -41,6 +40,9 @@ interface BudgetCardProps {
 export function BudgetCard({ budget, onDelete, onGeneratePDF }: BudgetCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
+  // The API only allows editing drafts, so hide the edit entry for every other status.
+  const isEditable = budget.status === 'draft'
+
   const handleDelete = () => {
     onDelete?.(budget.id)
     setShowDeleteDialog(false)
@@ -59,6 +61,11 @@ export function BudgetCard({ budget, onDelete, onGeneratePDF }: BudgetCardProps)
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
+              {formatQuoteNumber(budget.quote_number) && (
+                <span className="block text-xs font-mono text-neutral-400">
+                  {formatQuoteNumber(budget.quote_number)}
+                </span>
+              )}
               <Link
                 href={`/budgets/${budget.id}`}
                 className="text-lg font-semibold text-neutral-900 hover:text-primary-600 transition-colors"
@@ -84,12 +91,14 @@ export function BudgetCard({ budget, onDelete, onGeneratePDF }: BudgetCardProps)
                     Ver detalhes
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href={`/budgets/${budget.id}/edit`}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Editar
-                  </Link>
-                </DropdownMenuItem>
+                {isEditable && (
+                  <DropdownMenuItem asChild>
+                    <Link href={`/budgets/${budget.id}/edit`}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Editar
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={() => onGeneratePDF?.(budget.id, budget.name, false)}
                 >
@@ -174,4 +183,3 @@ export function BudgetCard({ budget, onDelete, onGeneratePDF }: BudgetCardProps)
     </>
   )
 }
-

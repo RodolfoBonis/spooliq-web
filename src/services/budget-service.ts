@@ -1,6 +1,6 @@
 import { api } from '@/lib/api/client'
 import { buildListParams, toPage } from '@/lib/api/pagination'
-import type { Budget, BudgetItem, BudgetItemFilament, BudgetWithDetails } from '@/types/models'
+import type { Budget, BudgetItem, BudgetItemFilament, BudgetStatus, BudgetWithDetails } from '@/types/models'
 
 export interface BudgetFilters {
   page?: number
@@ -51,6 +51,8 @@ export interface CreateBudgetItemDTO {
   cost_preset_id?: string
   setup_time_minutes: number // Setup time in minutes (one-time)
   manual_labor_minutes_total: number // Total manual labor for all units
+  post_processing_minutes?: number // Phase 4A: total post-processing minutes (all units)
+  support_removal_minutes?: number // Phase 4A: total support-removal minutes (all units)
   additional_notes?: string
   filaments: CreateBudgetItemFilamentDTO[]
   order: number
@@ -66,13 +68,35 @@ export interface CreateBudgetDTO {
   cost_preset_id?: string // Budget-level cost preset (overhead/margin)
   include_energy_cost: boolean
   include_waste_cost: boolean
+  // Phase 4A pricing controls (all optional; API defaults apply when omitted).
+  include_machine_cost?: boolean
+  discount_type?: 'percent' | 'fixed' | null
+  discount_value?: number // percent 0-100, or REAIS when discount_type === 'fixed'
+  include_shipping?: boolean
+  shipping_override?: number | null // cents; overrides computed shipping when set
+  tax_rate?: number | null // % 0-99.99; null uses the company default
   delivery_days?: number
   payment_terms?: string
   notes?: string
+  valid_until?: string // ISO 8601; quote expiration. Optional — API falls back to company default on send.
   items: CreateBudgetItemDTO[]
 }
 
-export type UpdateBudgetDTO = Partial<CreateBudgetDTO>
+/**
+ * Body for `PUT /budgets/:id` (drafts only).
+ *
+ * Partial-update semantics: an omitted key is left unchanged. The nullable fields
+ * accept an explicit `null` to CLEAR the stored value (see `buildBudgetUpdatePayload`):
+ * - `tax_rate: null` → use the company default;
+ * - `discount_type`/`discount_value`: either `null` clears BOTH;
+ * - `shipping_override: null` → clear the manual override (otherwise cents);
+ * - `valid_until: null` → clear the validity date.
+ * `items`, when provided, REPLACES the whole items array.
+ */
+export type UpdateBudgetDTO = Partial<Omit<CreateBudgetDTO, 'discount_value' | 'valid_until'>> & {
+  discount_value?: number | null
+  valid_until?: string | null
+}
 
 /** Same body as create, but customer and name are optional (nothing is persisted). */
 export type PreviewBudgetDTO = Omit<CreateBudgetDTO, 'customer_id' | 'name'> & {
@@ -89,8 +113,15 @@ export type BudgetPreview = Omit<
 }
 
 export interface UpdateBudgetStatusDTO {
-  status: 'sent' | 'approved' | 'rejected' | 'printing' | 'completed'
+  status: BudgetStatus
   notes?: string
+}
+
+/** Response of POST /budgets/:id/share (idempotent). */
+export interface ShareBudgetResponse {
+  public_token: string
+  status: BudgetStatus
+  valid_until: string | null
 }
 
 export const budgetService = {
@@ -136,6 +167,12 @@ export const budgetService = {
     return data
   },
 
+  /** Duplicate a budget as a new draft; returns the created budget (201). */
+  async duplicate(id: string): Promise<BudgetWithDetails> {
+    const { data } = await api.post<BudgetWithDetails>(`/budgets/${id}/duplicate`)
+    return data
+  },
+
   async updateStatus(id: string, statusData: UpdateBudgetStatusDTO): Promise<Budget> {
     const { data } = await api.patch<Budget>(`/budgets/${id}/status`, statusData)
     return data
@@ -143,6 +180,20 @@ export const budgetService = {
 
   async delete(id: string): Promise<void> {
     await api.delete(`/budgets/${id}`)
+  },
+
+  /**
+   * Create (or return the existing) public approval link for a budget.
+   * Idempotent: a draft is promoted to `sent` and the valid_until is resolved.
+   */
+  async share(id: string): Promise<ShareBudgetResponse> {
+    const { data } = await api.post<ShareBudgetResponse>(`/budgets/${id}/share`)
+    return data
+  },
+
+  /** Revoke the public approval link for a budget. */
+  async revokeShare(id: string): Promise<void> {
+    await api.delete(`/budgets/${id}/share`)
   },
 
   async generatePDF(id: string, force: boolean = false): Promise<Blob> {
@@ -153,4 +204,3 @@ export const budgetService = {
     return data
   },
 }
-
