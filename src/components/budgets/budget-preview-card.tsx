@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { formatCurrency } from '@/lib/utils/format'
 import { getApiErrorMessage } from '@/lib/api/errors'
 import type { BudgetPreview } from '@/services/budget-service'
+import { StockWarningsAlert } from '@/components/budgets/stock-warnings-alert'
 
 type PreviewItem = BudgetPreview['items'][number]
 
@@ -191,6 +192,8 @@ export function BudgetPreviewCard({
                 ))}
               </ul>
             )}
+
+            <StockWarningsAlert warnings={preview.stock_warnings} />
 
             <div className="space-y-3">
               {preview.items.map((item, idx) => (

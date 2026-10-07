@@ -36,6 +36,7 @@ import {
 } from '@/lib/utils/format'
 import { getAllowedTransitions, isShareable } from '@/lib/budgets/status'
 import { ShareBudgetDialog } from '@/components/budgets/share-budget-dialog'
+import { StockWarningsAlert } from '@/components/budgets/stock-warnings-alert'
 import {
   ArrowLeft,
   Edit,
@@ -209,6 +210,9 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Stock warnings (informational only) */}
+          <StockWarningsAlert warnings={budget.stock_warnings} />
+
           {/* Customer */}
           <Card>
             <CardHeader>

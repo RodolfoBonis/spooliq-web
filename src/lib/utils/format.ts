@@ -82,6 +82,37 @@ export function formatWeight(grams: number): string {
 }
 
 /**
+ * Format a stock quantity in grams for display.
+ *
+ * - `< 1000 g` (absolute) → grouped grams, e.g. "999 g", "-150 g".
+ * - `>= 1000 g` (absolute) → kilograms with 2 decimals, e.g. "1,23 kg".
+ *
+ * @param grams Weight in grams (may be negative).
+ */
+export function formatGrams(grams: number): string {
+  const abs = Math.abs(grams)
+  if (abs >= 1000) {
+    const kg = grams / 1000
+    return `${kg.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} kg`
+  }
+  return `${grams.toLocaleString('pt-BR')} g`
+}
+
+/**
+ * Format a signed stock movement in grams, always showing the sign.
+ * Positive values are prefixed with "+"; negatives keep their "-".
+ *
+ * @param grams Signed weight in grams.
+ */
+export function formatGramsSigned(grams: number): string {
+  const formatted = formatGrams(grams)
+  return grams > 0 ? `+${formatted}` : formatted
+}
+
+/**
  * Get CSS style for color preview
  */
 export function getColorPreviewStyle(colorType: ColorType, colorData: ColorData): React.CSSProperties {
