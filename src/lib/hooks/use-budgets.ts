@@ -22,11 +22,12 @@ export function useBudgets(filters?: BudgetFilters) {
   })
 }
 
-export function useBudget(id: string) {
+export function useBudget(id: string, options?: { refetchOnMount?: boolean | 'always' }) {
   return useQuery({
     queryKey: ['budgets', id],
     queryFn: () => budgetService.getById(id),
     enabled: !!id,
+    ...options,
   })
 }
 

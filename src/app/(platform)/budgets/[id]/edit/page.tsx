@@ -16,7 +16,10 @@ import { ArrowLeft, AlertCircle, Lock, Copy } from 'lucide-react'
 export default function EditBudgetPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  const { data: budget, isLoading, error } = useBudget(id)
+  // Always refetch on mount and wait for it: the form reads its defaults once, so it
+  // must never initialize from a stale cached detail (edits in another tab, or a
+  // status that is no longer draft).
+  const { data: budget, isLoading, isFetchedAfterMount, error } = useBudget(id, { refetchOnMount: 'always' })
   const { mutate: duplicateBudget, isPending: isDuplicating } = useDuplicateBudget()
 
   const handleDuplicate = () => {
@@ -27,7 +30,7 @@ export default function EditBudgetPage({ params }: { params: Promise<{ id: strin
     })
   }
 
-  if (isLoading) {
+  if (isLoading || (!isFetchedAfterMount && !error)) {
     return (
       <div className="container max-w-5xl py-6">
         <Skeleton className="h-10 w-64 mb-6" />

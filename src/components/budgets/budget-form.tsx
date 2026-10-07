@@ -221,7 +221,9 @@ export function BudgetForm({ mode, budgetId, initialValues, initialSelectedFilam
       if (!budgetId) return
       const payload: UpdateBudgetDTO = {
         name: data.name,
-        description: data.description?.trim() ? data.description : undefined,
+        // Empty text is sent as '' (not undefined) so clearing a field persists:
+        // an absent field means "unchanged" on PUT.
+        description: data.description?.trim() ? data.description : '',
         customer_id: data.customer_id,
         profile_id: data.profile_id || undefined,
         machine_preset_id: data.machine_preset_id || undefined,
@@ -230,8 +232,8 @@ export function BudgetForm({ mode, budgetId, initialValues, initialSelectedFilam
         include_energy_cost: data.include_energy_cost,
         include_waste_cost: data.include_waste_cost,
         delivery_days: data.delivery_days,
-        payment_terms: data.payment_terms?.trim() ? data.payment_terms : undefined,
-        notes: data.notes?.trim() ? data.notes : undefined,
+        payment_terms: data.payment_terms?.trim() ? data.payment_terms : '',
+        notes: data.notes?.trim() ? data.notes : '',
         items: formItemsToPayload(data.items),
         // Explicit null-producing rules for tax/discount/shipping/validity.
         ...buildBudgetUpdatePayload(data),
