@@ -21,7 +21,6 @@ import {
   Eye,
   Edit,
   Trash2,
-  FileText,
   Download,
 } from 'lucide-react'
 
@@ -40,6 +39,9 @@ interface BudgetCardProps {
 
 export function BudgetCard({ budget, onDelete, onGeneratePDF }: BudgetCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+
+  // The API only allows editing drafts, so hide the edit entry for every other status.
+  const isEditable = budget.status === 'draft'
 
   const handleDelete = () => {
     onDelete?.(budget.id)
@@ -89,12 +91,14 @@ export function BudgetCard({ budget, onDelete, onGeneratePDF }: BudgetCardProps)
                     Ver detalhes
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href={`/budgets/${budget.id}/edit`}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Editar
-                  </Link>
-                </DropdownMenuItem>
+                {isEditable && (
+                  <DropdownMenuItem asChild>
+                    <Link href={`/budgets/${budget.id}/edit`}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Editar
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={() => onGeneratePDF?.(budget.id, budget.name, false)}
                 >
@@ -179,4 +183,3 @@ export function BudgetCard({ budget, onDelete, onGeneratePDF }: BudgetCardProps)
     </>
   )
 }
-

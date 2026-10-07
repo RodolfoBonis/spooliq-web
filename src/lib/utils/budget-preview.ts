@@ -1,6 +1,7 @@
 import type { DeepPartialSkipArrayKey } from 'react-hook-form'
 import type { CreateBudgetFormData } from '@/lib/validations/budget'
 import type { CreateBudgetDTO, PreviewBudgetDTO } from '@/services/budget-service'
+import { endOfDayISO } from '@/lib/utils/format'
 
 type WatchedBudgetForm = DeepPartialSkipArrayKey<CreateBudgetFormData>
 
@@ -19,6 +20,29 @@ type BudgetPricingPayload = {
   tax_rate: number | null
 }
 
+/**
+ * Update-time pricing payload. Unlike the create/preview payload, every nullable
+ * field is sent *explicitly* so the API applies the documented clear semantics:
+ *
+ * | Field                         | `null` means                         |
+ * |-------------------------------|--------------------------------------|
+ * | `tax_rate`                    | clear → use the company default      |
+ * | `discount_type`/`value`       | either `null` clears BOTH            |
+ * | `shipping_override`           | clear the manual override (cents)    |
+ * | `valid_until`                 | clear the validity date              |
+ *
+ * `discount_value` is therefore widened to allow `null` (vs. `undefined` on create).
+ */
+export type BudgetUpdatePricingPayload = {
+  include_machine_cost: boolean
+  discount_type: NonNullable<CreateBudgetDTO['discount_type']> | null
+  discount_value: number | null
+  include_shipping: boolean
+  shipping_override: number | null
+  tax_rate: number | null
+  valid_until: string | null
+}
+
 /** Non-negative integer from a possibly empty/NaN input value. */
 function toWholeNumber(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0
@@ -34,7 +58,7 @@ function toFiniteNumber(value: unknown): number | undefined {
 }
 
 /** Reais → integer cents (used for the manual shipping override input). */
-function reaisToCents(reais: number): number {
+export function reaisToCents(reais: number): number {
   return Math.round(reais * 100)
 }
 
@@ -67,6 +91,35 @@ export function buildBudgetPricingPayload(values: WatchedBudgetForm): BudgetPric
     include_shipping: includeShipping,
     shipping_override: shippingOverride,
     tax_rate: taxRate ?? null,
+  }
+}
+
+/**
+ * Builds the nullable pricing fields for `PUT /budgets/:id` from the edit form.
+ *
+ * Reuses {@link buildBudgetPricingPayload} for the shared reais→cents / percent /
+ * tax-default math, then makes the "clear" intents explicit so the API applies the
+ * documented update contract:
+ * - "Sem desconto" → `discount_type` AND `discount_value` both `null` (clears both);
+ * - "Usar padrão da empresa" (tax blank) → `tax_rate: null`;
+ * - shipping without a manual override → `shipping_override: null`;
+ * - empty validity → `valid_until: null`.
+ */
+export function buildBudgetUpdatePayload(values: WatchedBudgetForm): BudgetUpdatePricingPayload {
+  const pricing = buildBudgetPricingPayload(values)
+  // When no discount type is active, clear the value too (null, not undefined) so
+  // the API drops any previously stored discount. With a type set, an invalid/absent
+  // value falls back to null — the edit form's zod guards this before submit.
+  const discountValue = pricing.discount_type === null ? null : pricing.discount_value ?? null
+
+  return {
+    include_machine_cost: pricing.include_machine_cost,
+    discount_type: pricing.discount_type,
+    discount_value: discountValue,
+    include_shipping: pricing.include_shipping,
+    shipping_override: pricing.shipping_override,
+    tax_rate: pricing.tax_rate,
+    valid_until: endOfDayISO(values.valid_until) ?? null,
   }
 }
 

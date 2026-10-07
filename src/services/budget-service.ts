@@ -82,7 +82,21 @@ export interface CreateBudgetDTO {
   items: CreateBudgetItemDTO[]
 }
 
-export type UpdateBudgetDTO = Partial<CreateBudgetDTO>
+/**
+ * Body for `PUT /budgets/:id` (drafts only).
+ *
+ * Partial-update semantics: an omitted key is left unchanged. The nullable fields
+ * accept an explicit `null` to CLEAR the stored value (see `buildBudgetUpdatePayload`):
+ * - `tax_rate: null` → use the company default;
+ * - `discount_type`/`discount_value`: either `null` clears BOTH;
+ * - `shipping_override: null` → clear the manual override (otherwise cents);
+ * - `valid_until: null` → clear the validity date.
+ * `items`, when provided, REPLACES the whole items array.
+ */
+export type UpdateBudgetDTO = Partial<Omit<CreateBudgetDTO, 'discount_value' | 'valid_until'>> & {
+  discount_value?: number | null
+  valid_until?: string | null
+}
 
 /** Same body as create, but customer and name are optional (nothing is persisted). */
 export type PreviewBudgetDTO = Omit<CreateBudgetDTO, 'customer_id' | 'name'> & {
@@ -184,4 +198,3 @@ export const budgetService = {
     return data
   },
 }
-

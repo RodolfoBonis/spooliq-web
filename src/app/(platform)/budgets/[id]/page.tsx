@@ -161,12 +161,14 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link href={`/budgets/${id}/edit`}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Editar
-                  </Link>
-                </DropdownMenuItem>
+                {budget.status === 'draft' && (
+                  <DropdownMenuItem asChild>
+                    <Link href={`/budgets/${id}/edit`}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Editar
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={() => handleDownloadPDF(false)}
                   disabled={isGeneratingPDF}
