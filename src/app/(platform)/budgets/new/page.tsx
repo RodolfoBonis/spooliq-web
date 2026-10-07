@@ -24,7 +24,7 @@ import { useProfiles } from '@/lib/hooks/use-profiles'
 import { useDebouncedValue } from '@/lib/hooks/use-debounced-value'
 import { createBudgetSchema, type CreateBudgetFormData } from '@/lib/validations/budget'
 import { optionalNumber } from '@/lib/validations/preset'
-import { formatCurrency, getColorPreviewStyle } from '@/lib/utils/format'
+import { formatCurrency, getColorPreviewStyle, endOfDayISO } from '@/lib/utils/format'
 import { buildBudgetPreviewPayload, buildBudgetPricingPayload } from '@/lib/utils/budget-preview'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import {
@@ -100,6 +100,8 @@ export default function NewBudgetPage() {
       include_shipping: false,
       shipping_override: undefined,
       tax_rate: undefined,
+      valid_until: undefined,
+      payment_terms: '',
       items: [newItem(0)],
     },
   })
@@ -152,6 +154,18 @@ export default function NewBudgetPage() {
     if (!company) fetchCompany()
   }, [company, fetchCompany])
 
+  // Prefill payment terms from the company default when the field is still empty.
+  // Nicety only: the API also falls back to the company default on its own.
+  const didPrefillPaymentTerms = useRef(false)
+  useEffect(() => {
+    if (didPrefillPaymentTerms.current) return
+    const companyDefault = company?.default_payment_terms?.trim()
+    if (companyDefault && !form.getValues('payment_terms')?.trim()) {
+      didPrefillPaymentTerms.current = true
+      form.setValue('payment_terms', companyDefault)
+    }
+  }, [company, form])
+
   // Preselect the organization's default profile once profiles load.
   const didPreselectProfile = useRef(false)
   useEffect(() => {
@@ -178,6 +192,8 @@ export default function NewBudgetPage() {
         cost_preset_id: data.cost_preset_id || undefined,
         // Normalize the "Preço final" controls (discount 'none' → null, shipping reais → cents, etc.).
         ...buildBudgetPricingPayload(data),
+        // Date-only field → ISO datetime (end of day) or omit when blank.
+        valid_until: endOfDayISO(data.valid_until),
       },
       {
         onSuccess: () => {
@@ -1022,6 +1038,17 @@ export default function NewBudgetPage() {
                   placeholder="Ex: 7"
                   {...form.register('delivery_days', { setValueAs: optionalNumber })}
                 />
+              </div>
+              <div>
+                <Label htmlFor="valid_until">Válido até</Label>
+                <Input id="valid_until" type="date" {...form.register('valid_until')} />
+                <p className="text-xs text-neutral-500 mt-1">
+                  Opcional. Em branco, ao enviar o orçamento usamos a validade padrão da empresa
+                  {company?.default_quote_validity_days != null
+                    ? ` (${company.default_quote_validity_days} dias)`
+                    : ''}
+                  .
+                </p>
               </div>
             </div>
 

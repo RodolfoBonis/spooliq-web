@@ -1,6 +1,6 @@
 import { api } from '@/lib/api/client'
 import { buildListParams, toPage } from '@/lib/api/pagination'
-import type { Budget, BudgetItem, BudgetItemFilament, BudgetWithDetails } from '@/types/models'
+import type { Budget, BudgetItem, BudgetItemFilament, BudgetStatus, BudgetWithDetails } from '@/types/models'
 
 export interface BudgetFilters {
   page?: number
@@ -78,6 +78,7 @@ export interface CreateBudgetDTO {
   delivery_days?: number
   payment_terms?: string
   notes?: string
+  valid_until?: string // ISO 8601; quote expiration. Optional — API falls back to company default on send.
   items: CreateBudgetItemDTO[]
 }
 
@@ -98,8 +99,15 @@ export type BudgetPreview = Omit<
 }
 
 export interface UpdateBudgetStatusDTO {
-  status: 'sent' | 'approved' | 'rejected' | 'printing' | 'completed'
+  status: BudgetStatus
   notes?: string
+}
+
+/** Response of POST /budgets/:id/share (idempotent). */
+export interface ShareBudgetResponse {
+  public_token: string
+  status: BudgetStatus
+  valid_until: string | null
 }
 
 export const budgetService = {
@@ -152,6 +160,20 @@ export const budgetService = {
 
   async delete(id: string): Promise<void> {
     await api.delete(`/budgets/${id}`)
+  },
+
+  /**
+   * Create (or return the existing) public approval link for a budget.
+   * Idempotent: a draft is promoted to `sent` and the valid_until is resolved.
+   */
+  async share(id: string): Promise<ShareBudgetResponse> {
+    const { data } = await api.post<ShareBudgetResponse>(`/budgets/${id}/share`)
+    return data
+  },
+
+  /** Revoke the public approval link for a budget. */
+  async revokeShare(id: string): Promise<void> {
+    await api.delete(`/budgets/${id}/share`)
   },
 
   async generatePDF(id: string, force: boolean = false): Promise<Blob> {

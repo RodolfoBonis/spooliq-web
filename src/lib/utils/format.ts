@@ -285,3 +285,38 @@ export function getInitials(name: string): string {
   
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
 }
+
+/**
+ * Convert a date-only value from an <input type="date"> (YYYY-MM-DD) into an ISO
+ * 8601 datetime at the end of that local day. Returns undefined for empty/invalid
+ * input. Used for the budget "Válido até" field.
+ */
+export function endOfDayISO(dateOnly: string | null | undefined): string | undefined {
+  if (!dateOnly) return undefined
+  const date = new Date(`${dateOnly}T23:59:59`)
+  if (isNaN(date.getTime())) return undefined
+  return date.toISOString()
+}
+
+/**
+ * Convert an ISO 8601 datetime into the YYYY-MM-DD value expected by an
+ * <input type="date">. Returns '' for empty/invalid input.
+ */
+export function isoToDateInput(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (isNaN(date.getTime())) return ''
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+/**
+ * Format a sequential quote number for display, e.g. 1 -> "#0001".
+ * Returns '' when the number is missing (older budgets created before Phase 4B).
+ */
+export function formatQuoteNumber(quoteNumber: number | null | undefined): string {
+  if (quoteNumber == null) return ''
+  return `#${String(quoteNumber).padStart(4, '0')}`
+}
