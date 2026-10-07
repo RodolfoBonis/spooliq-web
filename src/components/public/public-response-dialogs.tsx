@@ -69,6 +69,7 @@ function ApproveDialog({
   }, [open])
 
   const onSubmit = (data: PublicApproveFormData) => {
+    if (approve.isPending) return
     approve.mutate({ name: data.name }, { onSuccess: () => onClose() })
   }
 
@@ -143,6 +144,7 @@ function RejectDialog({
   }, [open])
 
   const onSubmit = (data: PublicRejectFormData) => {
+    if (reject.isPending) return
     const reason = data.reason?.trim()
     reject.mutate(
       { name: data.name, reason: reason ? reason : undefined },

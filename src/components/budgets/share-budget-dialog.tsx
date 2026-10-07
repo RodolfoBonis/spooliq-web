@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import { useShareBudget, useRevokeBudgetShare } from '@/lib/hooks/use-budgets'
+import { formatQuoteNumberPadded } from '@/lib/utils/format'
 import { normalizeWhatsappNumber, buildWhatsappLink } from '@/lib/utils/whatsapp'
 import type { BudgetWithDetails } from '@/types/models'
 import { Copy, Loader2, MessageCircle, Link2Off, RefreshCw } from 'lucide-react'
@@ -29,22 +30,14 @@ export function ShareBudgetDialog({ budget, open, onOpenChange }: ShareBudgetDia
   const revoke = useRevokeBudgetShare()
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false)
 
-  // The token comes from the budget itself (already shared) or from the share response
-  // we just received. Sharing is idempotent, so re-opening a shared budget reuses it.
+  // The budget is the source of truth. `share.data` only bridges the gap between the
+  // POST succeeding and the budget refetch landing (reset on revoke so it can't go stale).
   const token = budget.public_token ?? share.data?.public_token ?? null
   const publicUrl =
     token && typeof window !== 'undefined' ? `${window.location.origin}/orcamento/${token}` : ''
+  const isDraft = budget.status === 'draft'
 
-  // Ensure a link exists when the dialog opens. Idempotent on the API; guarded here so
-  // we only fire once per open while there is no token yet.
-  useEffect(() => {
-    if (!open) return
-    if (budget.public_token || share.data || share.isPending || share.isError) return
-    share.mutate(budget.id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, budget.public_token, budget.id])
-
-  const quoteLabel = budget.quote_number ? String(budget.quote_number).padStart(4, '0') : null
+  const quoteLabel = formatQuoteNumberPadded(budget.quote_number) || null
   const whatsappNumber = normalizeWhatsappNumber(budget.customer?.phone)
   const whatsappText = quoteLabel
     ? `Olá ${budget.customer?.name ?? ''}, segue o orçamento nº ${quoteLabel}: ${publicUrl}`.trim()
@@ -64,6 +57,7 @@ export function ShareBudgetDialog({ budget, open, onOpenChange }: ShareBudgetDia
   const handleRevoke = () => {
     revoke.mutate(budget.id, {
       onSuccess: () => {
+        share.reset()
         setShowRevokeConfirm(false)
         onOpenChange(false)
       },
@@ -81,26 +75,27 @@ export function ShareBudgetDialog({ budget, open, onOpenChange }: ShareBudgetDia
             </DialogDescription>
           </DialogHeader>
 
-          {share.isPending && !token && (
-            <div className="flex items-center justify-center gap-2 py-8 text-sm text-neutral-500">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Gerando link...
-            </div>
-          )}
-
-          {share.isError && !token && (
+          {!token && (
             <div className="space-y-3 py-4">
-              <p className="text-sm text-red-600">
-                Não foi possível gerar o link de compartilhamento.
-              </p>
+              {share.isError && (
+                <p className="text-sm text-red-600">
+                  Não foi possível gerar o link de compartilhamento.
+                </p>
+              )}
+              {isDraft && (
+                <p className="text-sm text-neutral-600">O orçamento será marcado como Enviado.</p>
+              )}
               <Button
-                variant="outline"
                 className="w-full"
                 onClick={() => share.mutate(budget.id)}
                 disabled={share.isPending}
               >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Tentar novamente
+                {share.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : share.isError ? (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                ) : null}
+                {share.isError ? 'Tentar novamente' : 'Gerar link'}
               </Button>
             </div>
           )}

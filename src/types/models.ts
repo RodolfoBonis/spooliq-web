@@ -715,7 +715,7 @@ export interface PublicBudgetCompany {
 }
 
 export interface PublicBudget {
-  quote_number: number
+  quote_number: number | null
   name: string
   description?: string | null
   status: BudgetStatus

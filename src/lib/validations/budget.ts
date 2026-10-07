@@ -82,7 +82,7 @@ export const updateBudgetSchema = createBudgetObject.partial()
 
 // Update Status schema
 export const updateBudgetStatusSchema = z.object({
-  status: z.enum(['sent', 'approved', 'rejected', 'printing', 'completed']),
+  status: z.enum(['sent', 'approved', 'rejected', 'printing', 'completed', 'expired', 'cancelled']),
   notes: z.string().optional(),
 })
 

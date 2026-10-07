@@ -316,6 +316,11 @@ export function isoToDateInput(iso: string | null | undefined): string {
  * Format a sequential quote number for display, e.g. 1 -> "#0001".
  * Returns '' when the number is missing (older budgets created before Phase 4B).
  */
+export function formatQuoteNumberPadded(quoteNumber: number | null | undefined): string {
+  if (quoteNumber == null) return ''
+  return String(quoteNumber).padStart(4, '0')
+}
+
 export function formatQuoteNumber(quoteNumber: number | null | undefined): string {
   if (quoteNumber == null) return ''
   return `#${String(quoteNumber).padStart(4, '0')}`

@@ -15,12 +15,13 @@ import {
 import { StatusBadge } from '@/components/budgets/status-badge'
 import { PublicResponseDialogs, type ResponseMode } from '@/components/public/public-response-dialogs'
 import { useDownloadPublicPDF } from '@/lib/hooks/use-public-budget'
-import { formatCurrency, formatDateShort } from '@/lib/utils/format'
+import { formatCurrency, formatDateShort, formatQuoteNumberPadded } from '@/lib/utils/format'
 import {
   buildWhatsappLink,
   buildInstagramLink,
   buildWebsiteLink,
   normalizeWhatsappNumber,
+  sanitizeHttpUrl,
 } from '@/lib/utils/whatsapp'
 import type { PublicBudget } from '@/types/models'
 import {
@@ -46,7 +47,7 @@ interface PublicBudgetViewProps {
 
 export function PublicBudgetView({ budget, token }: PublicBudgetViewProps) {
   const [responseMode, setResponseMode] = useState<ResponseMode>(null)
-  const download = useDownloadPublicPDF(token, budget.quote_number)
+  const download = useDownloadPublicPDF(token, budget.quote_number ?? undefined)
 
   const hasResponse = !!budget.customer_response_at
   const isRejected = budget.status === 'rejected' || !!budget.rejection_reason
@@ -60,7 +61,7 @@ export function PublicBudgetView({ budget, token }: PublicBudgetViewProps) {
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">
-            Orçamento nº {String(budget.quote_number).padStart(4, '0')}
+            Orçamento{budget.quote_number != null ? ` nº ${formatQuoteNumberPadded(budget.quote_number)}` : ''}
           </h1>
           {budget.name && <p className="text-neutral-600">{budget.name}</p>}
         </div>
@@ -163,16 +164,17 @@ function CompanyHeader({ company }: { company: PublicBudget['company'] }) {
   const whatsapp = normalizeWhatsappNumber(company.whatsapp)
   const instagram = buildInstagramLink(company.instagram)
   const website = buildWebsiteLink(company.website)
+  const logoUrl = sanitizeHttpUrl(company.logo_url)
   const location = [company.city, company.state].filter(Boolean).join(' / ')
 
   return (
     <Card>
       <CardContent className="flex flex-col items-center gap-4 py-6 text-center sm:flex-row sm:items-center sm:text-left">
         <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-white">
-          {company.logo_url ? (
+          {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={company.logo_url}
+              src={logoUrl}
               alt={company.trade_name || company.name}
               className="h-full w-full object-contain"
             />
@@ -250,26 +252,6 @@ function StatusBanner({
   hasResponse: boolean
   isRejected: boolean
 }) {
-  if (hasResponse) {
-    const who = budget.customer_response_name
-    const when = formatDateShort(budget.customer_response_at)
-    if (isRejected) {
-      return (
-        <Banner tone="red" icon={<XCircle className="h-5 w-5" />}>
-          <p className="font-semibold">Orçamento recusado{who ? ` por ${who}` : ''} em {when}</p>
-          {budget.rejection_reason && (
-            <p className="mt-1 text-sm">Motivo: {budget.rejection_reason}</p>
-          )}
-        </Banner>
-      )
-    }
-    return (
-      <Banner tone="green" icon={<CheckCircle className="h-5 w-5" />}>
-        <p className="font-semibold">Orçamento aprovado{who ? ` por ${who}` : ''} em {when}</p>
-      </Banner>
-    )
-  }
-
   if (budget.status === 'cancelled') {
     return (
       <Banner tone="muted" icon={<Ban className="h-5 w-5" />}>
@@ -286,6 +268,26 @@ function StatusBanner({
           não pode mais ser respondido.
         </p>
         <p className="mt-1 text-sm">Entre em contato com a empresa para gerar um novo orçamento.</p>
+      </Banner>
+    )
+  }
+
+  if (hasResponse) {
+    const who = budget.customer_response_name
+    const when = formatDateShort(budget.customer_response_at)
+    if (isRejected) {
+      return (
+        <Banner tone="red" icon={<XCircle className="h-5 w-5" />}>
+          <p className="font-semibold">Orçamento recusado{who ? ` por ${who}` : ''} em {when}</p>
+          {budget.rejection_reason && (
+            <p className="mt-1 text-sm">Motivo: {budget.rejection_reason}</p>
+          )}
+        </Banner>
+      )
+    }
+    return (
+      <Banner tone="green" icon={<CheckCircle className="h-5 w-5" />}>
+        <p className="font-semibold">Orçamento aprovado{who ? ` por ${who}` : ''} em {when}</p>
       </Banner>
     )
   }

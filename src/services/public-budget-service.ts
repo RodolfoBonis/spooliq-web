@@ -1,4 +1,4 @@
-import axios, { type AxiosInstance } from 'axios'
+import axios, { isAxiosError, type AxiosInstance } from 'axios'
 import type { PublicBudget } from '@/types/models'
 
 /**
@@ -36,11 +36,23 @@ export const publicBudgetService = {
 
   /** Download the budget PDF (public). */
   async getPDF(token: string): Promise<Blob> {
-    const { data } = await publicApi.get(
-      `/public/budgets/${encodeURIComponent(token)}/pdf`,
-      { responseType: 'blob' }
-    )
-    return data
+    try {
+      const { data } = await publicApi.get<Blob>(
+        `/public/budgets/${encodeURIComponent(token)}/pdf`,
+        { responseType: 'blob' }
+      )
+      return data
+    } catch (error) {
+      // With responseType 'blob' the error body is a Blob; parse it so error codes work.
+      if (isAxiosError(error) && error.response?.data instanceof Blob) {
+        try {
+          error.response.data = JSON.parse(await error.response.data.text())
+        } catch {
+          // not JSON; keep as is
+        }
+      }
+      throw error
+    }
   },
 
   /** Approve the budget. Returns the updated public view. */
