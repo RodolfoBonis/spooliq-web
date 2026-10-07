@@ -27,6 +27,7 @@ import {
   useDeleteBudget,
   useUpdateBudgetStatus,
   useGeneratePDF,
+  useDuplicateBudget,
 } from '@/lib/hooks/use-budgets'
 import {
   formatCurrency,
@@ -52,6 +53,7 @@ import {
   Share2,
   CalendarClock,
   MessageSquare,
+  Copy,
 } from 'lucide-react'
 import type { BudgetStatus, BudgetWithDetails } from '@/types/models'
 
@@ -69,6 +71,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
   const { mutate: deleteBudget } = useDeleteBudget()
   const { mutate: updateStatus } = useUpdateBudgetStatus()
   const { mutate: generatePDF, isPending: isGeneratingPDF } = useGeneratePDF()
+  const { mutate: duplicateBudget, isPending: isDuplicating } = useDuplicateBudget()
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showShareDialog, setShowShareDialog] = useState(false)
@@ -127,6 +130,14 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
     generatePDF({ id: id, name: budget.name, force })
   }
 
+  const handleDuplicate = () => {
+    duplicateBudget(id, {
+      onSuccess: (created) => {
+        router.push(`/budgets/${created.id}/edit`)
+      },
+    })
+  }
+
   const customerInitials = budget.customer.name
     .split(' ')
     .map((n) => n[0])
@@ -161,12 +172,14 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link href={`/budgets/${id}/edit`}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Editar
-                  </Link>
-                </DropdownMenuItem>
+                {budget.status === 'draft' && (
+                  <DropdownMenuItem asChild>
+                    <Link href={`/budgets/${id}/edit`}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Editar
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={() => handleDownloadPDF(false)}
                   disabled={isGeneratingPDF}
@@ -180,6 +193,10 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                 >
                   <Download className="mr-2 h-4 w-4" />
                   {isGeneratingPDF ? 'Gerando PDF...' : 'Gerar Novo PDF'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDuplicate} disabled={isDuplicating}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  {isDuplicating ? 'Duplicando...' : 'Duplicar'}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem

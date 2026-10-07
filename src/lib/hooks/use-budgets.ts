@@ -22,11 +22,12 @@ export function useBudgets(filters?: BudgetFilters) {
   })
 }
 
-export function useBudget(id: string) {
+export function useBudget(id: string, options?: { refetchOnMount?: boolean | 'always' }) {
   return useQuery({
     queryKey: ['budgets', id],
     queryFn: () => budgetService.getById(id),
     enabled: !!id,
+    ...options,
   })
 }
 
@@ -76,6 +77,25 @@ export function useUpdateBudget() {
     },
     onError: (error: unknown) => {
       toast.error(getApiErrorMessage(error, 'Erro ao atualizar orçamento', { byCode: BUDGET_ERROR_CODES }))
+    },
+  })
+}
+
+/**
+ * Duplicate a budget as a new draft. Invalidates the list so the copy shows up;
+ * callers navigate to the returned budget's edit page.
+ */
+export function useDuplicateBudget() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => budgetService.duplicate(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budgets'] })
+      toast.success('Orçamento duplicado como rascunho.')
+    },
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao duplicar orçamento'))
     },
   })
 }

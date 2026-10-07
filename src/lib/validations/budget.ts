@@ -21,6 +21,10 @@ export const budgetItemSchema = z.object({
   post_processing_minutes: z.number().min(0, 'Tempo de pós-processamento deve ser 0 ou mais').optional(),
   support_removal_minutes: z.number().min(0, 'Tempo de remoção de suporte deve ser 0 ou mais').optional(),
   additional_notes: z.string().optional(),
+  // Hidden passthrough: an existing item's own cost preset. No UI — it is carried
+  // from the loaded budget so editing never silently changes that item's pricing.
+  // New items leave it undefined and fall back to the budget-level cost preset.
+  cost_preset_id: z.string().uuid().optional(),
   filaments: z.array(budgetItemFilamentSchema).min(1, 'Adicione pelo menos um filamento'),
   order: z.number().min(0),
 })
@@ -92,4 +96,3 @@ export type BudgetItemFormData = z.infer<typeof budgetItemSchema>
 export type CreateBudgetFormData = z.infer<typeof createBudgetSchema>
 export type UpdateBudgetFormData = z.infer<typeof updateBudgetSchema>
 export type UpdateBudgetStatusFormData = z.infer<typeof updateBudgetStatusSchema>
-
