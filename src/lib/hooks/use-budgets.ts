@@ -1,8 +1,10 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { budgetService } from '@/services/budget-service'
-import type { BudgetFilters, BudgetPreview, CreateBudgetDTO, PreviewBudgetDTO, UpdateBudgetDTO, UpdateBudgetStatusDTO } from '@/services/budget-service'
+import type { BudgetFilters, BudgetPreview, CreateBudgetDTO, PreviewBudgetDTO, ShareBudgetResponse, UpdateBudgetDTO, UpdateBudgetStatusDTO } from '@/services/budget-service'
 import { toast } from 'sonner'
 import { getApiErrorMessage } from '@/lib/api/errors'
+import { LOW_STOCK_QUERY_KEY } from '@/hooks/dashboard/use-low-stock'
+import { SHARE_ERROR_CODES } from '@/lib/budgets/error-codes'
 
 /**
  * User-facing overrides for budget error `code`s. The API already returns pt-BR `message`s,
@@ -87,6 +89,12 @@ export function useUpdateBudgetStatus() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['budgets'] })
       queryClient.invalidateQueries({ queryKey: ['budgets', variables.id] })
+      if (variables.data.status === 'completed') {
+        // Completing a budget consumes stock.
+        queryClient.invalidateQueries({ queryKey: ['filaments'] })
+        queryClient.invalidateQueries({ queryKey: ['stock-movements'] })
+        queryClient.invalidateQueries({ queryKey: LOW_STOCK_QUERY_KEY })
+      }
       toast.success('Status do orçamento atualizado!')
     },
     onError: (error: unknown) => {
@@ -130,6 +138,44 @@ export function useGeneratePDF() {
     },
     onError: (error: unknown) => {
       toast.error(getApiErrorMessage(error, 'Erro ao gerar PDF'))
+    },
+  })
+}
+
+/**
+ * Create (or fetch) the public approval link for a budget. Sharing a draft promotes
+ * it to `sent`, so both the list and the detail queries are invalidated.
+ */
+export function useShareBudget() {
+  const queryClient = useQueryClient()
+
+  return useMutation<ShareBudgetResponse, unknown, string>({
+    mutationFn: (id: string) => budgetService.share(id),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ['budgets'] })
+      queryClient.invalidateQueries({ queryKey: ['budgets', id] })
+    },
+    onError: (error: unknown) => {
+      toast.error(
+        getApiErrorMessage(error, 'Erro ao compartilhar orçamento', { byCode: SHARE_ERROR_CODES })
+      )
+    },
+  })
+}
+
+/** Revoke the public approval link for a budget. */
+export function useRevokeBudgetShare() {
+  const queryClient = useQueryClient()
+
+  return useMutation<void, unknown, string>({
+    mutationFn: (id: string) => budgetService.revokeShare(id),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ['budgets'] })
+      queryClient.invalidateQueries({ queryKey: ['budgets', id] })
+      toast.success('Link do orçamento revogado.')
+    },
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Erro ao revogar o link do orçamento'))
     },
   })
 }

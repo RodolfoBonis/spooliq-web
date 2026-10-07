@@ -98,7 +98,7 @@ function BudgetsPageContent() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
             <Input
-              placeholder="Buscar por nome ou cliente..."
+              placeholder="Buscar por nº, nome ou cliente..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value)
@@ -123,6 +123,8 @@ function BudgetsPageContent() {
               <SelectItem value="sent">Enviado</SelectItem>
               <SelectItem value="approved">Aprovado</SelectItem>
               <SelectItem value="rejected">Rejeitado</SelectItem>
+              <SelectItem value="expired">Expirado</SelectItem>
+              <SelectItem value="cancelled">Cancelado</SelectItem>
               <SelectItem value="printing">Imprimindo</SelectItem>
               <SelectItem value="completed">Concluído</SelectItem>
             </SelectContent>

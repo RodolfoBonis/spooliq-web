@@ -10,6 +10,8 @@ import type {
   TopFilamentsData,
   TopMaterialsData,
   GoalsAlertsData,
+  LowStockData,
+  LowStockFilament,
   PeriodFilter,
 } from '@/types/dashboard';
 
@@ -74,5 +76,11 @@ export const dashboardApi = {
   async getGoalsAlerts(): Promise<GoalsAlertsData> {
     const { data } = await api.get<GoalsAlertsData>('/dashboard/goals-alerts');
     return data;
+  },
+
+  async getLowStock(): Promise<LowStockData> {
+    // Tolerant to both the `{ data: [...] }` envelope and a bare array.
+    const { data } = await api.get<LowStockData | LowStockFilament[]>('/dashboard/low-stock');
+    return Array.isArray(data) ? { data } : (data ?? { data: [] });
   },
 };
