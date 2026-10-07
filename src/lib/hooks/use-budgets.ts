@@ -3,6 +3,7 @@ import { budgetService } from '@/services/budget-service'
 import type { BudgetFilters, BudgetPreview, CreateBudgetDTO, PreviewBudgetDTO, ShareBudgetResponse, UpdateBudgetDTO, UpdateBudgetStatusDTO } from '@/services/budget-service'
 import { toast } from 'sonner'
 import { getApiErrorMessage } from '@/lib/api/errors'
+import { LOW_STOCK_QUERY_KEY } from '@/hooks/dashboard/use-low-stock'
 import { SHARE_ERROR_CODES } from '@/lib/budgets/error-codes'
 
 /**
@@ -88,6 +89,12 @@ export function useUpdateBudgetStatus() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['budgets'] })
       queryClient.invalidateQueries({ queryKey: ['budgets', variables.id] })
+      if (variables.data.status === 'completed') {
+        // Completing a budget consumes stock.
+        queryClient.invalidateQueries({ queryKey: ['filaments'] })
+        queryClient.invalidateQueries({ queryKey: ['stock-movements'] })
+        queryClient.invalidateQueries({ queryKey: LOW_STOCK_QUERY_KEY })
+      }
       toast.success('Status do orçamento atualizado!')
     },
     onError: (error: unknown) => {

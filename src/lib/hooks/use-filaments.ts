@@ -38,6 +38,7 @@ export function useCreateFilament() {
     mutationFn: filamentService.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['filaments'] })
+      queryClient.invalidateQueries({ queryKey: LOW_STOCK_QUERY_KEY })
     },
   })
 }
@@ -64,6 +65,7 @@ export function useDeleteFilament() {
     mutationFn: filamentService.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['filaments'] })
+      queryClient.invalidateQueries({ queryKey: LOW_STOCK_QUERY_KEY })
     },
   })
 }

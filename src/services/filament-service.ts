@@ -98,8 +98,7 @@ function normalizeFilament(raw: RawFilament): Filament {
  * Centralizes the "clear threshold" semantics for the stock settings part of a
  * filament update. An empty threshold is sent as `null`.
  *
- * NOTE: the final clear-semantics (null vs 0) are still being confirmed with the
- * API. Keeping this isolated here means switching to `0` is a one-line change.
+ * API contract: `null` clears the threshold and `0` sets a zero threshold.
  */
 export function buildStockSettingsPayload(input: {
   track_stock?: boolean

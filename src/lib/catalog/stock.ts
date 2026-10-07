@@ -15,5 +15,6 @@ export const STOCK_MOVEMENT_LABELS: Record<StockMovementType, string> = {
 export const STOCK_ERROR_BY_CODE: Record<string, string> = {
   filament_not_found: 'Filamento não encontrado.',
   invalid_movement_type: 'Tipo de movimentação inválido.',
+  invalid_low_stock_threshold: 'Limite de estoque baixo inválido.',
   invalid_movement_grams: 'Quantidade em gramas inválida para este tipo de movimentação.',
 }

@@ -94,8 +94,8 @@ export function formatGrams(grams: number): string {
   if (abs >= 1000) {
     const kg = grams / 1000
     return `${kg.toLocaleString('pt-BR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 3,
     })} kg`
   }
   return `${grams.toLocaleString('pt-BR')} g`

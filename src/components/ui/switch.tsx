@@ -17,6 +17,7 @@ export interface SwitchProps
 const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
   ({ className, checked = false, onCheckedChange, disabled, ...props }, ref) => (
     <button
+      {...props}
       type="button"
       role="switch"
       aria-checked={checked}
@@ -29,7 +30,6 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
         checked ? "bg-primary" : "bg-input",
         className
       )}
-      {...props}
     >
       <span
         className={cn(

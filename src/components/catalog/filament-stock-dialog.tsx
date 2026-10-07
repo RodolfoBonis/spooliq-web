@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
@@ -64,6 +64,11 @@ export function FilamentStockDialog({ filament, open, onOpenChange }: FilamentSt
   // Stock settings (kept local so the user can edit before saving).
   const [trackStock, setTrackStock] = useState(false)
   const [threshold, setThreshold] = useState('')
+  const [thresholdError, setThresholdError] = useState<string | null>(null)
+  // True while the user has unsaved edits to the settings (blocks background re-sync).
+  const settingsDirty = useRef(false)
+  // Filament id whose settings were last initialized from fresh server data.
+  const initializedFor = useRef<string | null>(null)
 
   // Purchase helper: spools × weight per spool fills the grams field.
   const [spools, setSpools] = useState('')
@@ -83,11 +88,27 @@ export function FilamentStockDialog({ filament, open, onOpenChange }: FilamentSt
     setThreshold(
       filament.low_stock_threshold_grams != null ? String(filament.low_stock_threshold_grams) : ''
     )
+    setThresholdError(null)
+    settingsDirty.current = false
+    initializedFor.current = null
     setSpools('')
     setSpoolWeight('')
     form.reset({ type: 'purchase', grams: undefined, note: '', unit_price_reais: undefined })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, filament?.id])
+
+  // Re-sync settings from the live filament once it loads, so stale row data is never saved.
+  useEffect(() => {
+    if (!open || !liveFilament || liveFilament.id !== filament?.id) return
+    if (initializedFor.current === liveFilament.id || settingsDirty.current) return
+    initializedFor.current = liveFilament.id
+    setTrackStock(liveFilament.track_stock ?? false)
+    setThreshold(
+      liveFilament.low_stock_threshold_grams != null
+        ? String(liveFilament.low_stock_threshold_grams)
+        : ''
+    )
+  }, [open, liveFilament, filament?.id])
 
   if (!filament) return null
 
@@ -97,10 +118,11 @@ export function FilamentStockDialog({ filament, open, onOpenChange }: FilamentSt
 
   const handleSaveSettings = () => {
     const parsedThreshold = threshold.trim() === '' ? '' : Number(threshold)
-    if (parsedThreshold !== '' && (Number.isNaN(parsedThreshold) || parsedThreshold < 0)) {
-      toast.error('Informe um limite de estoque válido (em gramas).')
+    if (parsedThreshold !== '' && (!Number.isInteger(parsedThreshold) || parsedThreshold < 0)) {
+      setThresholdError('Informe um número inteiro de gramas maior ou igual a zero.')
       return
     }
+    setThresholdError(null)
 
     updateFilament(
       {
@@ -111,9 +133,16 @@ export function FilamentStockDialog({ filament, open, onOpenChange }: FilamentSt
         }),
       },
       {
-        onSuccess: () => toast.success('Configurações de estoque salvas!'),
+        onSuccess: () => {
+          settingsDirty.current = false
+          toast.success('Configurações de estoque salvas!')
+        },
         onError: (error: unknown) =>
-          toast.error(getApiErrorMessage(error, 'Erro ao salvar configurações de estoque')),
+          toast.error(
+            getApiErrorMessage(error, 'Erro ao salvar configurações de estoque', {
+              byCode: STOCK_ERROR_BY_CODE,
+            })
+          ),
       }
     )
   }
@@ -123,6 +152,8 @@ export function FilamentStockDialog({ filament, open, onOpenChange }: FilamentSt
     const weight = Number(nextWeight)
     if (count > 0 && weight > 0) {
       form.setValue('grams', Math.round(count * weight), { shouldValidate: true })
+    } else {
+      form.setValue('grams', undefined as unknown as number)
     }
   }
 
@@ -145,12 +176,10 @@ export function FilamentStockDialog({ filament, open, onOpenChange }: FilamentSt
         onSuccess: (result) => {
           toast.success('Movimentação registrada!')
           // Any manual movement turns stock tracking on.
-          setTrackStock(result.filament.track_stock)
-          setThreshold(
-            result.filament.low_stock_threshold_grams != null
-              ? String(result.filament.low_stock_threshold_grams)
-              : ''
-          )
+          // Leave the threshold input alone, and don't clobber unsaved settings edits.
+          if (!settingsDirty.current) {
+            setTrackStock(result.filament.track_stock)
+          }
           form.reset({ type: data.type, grams: undefined, note: '', unit_price_reais: undefined })
           setSpools('')
           setSpoolWeight('')
@@ -207,7 +236,11 @@ export function FilamentStockDialog({ filament, open, onOpenChange }: FilamentSt
                   Acompanhe o saldo e receba alertas de estoque baixo.
                 </p>
               </div>
-              <Switch id="track-stock" checked={trackStock} onCheckedChange={setTrackStock} />
+              <Switch id="track-stock" checked={trackStock} onCheckedChange={(checked) => {
+                  settingsDirty.current = true
+                  setTrackStock(checked)
+                }}
+              />
             </div>
 
             <div className="space-y-2">
@@ -220,8 +253,13 @@ export function FilamentStockDialog({ filament, open, onOpenChange }: FilamentSt
                 inputMode="numeric"
                 placeholder="Ex: 200"
                 value={threshold}
-                onChange={(e) => setThreshold(e.target.value)}
+                onChange={(e) => {
+                  settingsDirty.current = true
+                  setThreshold(e.target.value)
+                  setThresholdError(null)
+                }}
               />
+              {thresholdError && <p className="text-sm text-error">{thresholdError}</p>}
               <p className="text-xs text-neutral-500">Deixe em branco para não receber alertas.</p>
             </div>
 
@@ -249,10 +287,16 @@ export function FilamentStockDialog({ filament, open, onOpenChange }: FilamentSt
                 <Select
                   value={movementType}
                   onValueChange={(value) =>
+                  {
                     form.setValue('type', value as StockMovementFormData['type'], {
                       shouldValidate: form.formState.isSubmitted,
                     })
+                    // The price only applies to purchases; never keep a hidden stale value.
+                    if (value !== 'purchase') {
+                      form.setValue('unit_price_reais', undefined)
+                    }
                   }
+                }
                 >
                   <SelectTrigger id="movement-type">
                     <SelectValue />
@@ -332,6 +376,7 @@ export function FilamentStockDialog({ filament, open, onOpenChange }: FilamentSt
                     <CurrencyInput
                       id="unit-price"
                       showCurrencySymbol
+                      value={form.watch('unit_price_reais')}
                       onChange={(value) =>
                         form.setValue('unit_price_reais', value > 0 ? value : undefined)
                       }
