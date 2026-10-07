@@ -167,6 +167,12 @@ export const budgetService = {
     return data
   },
 
+  /** Duplicate a budget as a new draft; returns the created budget (201). */
+  async duplicate(id: string): Promise<BudgetWithDetails> {
+    const { data } = await api.post<BudgetWithDetails>(`/budgets/${id}/duplicate`)
+    return data
+  },
+
   async updateStatus(id: string, statusData: UpdateBudgetStatusDTO): Promise<Budget> {
     const { data } = await api.patch<Budget>(`/budgets/${id}/status`, statusData)
     return data

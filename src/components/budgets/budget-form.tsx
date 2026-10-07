@@ -26,7 +26,8 @@ import { createBudgetSchema, type CreateBudgetFormData } from '@/lib/validations
 import { optionalNumber } from '@/lib/validations/preset'
 import { formatCurrency, getColorPreviewStyle, endOfDayISO } from '@/lib/utils/format'
 import { buildBudgetPreviewPayload, buildBudgetPricingPayload, buildBudgetUpdatePayload } from '@/lib/utils/budget-preview'
-import type { CreateBudgetItemDTO, UpdateBudgetDTO } from '@/services/budget-service'
+import type { UpdateBudgetDTO } from '@/services/budget-service'
+import { formItemsToPayload } from '@/lib/budgets/budget-form-mapping'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import {
   Select,
@@ -66,6 +67,7 @@ export function newBudgetItem(order: number): CreateBudgetFormData['items'][numb
     post_processing_minutes: 0,
     support_removal_minutes: 0,
     additional_notes: '',
+    cost_preset_id: undefined,
     filaments: [],
     order,
   }
@@ -92,35 +94,6 @@ function createDefaultValues(): CreateBudgetFormData {
     valid_until: undefined,
     payment_terms: '',
     items: [newBudgetItem(0)],
-  }
-}
-
-/** Map a form item to the API item DTO (used by the edit submit; items are replaced wholesale). */
-function toItemPayload(
-  item: CreateBudgetFormData['items'][number],
-  index: number
-): CreateBudgetItemDTO {
-  const trimmedOrUndefined = (value?: string) => (value && value.trim() ? value : undefined)
-  return {
-    model_3d_id: item.model_3d_id || undefined,
-    product_name: item.product_name,
-    product_description: trimmedOrUndefined(item.product_description),
-    product_quantity: item.product_quantity,
-    product_dimensions: trimmedOrUndefined(item.product_dimensions),
-    print_time_hours: item.print_time_hours,
-    print_time_minutes: item.print_time_minutes,
-    setup_time_minutes: item.setup_time_minutes,
-    manual_labor_minutes_total: item.manual_labor_minutes_total,
-    post_processing_minutes: item.post_processing_minutes ?? 0,
-    support_removal_minutes: item.support_removal_minutes ?? 0,
-    additional_notes: trimmedOrUndefined(item.additional_notes),
-    // API requires filament order >= 1; renumber from the current array position.
-    filaments: item.filaments.map((f, i) => ({
-      filament_id: f.filament_id,
-      quantity: f.quantity,
-      order: i + 1,
-    })),
-    order: index,
   }
 }
 
@@ -259,7 +232,7 @@ export function BudgetForm({ mode, budgetId, initialValues, initialSelectedFilam
         delivery_days: data.delivery_days,
         payment_terms: data.payment_terms?.trim() ? data.payment_terms : undefined,
         notes: data.notes?.trim() ? data.notes : undefined,
-        items: data.items.map(toItemPayload),
+        items: formItemsToPayload(data.items),
         // Explicit null-producing rules for tax/discount/shipping/validity.
         ...buildBudgetUpdatePayload(data),
       }
