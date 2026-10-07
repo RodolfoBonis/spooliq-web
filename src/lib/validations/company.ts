@@ -12,6 +12,11 @@ export const companySchema = z.object({
   city: z.string().optional(),
   state: z.string().length(2, 'Estado deve ter 2 caracteres').optional().or(z.literal('')),
   zip_code: z.string().optional(),
+  default_tax_rate: z
+    .number()
+    .min(0, 'Alíquota deve ser 0 ou maior')
+    .max(99.99, 'Alíquota deve ser no máximo 99,99%')
+    .optional(),
 })
 
 export type CompanyFormData = z.infer<typeof companySchema>

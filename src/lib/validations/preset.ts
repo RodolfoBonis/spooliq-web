@@ -63,6 +63,11 @@ export const costPresetSchema = z.object({
   post_processing_cost_per_hour: z.number().min(0, 'Custo de pós-processamento deve ser 0 ou maior'),
   support_removal_cost_per_hour: z.number().min(0, 'Custo de remoção de suporte deve ser 0 ou maior'),
   quality_control_cost_per_item: z.number().min(0, 'Custo de controle de qualidade deve ser 0 ou maior'),
+  failure_rate_percentage: z
+    .number()
+    .min(0, 'Taxa de falha deve ser 0 ou maior')
+    .max(100, 'Taxa de falha deve ser no máximo 100%'),
+  waste_grams_per_color_change: z.number().min(0, 'Desperdício por troca de cor deve ser 0 ou maior'),
 })
 
 export type CostPresetFormData = z.infer<typeof costPresetSchema>

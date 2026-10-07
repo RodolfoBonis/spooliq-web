@@ -44,6 +44,7 @@ export default function CompanySettingsPage() {
       city: '',
       state: '',
       zip_code: '',
+      default_tax_rate: undefined,
     },
   })
 
@@ -65,6 +66,7 @@ export default function CompanySettingsPage() {
         city: company.city || '',
         state: company.state || '',
         zip_code: company.zip_code || '',
+        default_tax_rate: company.default_tax_rate ?? undefined,
       })
       if (company.logo_url) {
         setLogoPreview(company.logo_url)
@@ -356,6 +358,47 @@ export default function CompanySettingsPage() {
                     </FormItem>
                   )}
                 />
+              </div>
+
+              <Separator />
+
+              {/* Fiscal */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-neutral-900">Fiscal</h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="default_tax_rate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Alíquota padrão de imposto (%)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="99.99"
+                            placeholder="Ex: 6"
+                            value={field.value ?? ''}
+                            onChange={(e) =>
+                              field.onChange(
+                                e.target.value === '' ? 0 : Number(e.target.value)
+                              )
+                            }
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Aplicada por dentro do preço; ex.: Simples Nacional 6%. Usada nos
+                          orçamentos quando nenhuma alíquota específica é informada.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end">

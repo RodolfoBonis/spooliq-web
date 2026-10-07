@@ -1,8 +1,23 @@
 import type { DeepPartialSkipArrayKey } from 'react-hook-form'
 import type { CreateBudgetFormData } from '@/lib/validations/budget'
-import type { PreviewBudgetDTO } from '@/services/budget-service'
+import type { CreateBudgetDTO, PreviewBudgetDTO } from '@/services/budget-service'
 
 type WatchedBudgetForm = DeepPartialSkipArrayKey<CreateBudgetFormData>
+
+/**
+ * Budget-level pricing fields shared by create and preview payloads.
+ *
+ * All keys are required (not optional) so that spreading this over the raw form
+ * values fully overrides the form-only `discount_type: 'none'` placeholder.
+ */
+type BudgetPricingPayload = {
+  include_machine_cost: boolean
+  discount_type: NonNullable<CreateBudgetDTO['discount_type']> | null
+  discount_value: number | undefined
+  include_shipping: boolean
+  shipping_override: number | null
+  tax_rate: number | null
+}
 
 /** Non-negative integer from a possibly empty/NaN input value. */
 function toWholeNumber(value: unknown): number {
@@ -11,6 +26,48 @@ function toWholeNumber(value: unknown): number {
 
 function toPositiveNumber(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0
+}
+
+/** Finite number (including 0) or undefined. */
+function toFiniteNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
+/** Reais → integer cents (used for the manual shipping override input). */
+function reaisToCents(reais: number): number {
+  return Math.round(reais * 100)
+}
+
+/**
+ * Maps the form's "Preço final" controls to the API pricing fields, shared by the
+ * server preview and the final create payload so both stay in sync.
+ *
+ * - `discount_type: 'none'` (form-only) → no discount (`null`, value omitted);
+ * - `shipping_override` is entered in REAIS and converted to cents here;
+ * - `tax_rate` left blank means "use the company default" → `null`.
+ */
+export function buildBudgetPricingPayload(values: WatchedBudgetForm): BudgetPricingPayload {
+  const discountType = values.discount_type && values.discount_type !== 'none' ? values.discount_type : null
+  const rawDiscount = discountType ? toPositiveNumber(values.discount_value) : undefined
+  // Preview only: omit values the API would reject (form zod blocks submit anyway).
+  const discountValue = discountType === 'percent' && rawDiscount !== undefined && rawDiscount > 100 ? undefined : rawDiscount
+
+  const includeShipping = values.include_shipping ?? false
+  const overrideReais = toFiniteNumber(values.shipping_override)
+  const shippingOverride =
+    includeShipping && overrideReais !== undefined && overrideReais > 0 ? reaisToCents(overrideReais) : null
+
+  const rawTax = toFiniteNumber(values.tax_rate)
+  const taxRate = rawTax !== undefined && rawTax >= 0 && rawTax <= 99.99 ? rawTax : undefined
+
+  return {
+    include_machine_cost: values.include_machine_cost ?? true,
+    discount_type: discountType,
+    discount_value: discountValue,
+    include_shipping: includeShipping,
+    shipping_override: shippingOverride,
+    tax_rate: taxRate ?? null,
+  }
 }
 
 /**
@@ -41,6 +98,8 @@ export function buildBudgetPreviewPayload(values: WatchedBudgetForm): PreviewBud
       print_time_minutes: Math.min(59, toWholeNumber(item.print_time_minutes)),
       setup_time_minutes: toWholeNumber(item.setup_time_minutes),
       manual_labor_minutes_total: toWholeNumber(item.manual_labor_minutes_total),
+      post_processing_minutes: toWholeNumber(item.post_processing_minutes),
+      support_removal_minutes: toWholeNumber(item.support_removal_minutes),
       filaments,
       order: index,
     })
@@ -56,6 +115,7 @@ export function buildBudgetPreviewPayload(values: WatchedBudgetForm): PreviewBud
     customer_id: values.customer_id || undefined,
     include_energy_cost: values.include_energy_cost ?? true,
     include_waste_cost: values.include_waste_cost ?? true,
+    ...buildBudgetPricingPayload(values),
     items,
   }
 }
