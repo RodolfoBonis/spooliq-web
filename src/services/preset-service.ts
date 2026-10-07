@@ -184,6 +184,8 @@ export interface CreateCostPresetDTO {
   post_processing_cost_per_hour?: number // reais
   support_removal_cost_per_hour?: number // reais
   quality_control_cost_per_item?: number // reais
+  failure_rate_percentage?: number // 0-100
+  waste_grams_per_color_change?: number // grams per AMS color change (default 15)
 }
 
 export type UpdateCostPresetDTO = Partial<CreateCostPresetDTO>
