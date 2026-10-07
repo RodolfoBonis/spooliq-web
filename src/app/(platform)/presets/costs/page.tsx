@@ -62,6 +62,8 @@ const EMPTY_FORM: CostPresetFormData = {
   post_processing_cost_per_hour: 0,
   support_removal_cost_per_hour: 0,
   quality_control_cost_per_item: 0,
+  failure_rate_percentage: 0,
+  waste_grams_per_color_change: 15,
 }
 
 type CurrencyField = Extract<
@@ -118,6 +120,8 @@ export default function CostPresetsPage() {
       post_processing_cost_per_hour: preset.post_processing_cost_per_hour,
       support_removal_cost_per_hour: preset.support_removal_cost_per_hour,
       quality_control_cost_per_item: preset.quality_control_cost_per_item,
+      failure_rate_percentage: preset.failure_rate_percentage ?? 0,
+      waste_grams_per_color_change: preset.waste_grams_per_color_change ?? 15,
     })
     setIsDialogOpen(true)
   }
@@ -258,6 +262,7 @@ export default function CostPresetsPage() {
                   <TableHead>Margem Lucro</TableHead>
                   <TableHead>Embalagem</TableHead>
                   <TableHead>Envio Base</TableHead>
+                  <TableHead>Taxa de Falha</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -278,6 +283,7 @@ export default function CostPresetsPage() {
                     <TableCell>{preset.profit_margin_percentage}%</TableCell>
                     <TableCell>{formatCurrencyFromReais(preset.packaging_cost_per_item)}</TableCell>
                     <TableCell>{formatCurrencyFromReais(preset.shipping_cost_base)}</TableCell>
+                    <TableCell>{preset.failure_rate_percentage ?? 0}%</TableCell>
                     <TableCell className="text-right">
                       <PresetRowActions
                         itemLabel={costPresetName(preset)}
@@ -390,6 +396,52 @@ export default function CostPresetsPage() {
             </div>
 
             {renderCurrencyField('quality_control_cost_per_item', 'Controle Qualidade/Item')}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="failure_rate_percentage">Taxa de Falha (%)</Label>
+                <Input
+                  id="failure_rate_percentage"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  aria-describedby="failure_rate_percentage-help"
+                  aria-invalid={form.formState.errors.failure_rate_percentage ? true : undefined}
+                  {...form.register('failure_rate_percentage', { valueAsNumber: true })}
+                />
+                {form.formState.errors.failure_rate_percentage ? (
+                  <p className="text-sm text-red-600 mt-1">
+                    {form.formState.errors.failure_rate_percentage.message}
+                  </p>
+                ) : (
+                  <p id="failure_rate_percentage-help" className="text-xs text-neutral-500 mt-1">
+                    Percentual de peças refugadas/refeitas; é somado ao custo como provisão.
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="waste_grams_per_color_change">Desperdício por Troca de Cor (g)</Label>
+                <Input
+                  id="waste_grams_per_color_change"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  aria-describedby="waste_grams_per_color_change-help"
+                  aria-invalid={form.formState.errors.waste_grams_per_color_change ? true : undefined}
+                  {...form.register('waste_grams_per_color_change', { valueAsNumber: true })}
+                />
+                {form.formState.errors.waste_grams_per_color_change ? (
+                  <p className="text-sm text-red-600 mt-1">
+                    {form.formState.errors.waste_grams_per_color_change.message}
+                  </p>
+                ) : (
+                  <p id="waste_grams_per_color_change-help" className="text-xs text-neutral-500 mt-1">
+                    Filamento purgado a cada troca de cor no AMS (padrão: 15 g).
+                  </p>
+                )}
+              </div>
+            </div>
 
             <DialogFooter>
               <Button

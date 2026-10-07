@@ -25,8 +25,17 @@ import { useDebouncedValue } from '@/lib/hooks/use-debounced-value'
 import { createBudgetSchema, type CreateBudgetFormData } from '@/lib/validations/budget'
 import { optionalNumber } from '@/lib/validations/preset'
 import { formatCurrency, getColorPreviewStyle } from '@/lib/utils/format'
-import { buildBudgetPreviewPayload } from '@/lib/utils/budget-preview'
-import { Plus, Trash2, Save, ArrowLeft, Settings, Users, Info, Clock, Loader2, FileUp } from 'lucide-react'
+import { buildBudgetPreviewPayload, buildBudgetPricingPayload } from '@/lib/utils/budget-preview'
+import { CurrencyInput } from '@/components/ui/currency-input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { useCompanyStore } from '@/stores/company-store'
+import { Plus, Trash2, Save, ArrowLeft, Settings, Users, Info, Clock, Loader2, FileUp, Receipt, Scissors, Sparkles } from 'lucide-react'
 import type { Filament } from '@/types/models'
 import { toast } from 'sonner'
 import { SliceImportDialog, SliceModelPrompt, type SliceApplyPayload } from '@/components/slicer'
@@ -53,6 +62,8 @@ function newItem(order: number): CreateBudgetFormData['items'][number] {
     print_time_minutes: 0,
     setup_time_minutes: 0,
     manual_labor_minutes_total: 0,
+    post_processing_minutes: 0,
+    support_removal_minutes: 0,
     additional_notes: '',
     filaments: [],
     order,
@@ -63,6 +74,9 @@ export default function NewBudgetPage() {
   const router = useRouter()
   const { mutate: createBudget, isPending } = useCreateBudget()
   const { data: profiles } = useProfiles()
+  const company = useCompanyStore((state) => state.company)
+  const fetchCompany = useCompanyStore((state) => state.fetchCompany)
+  const defaultTaxRate = company?.default_tax_rate
   const [selectedFilaments, setSelectedFilaments] = useState<Record<string, Filament>>({})
   // Target is kept while the dialog animates closed so it doesn't flip modes mid-exit.
   const [sliceImport, setSliceImport] = useState<{ itemIndex: number; modelId?: string } | null>(null)
@@ -80,6 +94,12 @@ export default function NewBudgetPage() {
       cost_preset_id: undefined,
       include_energy_cost: true,
       include_waste_cost: true,
+      include_machine_cost: true,
+      discount_type: 'none',
+      discount_value: undefined,
+      include_shipping: false,
+      shipping_override: undefined,
+      tax_rate: undefined,
       items: [newItem(0)],
     },
   })
@@ -127,6 +147,11 @@ export default function NewBudgetPage() {
     [form, profiles]
   )
 
+  // Load the company so the tax field can show its default alíquota.
+  useEffect(() => {
+    if (!company) fetchCompany()
+  }, [company, fetchCompany])
+
   // Preselect the organization's default profile once profiles load.
   const didPreselectProfile = useRef(false)
   useEffect(() => {
@@ -151,6 +176,8 @@ export default function NewBudgetPage() {
         ...data,
         profile_id: data.profile_id || undefined,
         cost_preset_id: data.cost_preset_id || undefined,
+        // Normalize the "Preço final" controls (discount 'none' → null, shipping reais → cents, etc.).
+        ...buildBudgetPricingPayload(data),
       },
       {
         onSuccess: () => {
@@ -670,6 +697,52 @@ export default function NewBudgetPage() {
                         )}
                       </div>
                     </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {/* Post-processing time */}
+                      <div className="bg-white p-3 rounded-lg border">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Label className="flex items-center gap-2">
+                            <Sparkles className="h-3 w-3" />
+                            Pós-processamento (min)
+                          </Label>
+                        </div>
+                        <Input
+                          type="number"
+                          min="0"
+                          placeholder="Ex: 20"
+                          aria-describedby={`post-processing-help-${itemIndex}`}
+                          {...form.register(`items.${itemIndex}.post_processing_minutes`, {
+                            setValueAs: (v: unknown) => optionalNumber(v) ?? 0,
+                          })}
+                        />
+                        <p id={`post-processing-help-${itemIndex}`} className="text-xs text-neutral-500 mt-1">
+                          Lixamento, pintura e acabamento (total, todas as unidades)
+                        </p>
+                      </div>
+
+                      {/* Support removal time */}
+                      <div className="bg-white p-3 rounded-lg border">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Label className="flex items-center gap-2">
+                            <Scissors className="h-3 w-3" />
+                            Remoção de suporte (min)
+                          </Label>
+                        </div>
+                        <Input
+                          type="number"
+                          min="0"
+                          placeholder="Ex: 10"
+                          aria-describedby={`support-removal-help-${itemIndex}`}
+                          {...form.register(`items.${itemIndex}.support_removal_minutes`, {
+                            setValueAs: (v: unknown) => optionalNumber(v) ?? 0,
+                          })}
+                        />
+                        <p id={`support-removal-help-${itemIndex}`} className="text-xs text-neutral-500 mt-1">
+                          Remoção de suportes e brim (total, todas as unidades)
+                        </p>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -718,6 +791,210 @@ export default function NewBudgetPage() {
           <Plus className="mr-2 h-4 w-4" />
           Adicionar Item
         </Button>
+
+        {/* Final price controls (Phase 4A) */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-primary-600" aria-hidden="true" />
+              Preço final
+            </CardTitle>
+            <CardDescription>
+              Ajustes comerciais aplicados sobre o custo calculado (desconto, frete e impostos).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Machine wear */}
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="include_machine_cost"
+                checked={values.include_machine_cost ?? true}
+                onCheckedChange={(checked) =>
+                  form.setValue('include_machine_cost', checked === true)
+                }
+              />
+              <div className="space-y-1 leading-none">
+                <label htmlFor="include_machine_cost" className="text-sm font-medium">
+                  Incluir desgaste da máquina
+                </label>
+                <p className="text-xs text-neutral-500">
+                  Rateia o custo de depreciação/uso da impressora (preset de máquina) no orçamento.
+                </p>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Discount */}
+            <div className="space-y-3">
+              <Label>Desconto</Label>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Select
+                    value={values.discount_type ?? 'none'}
+                    onValueChange={(value) => {
+                      const next = value as 'none' | 'percent' | 'fixed'
+                      form.setValue('discount_type', next, {
+                        shouldValidate: form.formState.isSubmitted,
+                      })
+                      // Reset the value so e.g. 10% never silently becomes R$10.
+                      form.setValue('discount_value', undefined, {
+                        shouldValidate: form.formState.isSubmitted,
+                      })
+                    }}
+                  >
+                    <SelectTrigger id="discount_type" aria-label="Tipo de desconto">
+                      <SelectValue placeholder="Nenhum" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      <SelectItem value="percent">Percentual (%)</SelectItem>
+                      <SelectItem value="fixed">Valor fixo (R$)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {values.discount_type === 'percent' && (
+                  <div>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      placeholder="Ex: 10"
+                      aria-label="Percentual de desconto"
+                      value={values.discount_value ?? ''}
+                      onChange={(e) =>
+                        form.setValue(
+                          'discount_value',
+                          e.target.value === '' ? undefined : Number(e.target.value),
+                          { shouldValidate: form.formState.isSubmitted }
+                        )
+                      }
+                    />
+                    {form.formState.errors.discount_value && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {form.formState.errors.discount_value.message}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {values.discount_type === 'fixed' && (
+                  <div>
+                    <CurrencyInput
+                      showCurrencySymbol
+                      aria-label="Valor fixo do desconto em reais"
+                      value={values.discount_value || 0}
+                      onChange={(value) =>
+                        form.setValue('discount_value', value, {
+                          shouldValidate: form.formState.isSubmitted,
+                        })
+                      }
+                    />
+                    {form.formState.errors.discount_value && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {form.formState.errors.discount_value.message}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Shipping */}
+            <div className="space-y-3">
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="include_shipping"
+                  checked={values.include_shipping ?? false}
+                  onCheckedChange={(checked) =>
+                    form.setValue('include_shipping', checked === true)
+                  }
+                />
+                <div className="space-y-1 leading-none">
+                  <label htmlFor="include_shipping" className="text-sm font-medium">
+                    Incluir frete
+                  </label>
+                  <p className="text-xs text-neutral-500">
+                    Soma o frete ao total do orçamento.
+                  </p>
+                </div>
+              </div>
+              {values.include_shipping && (
+                <div className="md:max-w-xs">
+                  <Label htmlFor="shipping_override">Valor manual do frete (R$)</Label>
+                  <CurrencyInput
+                    id="shipping_override"
+                    showCurrencySymbol
+                    aria-describedby="shipping_override-help"
+                    value={values.shipping_override || 0}
+                    onChange={(value) =>
+                      form.setValue('shipping_override', value || undefined, {
+                        shouldValidate: form.formState.isSubmitted,
+                      })
+                    }
+                  />
+                  <p id="shipping_override-help" className="text-xs text-neutral-500 mt-1">
+                    Deixe em branco (R$ 0,00) para o sistema calcular o frete automaticamente.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Tax rate */}
+            <div className="md:max-w-xs">
+              <Label htmlFor="tax_rate">Alíquota de imposto (%)</Label>
+              <Input
+                id="tax_rate"
+                type="number"
+                min="0"
+                max="99.99"
+                step="0.01"
+                aria-describedby="tax_rate-help"
+                placeholder={
+                  defaultTaxRate != null
+                    ? `Padrão da empresa: ${defaultTaxRate}%`
+                    : 'Ex: 6'
+                }
+                value={values.tax_rate ?? ''}
+                onChange={(e) =>
+                  form.setValue(
+                    'tax_rate',
+                    e.target.value === '' ? undefined : Number(e.target.value),
+                    { shouldValidate: form.formState.isSubmitted }
+                  )
+                }
+              />
+              {form.formState.errors.tax_rate ? (
+                <p className="text-sm text-red-600 mt-1">
+                  {form.formState.errors.tax_rate.message}
+                </p>
+              ) : (
+                <p id="tax_rate-help" className="text-xs text-neutral-500 mt-1">
+                  Aplicada por dentro do preço. Deixe em branco para usar o padrão da empresa
+                  {defaultTaxRate != null ? ` (${defaultTaxRate}%)` : ''}.
+                </p>
+              )}
+              {values.tax_rate !== undefined && (
+                <Button
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0 mt-1 text-xs"
+                  onClick={() =>
+                    form.setValue('tax_rate', undefined, {
+                      shouldValidate: form.formState.isSubmitted,
+                    })
+                  }
+                >
+                  Usar padrão da empresa
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Cost Preview Card */}
         <BudgetPreviewCard

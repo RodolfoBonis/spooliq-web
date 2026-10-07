@@ -13,6 +13,7 @@ export interface UpdateCompanyDTO {
   city?: string
   state?: string
   zip_code?: string
+  default_tax_rate?: number // % applied "por dentro" to budgets by default
 }
 
 export const companyService = {
