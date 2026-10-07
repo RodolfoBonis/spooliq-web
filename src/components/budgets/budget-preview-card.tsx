@@ -21,12 +21,39 @@ interface BudgetPreviewCardProps {
   error: unknown
 }
 
+/** Treats undefined/missing cost fields (pre-deploy API) as 0. */
+function n(value: number | undefined): number {
+  return value ?? 0
+}
+
 function Row({ label, value, className }: { label: string; value: number; className?: string }) {
   return (
     <>
       <dt className="text-neutral-600">{label}</dt>
       <dd className={className ?? 'text-right text-neutral-900'}>{formatCurrency(value)}</dd>
     </>
+  )
+}
+
+function SummaryRow({
+  label,
+  value,
+  negative = false,
+  valueClassName,
+}: {
+  label: React.ReactNode
+  value: number
+  negative?: boolean
+  valueClassName?: string
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <dt className="text-neutral-600">{label}</dt>
+      <dd className={valueClassName ?? 'text-neutral-900'}>
+        {negative ? '− ' : ''}
+        {formatCurrency(value)}
+      </dd>
+    </div>
   )
 }
 
@@ -44,8 +71,14 @@ function ItemBreakdown({ item, name }: { item: PreviewItem; name: string }) {
         {item.filament_cost > 0 && <Row label="Filamento" value={item.filament_cost} />}
         {item.waste_cost > 0 && <Row label="Desperdício" value={item.waste_cost} />}
         {item.energy_cost > 0 && <Row label="Energia" value={item.energy_cost} />}
+        {!!item.machine_cost && <Row label="Desgaste da máquina" value={item.machine_cost} />}
         {item.setup_cost > 0 && <Row label="Setup" value={item.setup_cost} />}
         {item.manual_labor_cost > 0 && <Row label="Mão de obra" value={item.manual_labor_cost} />}
+        {!!item.post_processing_cost && <Row label="Pós-processamento" value={item.post_processing_cost} />}
+        {!!item.support_removal_cost && <Row label="Remoção de suporte" value={item.support_removal_cost} />}
+        {!!item.packaging_cost && <Row label="Embalagem" value={item.packaging_cost} />}
+        {!!item.quality_control_cost && <Row label="Controle de qualidade" value={item.quality_control_cost} />}
+        {!!item.failure_cost && <Row label="Falhas" value={item.failure_cost} />}
         <Row label="Custo do item" value={item.item_total_cost} className="text-right font-medium" />
         {item.sale_unit_price !== undefined && (
           <Row
@@ -68,9 +101,25 @@ export function BudgetPreviewCard({
   isUpdating,
   error,
 }: BudgetPreviewCardProps) {
+  // Direct costs subtotal (before overhead/profit). Includes the Phase 4A cost lines.
   const subtotal = preview
-    ? preview.filament_cost + preview.waste_cost + preview.energy_cost + preview.setup_cost + preview.labor_cost
+    ? n(preview.filament_cost) +
+      n(preview.waste_cost) +
+      n(preview.energy_cost) +
+      n(preview.machine_cost) +
+      n(preview.setup_cost) +
+      n(preview.labor_cost) +
+      n(preview.post_processing_cost) +
+      n(preview.packaging_cost) +
+      n(preview.quality_control_cost) +
+      n(preview.failure_cost)
     : 0
+  const discountLabel =
+    preview?.discount_type === 'percent' && preview.discount_value != null
+      ? `Desconto (${preview.discount_value}%)`
+      : 'Desconto'
+  const taxLabel =
+    preview?.tax_rate_applied != null ? `Impostos (${preview.tax_rate_applied}%)` : 'Impostos'
   const presetNames = preview
     ? [
         preview.profile?.name && `Perfil: ${preview.profile.name}`,
@@ -161,17 +210,27 @@ export function BudgetPreviewCard({
                 <dd className="font-semibold">{formatCurrency(subtotal)}</dd>
               </div>
               {preview.overhead_cost > 0 && (
-                <div className="flex items-center justify-between">
-                  <dt className="text-neutral-600">Overhead</dt>
-                  <dd className="text-neutral-900">{formatCurrency(preview.overhead_cost)}</dd>
-                </div>
+                <SummaryRow label="Overhead" value={preview.overhead_cost} />
               )}
               {preview.profit_amount > 0 && (
-                <div className="flex items-center justify-between">
-                  <dt className="text-neutral-600">Margem de lucro</dt>
-                  <dd className="text-green-700">{formatCurrency(preview.profit_amount)}</dd>
+                <SummaryRow label="Margem de lucro" value={preview.profit_amount} valueClassName="text-green-700" />
+              )}
+              {!!preview.base_price && (
+                <div className="flex items-center justify-between font-medium">
+                  <dt className="text-neutral-700">Preço base</dt>
+                  <dd className="text-neutral-900">{formatCurrency(preview.base_price)}</dd>
                 </div>
               )}
+              {!!preview.discount_amount && (
+                <SummaryRow
+                  label={discountLabel}
+                  value={preview.discount_amount}
+                  negative
+                  valueClassName="text-red-600"
+                />
+              )}
+              {!!preview.shipping_cost && <SummaryRow label="Frete" value={preview.shipping_cost} />}
+              {!!preview.tax_amount && <SummaryRow label={taxLabel} value={preview.tax_amount} />}
               <Separator />
               <div className="flex items-center justify-between pt-1">
                 <dt className="font-bold text-neutral-900">Total</dt>
