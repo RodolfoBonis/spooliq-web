@@ -31,7 +31,7 @@ permissions:
 
 jobs:
   prepare-release:
-    runs-on: ubuntu-latest
+    runs-on: arc-spooliq-web
     outputs:
       version: ${{ steps.version.outputs.version }}
       release_branch: ${{ steps.create_branch.outputs.branch }}

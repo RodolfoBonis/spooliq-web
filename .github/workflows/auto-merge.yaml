@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   dependabot-auto-merge:
-    runs-on: ubuntu-latest
+    runs-on: arc-spooliq-web
     if: github.actor == 'dependabot[bot]'
     steps:
       - name: Checkout code
@@ -44,7 +44,7 @@ jobs:
           gh pr comment "$PR_URL" --body "⚠️ This is a **major version update** and requires manual review before merging."
 
   backport-auto-merge:
-    runs-on: ubuntu-latest
+    runs-on: arc-spooliq-web
     if: startsWith(github.head_ref, 'backport/')
     steps:
       - name: Checkout code
@@ -88,7 +88,7 @@ jobs:
   # ensuring a conscious gate before production deployment.
 
   cleanup-branches:
-    runs-on: ubuntu-latest
+    runs-on: arc-spooliq-web
     if: github.event.pull_request.merged == true
     steps:
       - name: Delete merged branch

@@ -26,7 +26,7 @@ env:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: arc-spooliq-web
     outputs:
       version: ${{ steps.validate.outputs.version }}
       tag: ${{ steps.validate.outputs.tag }}
@@ -81,7 +81,7 @@ jobs:
 
   release:
     needs: validate
-    runs-on: [ubuntu-latest]
+    runs-on: [arc-spooliq-web]
     timeout-minutes: 30
     steps:
       - name: Record build start time
@@ -266,7 +266,7 @@ jobs:
 
   backport:
     needs: [validate, release]
-    runs-on: ubuntu-latest
+    runs-on: arc-spooliq-web
     if: success()
     steps:
       - name: Checkout main

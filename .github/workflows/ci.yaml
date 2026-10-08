@@ -32,7 +32,7 @@ env:
 jobs:
   lint:
     name: Lint Code
-    runs-on: [ubuntu-latest]
+    runs-on: [arc-spooliq-web]
     outputs:
       status: ${{ steps.lint.outputs.status }}
     steps:
@@ -102,7 +102,7 @@ jobs:
 
   test:
     name: Run Tests
-    runs-on: [ubuntu-latest]
+    runs-on: [arc-spooliq-web]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -139,7 +139,7 @@ jobs:
 
   build:
     name: Build Application
-    runs-on: [ubuntu-latest]
+    runs-on: [arc-spooliq-web]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -170,7 +170,7 @@ jobs:
 
   security_check:
     name: Security Vulnerability Check
-    runs-on: [ubuntu-latest]
+    runs-on: [arc-spooliq-web]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -213,7 +213,7 @@ jobs:
 
   notify_success:
     name: Notify Success
-    runs-on: [ubuntu-latest]
+    runs-on: [arc-spooliq-web]
     needs: [lint, test, build, security_check]
     if: ${{ needs.lint.result == 'success' && needs.test.result == 'success' && needs.build.result == 'success' && needs.security_check.result == 'success' }}
     steps:
@@ -276,7 +276,7 @@ jobs:
 
   notify_failure:
     name: Notify Failure
-    runs-on: ubuntu-latest
+    runs-on: arc-spooliq-web
     needs: [lint, test, build, security_check]
     if: ${{ needs.lint.result != 'success' || needs.test.result != 'success' || needs.build.result != 'success' || needs.security_check.result != 'success' }}
     steps:
