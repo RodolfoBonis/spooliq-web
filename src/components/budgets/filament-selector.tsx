@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { useFilaments } from '@/lib/hooks/use-filaments'
+import { useDebouncedValue } from '@/lib/hooks/use-debounced-value'
 import { getColorPreviewStyle, formatCurrency } from '@/lib/utils/format'
 import type { Filament } from '@/types/models'
 
@@ -33,14 +34,20 @@ export function FilamentSelector({
 }: FilamentSelectorProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
+  // Keeps the trigger label when the current search no longer contains the selection.
+  const [lastSelected, setLastSelected] = useState<Filament | null>(null)
+  const debouncedSearch = useDebouncedValue(search.trim(), 250)
 
-  const { data, isLoading } = useFilaments({ search, pageSize: 100 })
+  const { data, isLoading } = useFilaments({ search: debouncedSearch, pageSize: 100 })
   const filaments = (data?.data || []).filter((f) => !excludeIds.includes(f.id))
+  const total = data?.total ?? filaments.length
 
-  const selectedFilament = filaments.find((f) => f.id === value)
+  const selectedFilament =
+    filaments.find((f) => f.id === value) ?? (lastSelected?.id === value ? lastSelected : undefined)
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    // modal: inside a Dialog, a portalled non-modal Popover loses focus and can't scroll.
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -68,7 +75,8 @@ export function FilamentSelector({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[500px] p-0">
-        <Command>
+        {/* Filtering happens on the server (debounced q), not in cmdk. */}
+        <Command shouldFilter={false}>
           <CommandInput
             placeholder="Buscar filamento..."
             value={search}
@@ -76,14 +84,20 @@ export function FilamentSelector({
           />
           <CommandEmpty>
             <div className="py-6 text-center">
-              <p className="text-sm text-neutral-500">Nenhum filamento encontrado</p>
+              <p className="text-sm text-neutral-500">
+                {isLoading || search.trim() !== debouncedSearch
+                  ? 'Buscando…'
+                  : 'Nenhum filamento encontrado'}
+              </p>
             </div>
           </CommandEmpty>
           <CommandGroup className="max-h-[300px] overflow-y-auto">
             {filaments.map((filament) => (
               <CommandItem
                 key={filament.id}
+                value={filament.id}
                 onSelect={() => {
+                  setLastSelected(filament)
                   onValueChange(filament)
                   setOpen(false)
                 }}
@@ -118,6 +132,13 @@ export function FilamentSelector({
               </CommandItem>
             ))}
           </CommandGroup>
+          {filaments.length > 0 && (
+            <div className="border-t px-3 py-2 text-xs text-neutral-500" aria-live="polite">
+              {total > filaments.length
+                ? `Mostrando ${filaments.length} de ${total} filamentos — refine a busca`
+                : `${filaments.length} ${filaments.length === 1 ? 'filamento' : 'filamentos'}`}
+            </div>
+          )}
         </Command>
       </PopoverContent>
     </Popover>

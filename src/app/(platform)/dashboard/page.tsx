@@ -12,6 +12,7 @@ import { OperationalInsights } from '@/components/dashboard/operational-insights
 import { TopFilamentsChart } from '@/components/dashboard/top-filaments-chart';
 import { TopMaterialsChart } from '@/components/dashboard/top-materials-chart';
 import { GoalsSection } from '@/components/dashboard/goals-section';
+import { LowStockCard } from '@/components/dashboard/low-stock-card';
 import { exportDashboardToPDF, exportDashboardToPNG } from '@/lib/dashboard/export-pdf';
 import { Separator } from '@/components/ui/separator';
 
@@ -91,6 +92,12 @@ export default function DashboardPage() {
         <h2 id="catalog-heading" className="sr-only">Catálogo mais utilizado</h2>
         <TopFilamentsChart />
         <TopMaterialsChart />
+      </section>
+
+      {/* STOCK CONTROL */}
+      <section className="grid gap-6 lg:grid-cols-2" aria-labelledby="stock-heading">
+        <h2 id="stock-heading" className="sr-only">Controle de estoque</h2>
+        <LowStockCard />
       </section>
 
       <Separator />

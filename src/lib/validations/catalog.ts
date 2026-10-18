@@ -63,3 +63,34 @@ export const updateFilamentSchema = filamentSchema.partial()
 
 export type FilamentFormData = z.infer<typeof filamentSchema>
 
+// Stock Movement Schema (Phase 4C)
+export const stockMovementSchema = z
+  .object({
+    type: z.enum(['purchase', 'adjustment', 'waste']),
+    grams: z
+      .number({ invalid_type_error: 'Informe a quantidade em gramas' })
+      .int('Use um valor inteiro em gramas'),
+    note: z.string().max(500, 'Máximo de 500 caracteres').optional(),
+    /** Purchase-only price per kg, in REAIS (converted to cents before sending). */
+    unit_price_reais: z.number().positive('Preço deve ser positivo').optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.type === 'adjustment') {
+      if (!data.grams || data.grams === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['grams'],
+          message: 'Use um valor diferente de zero',
+        })
+      }
+    } else if (!data.grams || data.grams <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['grams'],
+        message: 'Informe uma quantidade maior que zero',
+      })
+    }
+  })
+
+export type StockMovementFormData = z.infer<typeof stockMovementSchema>
+

@@ -2,7 +2,7 @@
 
 export type PeriodFilter = '7d' | '30d' | '3m' | '6m' | '1y' | 'all';
 
-export type BudgetStatus = 'draft' | 'sent' | 'approved' | 'rejected' | 'printing' | 'completed';
+export type BudgetStatus = 'draft' | 'sent' | 'approved' | 'rejected' | 'printing' | 'completed' | 'expired' | 'cancelled';
 
 // ============================================================================
 // TIER 1: Overview Metrics (matches backend entities.OverviewResponse)
@@ -187,6 +187,25 @@ export interface Alert {
 export interface GoalsAlertsData {
   goals: Goal[];
   alerts: Alert[];
+}
+
+// ============================================================================
+// Low Stock (Phase 4C) — matches GET /dashboard/low-stock
+// ============================================================================
+
+export interface LowStockFilament {
+  id: string;
+  name: string;
+  color: string;
+  color_hex?: string;
+  brand_name?: string;
+  material_name?: string;
+  stock_grams: number;
+  low_stock_threshold_grams: number;
+}
+
+export interface LowStockData {
+  data: LowStockFilament[];
 }
 
 // ============================================================================

@@ -68,7 +68,7 @@ export function Model3DCombobox({ id, value, onChange, customerId, disabled }: M
 
   return (
     <div className="flex items-center gap-1">
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal>
         <PopoverTrigger asChild>
           <Button
             id={id}
