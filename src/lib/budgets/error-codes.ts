@@ -18,5 +18,7 @@ export const PUBLIC_BUDGET_ERROR_CODES = {
   budget_already_responded: 'Este orçamento já foi respondido.',
   budget_expired: 'Este orçamento expirou e não pode mais ser respondido.',
   budget_not_available: 'Este orçamento não está mais disponível.',
+  budget_under_review:
+    'Este orçamento está sendo revisado. Você receberá a nova versão neste mesmo link em breve.',
   rate_limited: 'Muitas tentativas. Aguarde alguns instantes e tente novamente.',
 } as const
