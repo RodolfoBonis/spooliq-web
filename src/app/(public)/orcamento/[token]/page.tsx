@@ -1,11 +1,10 @@
 'use client'
 
 import { use } from 'react'
-import { isAxiosError } from 'axios'
 import { usePublicBudget } from '@/lib/hooks/use-public-budget'
 import { PublicBudgetView } from '@/components/public/public-budget-view'
 import { Skeleton } from '@/components/ui/skeleton'
-import { FileQuestion, Clock, Ban, AlertCircle, type LucideIcon } from 'lucide-react'
+import { resolveErrorScreen } from '@/lib/budgets/public-error-screen'
 
 export default function PublicBudgetPage({
   params,
@@ -36,66 +35,6 @@ function PublicLoading() {
       <Skeleton className="mt-4 h-40 w-full" />
     </div>
   )
-}
-
-interface ErrorScreen {
-  icon: LucideIcon
-  title: string
-  description: string
-}
-
-function resolveErrorScreen(error: unknown): ErrorScreen {
-  const status = isAxiosError(error) ? error.response?.status : undefined
-  const data = isAxiosError(error) ? (error.response?.data as { code?: string } | undefined) : undefined
-  const code = data?.code
-
-  if (status === 404 || code === 'public_budget_not_found') {
-    return {
-      icon: FileQuestion,
-      title: 'Orçamento não encontrado',
-      description:
-        'O link pode estar incorreto ou ter sido revogado. Confira o endereço recebido ou entre em contato com a empresa.',
-    }
-  }
-
-  if (status === 410 || code === 'budget_expired') {
-    return {
-      icon: Clock,
-      title: 'Orçamento expirado',
-      description:
-        'Este orçamento não está mais disponível. Entre em contato com a empresa para gerar um novo.',
-    }
-  }
-
-  if (code === 'budget_already_responded') {
-    return {
-      icon: Ban,
-      title: 'Orçamento já respondido',
-      description: 'Este orçamento já foi aprovado ou recusado e não aceita novas respostas.',
-    }
-  }
-
-  if (status === 409 || code === 'budget_not_available') {
-    return {
-      icon: Ban,
-      title: 'Orçamento indisponível',
-      description: 'Este orçamento não está mais disponível para visualização.',
-    }
-  }
-
-  if (status === 429 || code === 'rate_limited') {
-    return {
-      icon: AlertCircle,
-      title: 'Muitas tentativas',
-      description: 'Aguarde alguns instantes e tente novamente.',
-    }
-  }
-
-  return {
-    icon: AlertCircle,
-    title: 'Não foi possível carregar o orçamento',
-    description: 'Ocorreu um erro inesperado. Tente novamente mais tarde.',
-  }
 }
 
 function PublicErrorState({ error }: { error: unknown }) {
