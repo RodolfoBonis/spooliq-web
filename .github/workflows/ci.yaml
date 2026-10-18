@@ -125,7 +125,7 @@ jobs:
       - name: Run tests
         run: |
           if [ -f "jest.config.js" ] || [ -f "jest.config.ts" ] || grep -q '"test"' package.json; then
-            npm test -- --coverage --watchAll=false
+            npm test -- --coverage
           else
             echo "No tests configured, skipping test step"
           fi

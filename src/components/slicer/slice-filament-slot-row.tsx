@@ -18,25 +18,30 @@ interface SliceFilamentSlotRowProps {
 
 /**
  * One row of the slice filament table: color swatch, material, weight and the
- * catalog match. The select defaults to the suggested filament and can be
- * overridden; the effective choice is reported upward via `onChange`.
+ * catalog match. An EXACT match (same material and color) is pre-selected; any
+ * other suggestion is only offered ("Usar sugestão") and the user picks the
+ * filament. The effective choice is reported upward via `onChange`.
  */
 export function SliceFilamentSlotRow({ slot, onChange }: SliceFilamentSlotRowProps) {
   const suggestion = slot.suggestion ?? null
   const suggestedId = suggestion?.filament_id
+  const isExact = suggestion?.confidence === 'exact'
   const [override, setOverride] = useState<Filament | null>(null)
+  // Only exact matches are applied automatically; others need an explicit choice.
+  const [useSuggested, setUseSuggested] = useState(isExact)
 
   // Resolve the suggested filament to a full entity for display/apply — only when
-  // the user hasn't overridden it. `useFilament('')` stays disabled.
-  const suggestedQuery = useFilament(!override && suggestedId ? suggestedId : '')
-  const chosen = override ?? suggestedQuery.data ?? null
+  // it is in use and not overridden. `useFilament('')` stays disabled.
+  const suggestedQuery = useFilament(!override && useSuggested && suggestedId ? suggestedId : '')
+  const chosen = override ?? (useSuggested ? suggestedQuery.data ?? null : null)
+  const usingSuggestion = !!chosen && chosen.id === suggestedId
 
   useEffect(() => {
     onChange(slot.slot, chosen)
   }, [slot.slot, chosen, onChange])
 
   const swatchColor = slot.color_hex || suggestion?.color_hex || '#cccccc'
-  const resolvingSuggestion = !override && !!suggestedId && suggestedQuery.isLoading
+  const resolvingSuggestion = !override && useSuggested && !!suggestedId && suggestedQuery.isLoading
 
   return (
     <TableRow>
@@ -65,13 +70,16 @@ export function SliceFilamentSlotRow({ slot, onChange }: SliceFilamentSlotRowPro
               <span className="text-xs text-neutral-500">Sugestão:</span>
               <span className="text-sm text-neutral-800">{suggestion.name}</span>
               <ConfidenceBadge confidence={suggestion.confidence} />
-              {override && override.id !== suggestion.filament_id && (
+              {!usingSuggestion && !resolvingSuggestion && (
                 <Button
                   type="button"
                   variant="link"
                   size="sm"
                   className="h-auto p-0 text-xs"
-                  onClick={() => setOverride(null)}
+                  onClick={() => {
+                    setOverride(null)
+                    setUseSuggested(true)
+                  }}
                 >
                   Usar sugestão
                 </Button>
@@ -87,6 +95,12 @@ export function SliceFilamentSlotRow({ slot, onChange }: SliceFilamentSlotRowPro
             value={chosen?.id}
             onValueChange={(filament) => setOverride(filament)}
           />
+
+          {isExact && usingSuggestion && !override && (
+            <p className="text-xs text-green-700">
+              Preenchido automaticamente: mesmo material e cor.
+            </p>
+          )}
 
           {!chosen && (
             <p className="text-xs text-red-600">

@@ -27,6 +27,7 @@ import {
   useDeleteBudget,
   useUpdateBudgetStatus,
   useGeneratePDF,
+  useDuplicateBudget,
 } from '@/lib/hooks/use-budgets'
 import {
   formatCurrency,
@@ -34,6 +35,9 @@ import {
   formatWeight,
   getColorPreviewStyle,
 } from '@/lib/utils/format'
+import { getAllowedTransitions, isShareable } from '@/lib/budgets/status'
+import { ShareBudgetDialog } from '@/components/budgets/share-budget-dialog'
+import { StockWarningsAlert } from '@/components/budgets/stock-warnings-alert'
 import {
   ArrowLeft,
   Edit,
@@ -46,6 +50,10 @@ import {
   Package,
   DollarSign,
   AlertCircle,
+  Share2,
+  CalendarClock,
+  MessageSquare,
+  Copy,
 } from 'lucide-react'
 import type { BudgetStatus, BudgetWithDetails } from '@/types/models'
 
@@ -63,8 +71,10 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
   const { mutate: deleteBudget } = useDeleteBudget()
   const { mutate: updateStatus } = useUpdateBudgetStatus()
   const { mutate: generatePDF, isPending: isGeneratingPDF } = useGeneratePDF()
+  const { mutate: duplicateBudget, isPending: isDuplicating } = useDuplicateBudget()
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showShareDialog, setShowShareDialog] = useState(false)
 
   if (isLoading) {
     return (
@@ -113,12 +123,19 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
   }
 
   const handleChangeStatus = (status: BudgetStatus) => {
-    if (status === 'draft') return // Cannot change back to draft
     updateStatus({ id: id, data: { status } })
   }
 
   const handleDownloadPDF = (force = false) => {
     generatePDF({ id: id, name: budget.name, force })
+  }
+
+  const handleDuplicate = () => {
+    duplicateBudget(id, {
+      onSuccess: (created) => {
+        router.push(`/budgets/${created.id}/edit`)
+      },
+    })
   }
 
   const customerInitials = budget.customer.name
@@ -138,6 +155,11 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
         <div className="flex-1">
           <div className="flex items-start justify-between">
             <div>
+              {budget.quote_number != null && (
+                <p className="text-sm font-mono text-neutral-400">
+                  Orçamento nº {String(budget.quote_number).padStart(4, '0')}
+                </p>
+              )}
               <h1 className="text-3xl font-bold text-neutral-900">{budget.name}</h1>
               {budget.description && (
                 <p className="text-neutral-600 mt-1">{budget.description}</p>
@@ -150,12 +172,14 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link href={`/budgets/${id}/edit`}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Editar
-                  </Link>
-                </DropdownMenuItem>
+                {budget.status === 'draft' && (
+                  <DropdownMenuItem asChild>
+                    <Link href={`/budgets/${id}/edit`}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Editar
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={() => handleDownloadPDF(false)}
                   disabled={isGeneratingPDF}
@@ -170,6 +194,10 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                   <Download className="mr-2 h-4 w-4" />
                   {isGeneratingPDF ? 'Gerando PDF...' : 'Gerar Novo PDF'}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDuplicate} disabled={isDuplicating}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  {isDuplicating ? 'Duplicando...' : 'Duplicar'}
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setShowDeleteDialog(true)}
@@ -181,11 +209,17 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <div className="flex items-center gap-4 mt-4">
+          <div className="flex flex-wrap items-center gap-4 mt-4">
             <StatusBadge status={budget.status} />
             <span className="text-sm text-neutral-500">
               Criado em {formatDateShort(budget.created_at)}
             </span>
+            {budget.valid_until && (
+              <span className="flex items-center gap-1 text-sm text-neutral-500">
+                <CalendarClock className="h-4 w-4" />
+                Válido até {formatDateShort(budget.valid_until)}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -193,6 +227,9 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Stock warnings (informational only) */}
+          <StockWarningsAlert warnings={budget.stock_warnings} />
+
           {/* Customer */}
           <Card>
             <CardHeader>
@@ -317,13 +354,32 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                           </p>
                         </div>
                       )}
+                      {!!item.post_processing_minutes && (
+                        <div>
+                          <p className="text-neutral-500">Pós-processamento</p>
+                          <p className="font-medium">{item.post_processing_minutes} min (total)</p>
+                        </div>
+                      )}
+                      {!!item.support_removal_minutes && (
+                        <div>
+                          <p className="text-neutral-500">Remoção de Suporte</p>
+                          <p className="font-medium">{item.support_removal_minutes} min (total)</p>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Labor Cost Breakdown */}
-                    {(item.setup_cost > 0 || item.manual_labor_cost > 0) && (
+                    {/* Cost breakdown (labor + Phase 4A operation costs) */}
+                    {(item.setup_cost > 0 ||
+                      item.manual_labor_cost > 0 ||
+                      !!item.machine_cost ||
+                      !!item.post_processing_cost ||
+                      !!item.support_removal_cost ||
+                      !!item.packaging_cost ||
+                      !!item.quality_control_cost ||
+                      !!item.failure_cost) && (
                       <div className="mt-3 p-3 bg-neutral-50 rounded-lg space-y-2">
                         <p className="text-xs font-medium text-neutral-700">
-                          Custos de Mão de Obra:
+                          Custos de Mão de Obra e Operação:
                         </p>
                         {item.setup_cost > 0 && (
                           <div className="flex justify-between text-xs">
@@ -343,6 +399,42 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                             <span className="font-medium">
                               {formatCurrency(item.manual_labor_cost)}
                             </span>
+                          </div>
+                        )}
+                        {!!item.machine_cost && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-neutral-600">Desgaste da Máquina</span>
+                            <span className="font-medium">{formatCurrency(item.machine_cost)}</span>
+                          </div>
+                        )}
+                        {!!item.post_processing_cost && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-neutral-600">Pós-processamento</span>
+                            <span className="font-medium">{formatCurrency(item.post_processing_cost)}</span>
+                          </div>
+                        )}
+                        {!!item.support_removal_cost && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-neutral-600">Remoção de Suporte</span>
+                            <span className="font-medium">{formatCurrency(item.support_removal_cost)}</span>
+                          </div>
+                        )}
+                        {!!item.packaging_cost && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-neutral-600">Embalagem</span>
+                            <span className="font-medium">{formatCurrency(item.packaging_cost)}</span>
+                          </div>
+                        )}
+                        {!!item.quality_control_cost && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-neutral-600">Controle de Qualidade</span>
+                            <span className="font-medium">{formatCurrency(item.quality_control_cost)}</span>
+                          </div>
+                        )}
+                        {!!item.failure_cost && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-neutral-600">Falhas</span>
+                            <span className="font-medium">{formatCurrency(item.failure_cost)}</span>
                           </div>
                         )}
                       </div>
@@ -447,34 +539,84 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                 {isGeneratingPDF ? 'Gerando...' : 'Baixar PDF'}
               </Button>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full">
-                    Mudar Status
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56">
-                  {Object.keys(STATUS_CONFIG).map((status) => {
-                    const config = STATUS_CONFIG[status as BudgetStatus]
-                    if (!config || !config.icon) {
-                      return null
-                    }
-                    const Icon = config.icon
-                    return (
-                      <DropdownMenuItem
-                        key={status}
-                        onClick={() => handleChangeStatus(status as BudgetStatus)}
-                        disabled={status === budget.status}
+              {isShareable(budget.status) && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowShareDialog(true)}
+                >
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Compartilhar
+                </Button>
+              )}
+
+              {(() => {
+                const transitions = getAllowedTransitions(budget.status)
+                return (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        disabled={transitions.length === 0}
                       >
-                        <Icon className="mr-2 h-4 w-4" />
-                        {config.label}
-                      </DropdownMenuItem>
-                    )
-                  }).filter(Boolean)}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                        Mudar Status
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56">
+                      {transitions.map((status) => {
+                        const config = STATUS_CONFIG[status]
+                        const Icon = config.icon
+                        return (
+                          <DropdownMenuItem
+                            key={status}
+                            onClick={() => handleChangeStatus(status)}
+                          >
+                            <Icon className="mr-2 h-4 w-4" />
+                            {config.label}
+                          </DropdownMenuItem>
+                        )
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )
+              })()}
             </CardContent>
           </Card>
+
+          {/* Customer response (Phase 4B) */}
+          {budget.customer_response_at && (() => {
+            const isRejected = budget.status === 'rejected' || !!budget.rejection_reason
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <MessageSquare className="h-5 w-5" />
+                    Resposta do cliente
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <p className={isRejected ? 'font-semibold text-red-700' : 'font-semibold text-emerald-700'}>
+                    {isRejected ? 'Orçamento recusado' : 'Orçamento aprovado'}
+                  </p>
+                  {budget.customer_response_name && (
+                    <p className="text-neutral-700">
+                      por <strong>{budget.customer_response_name}</strong>
+                    </p>
+                  )}
+                  <p className="text-neutral-500">
+                    em {formatDateShort(budget.customer_response_at)}
+                  </p>
+                  {budget.rejection_reason && (
+                    <div className="mt-2 p-3 bg-neutral-50 rounded-lg">
+                      <p className="text-neutral-500">Motivo</p>
+                      <p className="text-neutral-800">{budget.rejection_reason}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })()}
 
           {/* Cost Breakdown */}
           <Card>
@@ -534,6 +676,14 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                     color="yellow"
                   />
                 )}
+                {!!budget.machine_cost && (
+                  <CostBreakdownBar
+                    label="Desgaste da Máquina"
+                    amount={budget.machine_cost ?? 0}
+                    total={budget.total_cost}
+                    color="purple"
+                  />
+                )}
                 {budget.setup_cost > 0 && (
                   <CostBreakdownBar
                     label="Setup"
@@ -550,6 +700,38 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                     color="purple"
                   />
                 )}
+                {!!budget.post_processing_cost && (
+                  <CostBreakdownBar
+                    label="Pós-processamento"
+                    amount={budget.post_processing_cost ?? 0}
+                    total={budget.total_cost}
+                    color="blue"
+                  />
+                )}
+                {!!budget.packaging_cost && (
+                  <CostBreakdownBar
+                    label="Embalagem"
+                    amount={budget.packaging_cost ?? 0}
+                    total={budget.total_cost}
+                    color="orange"
+                  />
+                )}
+                {!!budget.quality_control_cost && (
+                  <CostBreakdownBar
+                    label="Controle de Qualidade"
+                    amount={budget.quality_control_cost ?? 0}
+                    total={budget.total_cost}
+                    color="yellow"
+                  />
+                )}
+                {!!budget.failure_cost && (
+                  <CostBreakdownBar
+                    label="Falhas"
+                    amount={budget.failure_cost ?? 0}
+                    total={budget.total_cost}
+                    color="red"
+                  />
+                )}
               </div>
 
               <Separator />
@@ -562,8 +744,13 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                     budget.filament_cost +
                     budget.waste_cost +
                     budget.energy_cost +
+                    (budget.machine_cost ?? 0) +
                     (budget.setup_cost || 0) +
-                    budget.labor_cost
+                    budget.labor_cost +
+                    (budget.post_processing_cost ?? 0) +
+                    (budget.packaging_cost ?? 0) +
+                    (budget.quality_control_cost ?? 0) +
+                    (budget.failure_cost ?? 0)
                   )}
                 </span>
               </div>
@@ -586,6 +773,42 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                   total={budget.total_cost}
                   color="green"
                 />
+              )}
+
+              {/* Base price, discount, shipping and taxes (Phase 4A) */}
+              {!!budget.base_price && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-neutral-700 font-medium">Preço base</span>
+                  <span className="font-semibold">{formatCurrency(budget.base_price)}</span>
+                </div>
+              )}
+              {!!budget.discount_amount && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-neutral-700">
+                    {budget.discount_type === 'percent' && budget.discount_value != null
+                      ? `Desconto (${budget.discount_value}%)`
+                      : 'Desconto'}
+                  </span>
+                  <span className="font-semibold text-red-600">
+                    − {formatCurrency(budget.discount_amount)}
+                  </span>
+                </div>
+              )}
+              {!!budget.shipping_cost && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-neutral-700">Frete</span>
+                  <span className="font-semibold">{formatCurrency(budget.shipping_cost)}</span>
+                </div>
+              )}
+              {!!budget.tax_amount && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-neutral-700">
+                    {budget.tax_rate_applied != null
+                      ? `Impostos (${budget.tax_rate_applied}%)`
+                      : 'Impostos'}
+                  </span>
+                  <span className="font-semibold">{formatCurrency(budget.tax_amount)}</span>
+                </div>
               )}
 
               <Separator />
@@ -645,6 +868,12 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
           </Card>
         </div>
       </div>
+
+      <ShareBudgetDialog
+        budget={budget}
+        open={showShareDialog}
+        onOpenChange={setShowShareDialog}
+      />
 
       <ConfirmDialog
         open={showDeleteDialog}
