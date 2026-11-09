@@ -26,17 +26,18 @@ export default function PublicBudgetPage({
 function PublicBudgetContent({ token }: { token: string }) {
   const { data: budget, isLoading, error } = usePublicBudget(token)
 
-  if (isLoading) {
-    return <PublicLoading />
-  }
-
-  if (error || !budget) {
-    return <PublicErrorState error={error} />
-  }
-
+  // The payment-return handler is mounted in every state so the checkout return is
+  // confirmed and the URL is cleaned even when the budget GET fails. It renders nothing
+  // unless the URL carries `?pagamento=retorno`.
   return (
     <>
-      <PublicBudgetView budget={budget} token={token} />
+      {isLoading ? (
+        <PublicLoading />
+      ) : error || !budget ? (
+        <PublicErrorState error={error} />
+      ) : (
+        <PublicBudgetView budget={budget} token={token} />
+      )}
       <PublicPaymentReturn token={token} />
     </>
   )

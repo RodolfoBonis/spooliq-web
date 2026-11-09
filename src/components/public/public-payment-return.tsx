@@ -12,12 +12,15 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { usePublicBudget, useConfirmPublicPayment } from '@/lib/hooks/use-public-budget'
-import { CheckCircle, Clock, Loader2 } from 'lucide-react'
+import {
+  phaseFromConfirmError,
+  phaseFromConfirmResponse,
+  type ReturnPhase,
+} from '@/lib/budgets/payment-return'
+import { AlertTriangle, CheckCircle, Clock, Loader2 } from 'lucide-react'
 
 const POLL_INTERVAL_MS = 3000
 const POLL_TIMEOUT_MS = 30000
-
-type Phase = 'confirming' | 'paid' | 'processing' | 'timeout'
 
 interface ReturnParams {
   order_nsu: string
@@ -30,11 +33,16 @@ interface ReturnParams {
  * Handles the `?pagamento=retorno&order_nsu=…&transaction_nsu=…&slug=…&receipt_url=…`
  * return from the InfinitePay checkout.
  *
- * It confirms the payment exactly once, then shows "Pagamento confirmado" or, while the
- * confirmation is still settling, "Processando…" — refetching the budget every 3s for up
- * to 30s before falling back to a friendly message. The URL is cleaned on mount so a
- * refresh doesn't re-trigger the flow; the params are captured once up front so the clean
- * doesn't tear the flow down.
+ * It confirms the payment exactly once, then shows:
+ * - "Pagamento confirmado" when confirmed;
+ * - "Processando…" while it settles (refetching the budget every 3s for up to 30s, then a
+ *   friendly fallback) — only for transient failures (5xx, network) or `processing`;
+ * - "Não conseguimos confirmar" on a definitive 4xx, pointing to the company;
+ * - "Link de retorno incompleto" when required params are missing.
+ *
+ * The URL is cleaned on mount so a refresh doesn't re-trigger the flow; params are captured
+ * once up front so the clean doesn't tear the flow down. This component is mounted in every
+ * page state (loading/error/success) so the URL is cleaned even when the budget GET fails.
  */
 export function PublicPaymentReturn({ token }: { token: string }) {
   const search = useSearchParams()
@@ -66,7 +74,7 @@ function PaymentReturnDialog({
   const router = useRouter()
   const confirm = useConfirmPublicPayment(token)
   const { refetch } = usePublicBudget(token)
-  const [phase, setPhase] = useState<Phase>('confirming')
+  const [phase, setPhase] = useState<ReturnPhase>(params ? 'confirming' : 'invalid')
   const started = useRef(false)
 
   // Remove the payment query string so a refresh won't re-run the confirmation.
@@ -75,17 +83,13 @@ function PaymentReturnDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Confirm exactly once.
+  // Confirm exactly once (only when we have the required params).
   useEffect(() => {
-    if (started.current) return
+    if (started.current || !params) return
     started.current = true
-    if (!params) {
-      setPhase('timeout')
-      return
-    }
     confirm.mutate(params, {
-      onSuccess: (data) => setPhase(data.confirmation === 'paid' ? 'paid' : 'processing'),
-      onError: () => setPhase('processing'),
+      onSuccess: (data) => setPhase(phaseFromConfirmResponse(data.confirmation)),
+      onError: (error) => setPhase(phaseFromConfirmError(error)),
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -107,10 +111,15 @@ function PaymentReturnDialog({
   }, [phase, refetch])
 
   const content = RETURN_CONTENT[phase]
+  const canClose = phase !== 'confirming'
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open onOpenChange={(o) => !o && canClose && onClose()}>
+      <DialogContent
+        className="sm:max-w-md"
+        onEscapeKeyDown={(e) => !canClose && e.preventDefault()}
+        onInteractOutside={(e) => !canClose && e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <content.icon
@@ -121,7 +130,7 @@ function PaymentReturnDialog({
           <DialogDescription>{content.description}</DialogDescription>
         </DialogHeader>
 
-        {phase !== 'confirming' && (
+        {canClose && (
           <DialogFooter>
             <Button type="button" onClick={onClose} className="w-full sm:w-auto">
               Fechar
@@ -163,7 +172,23 @@ const RETURN_CONTENT = {
     description:
       'Assim que a confirmação chegar, o status deste orçamento será atualizado automaticamente. Você pode fechar esta janela com segurança.',
   },
+  failed: {
+    icon: AlertTriangle,
+    spin: false,
+    iconClass: 'text-red-500',
+    title: 'Não conseguimos confirmar',
+    description:
+      'Não conseguimos confirmar seu pagamento automaticamente. Se você concluiu o pagamento, fale com a empresa para verificar.',
+  },
+  invalid: {
+    icon: AlertTriangle,
+    spin: false,
+    iconClass: 'text-amber-500',
+    title: 'Link de retorno incompleto',
+    description:
+      'Este link de retorno está incompleto. Se você concluiu o pagamento, fale com a empresa para confirmar.',
+  },
 } as const satisfies Record<
-  Phase,
+  ReturnPhase,
   { icon: typeof Loader2; spin: boolean; iconClass: string; title: string; description: string }
 >

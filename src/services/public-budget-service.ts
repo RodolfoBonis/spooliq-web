@@ -49,6 +49,17 @@ export type ConfirmPublicPaymentResponse = PublicBudget & {
   confirmation: 'paid' | 'processing'
 }
 
+/**
+ * Strips the transient `confirmation` flag from a confirm response, returning just the
+ * budget view to store in the query cache. Fully typed — no cast needed, since the rest
+ * of the intersection is exactly `PublicBudget`.
+ */
+export function toBudgetView(res: ConfirmPublicPaymentResponse): PublicBudget {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- drop the transient flag
+  const { confirmation, ...view } = res
+  return view
+}
+
 export const publicBudgetService = {
   /** Fetch the public view of a budget by its share token. */
   async get(token: string): Promise<PublicBudget> {

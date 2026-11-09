@@ -3,22 +3,15 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useCreatePublicPayment } from '@/lib/hooks/use-public-budget'
-import { buildPaymentSummaryLines } from '@/lib/budgets/payment-summary'
+import { isInfinitePayUrl } from '@/lib/budgets/infinitepay'
+import { PaymentSummaryList, payButtonLabel } from '@/components/public/payment-labels'
 import { formatCurrency, formatDateShort } from '@/lib/utils/format'
-import { sanitizeHttpUrl } from '@/lib/utils/whatsapp'
 import type {
   PublicBudgetPayment,
-  PublicBudgetPaymentKind,
   PublicBudgetPaymentNext,
   PublicBudgetPaymentReceipt,
 } from '@/types/models'
 import { CreditCard, Loader2, CheckCircle, ExternalLink, Lock, Info } from 'lucide-react'
-
-const PAY_BUTTON_LABEL: Record<PublicBudgetPaymentKind, string> = {
-  deposit: 'Pagar sinal',
-  full: 'Pagar agora',
-  balance: 'Pagar restante',
-}
 
 const CAPTURE_METHOD_LABEL: Record<string, string> = {
   pix: 'Pix',
@@ -96,23 +89,24 @@ export function PublicPaymentCard({ payment, token }: PublicPaymentCardProps) {
 
 function PayableSection({ next, token }: { next: PublicBudgetPaymentNext; token: string }) {
   const createPayment = useCreatePublicPayment(token)
-  const lines = buildPaymentSummaryLines(next)
+  // Keep disabled after success too: a valid checkout_url triggers a full-page redirect,
+  // so re-enabling would only allow a pointless second click during navigation.
+  const busy = createPayment.isPending || createPayment.isSuccess
 
   return (
     <div className="space-y-3">
-      <SummaryLines lines={lines} />
+      <PaymentSummaryList next={next} />
       <Button
         onClick={() => createPayment.mutate({ kind: next.kind })}
-        disabled={createPayment.isPending}
+        disabled={busy}
         className="w-full bg-primary-600 text-white hover:bg-primary-700 sm:w-auto"
       >
-        {createPayment.isPending ? (
+        {busy ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
           <CreditCard className="mr-2 h-4 w-4" />
         )}
-        {PAY_BUTTON_LABEL[next.kind]}
-        {next.kind !== 'full' ? ` · ${formatCurrency(next.amount)}` : ''}
+        {payButtonLabel(next)}
       </Button>
       <p className="flex items-center gap-1.5 text-xs text-neutral-400">
         <Lock className="h-3 w-3" />
@@ -123,11 +117,9 @@ function PayableSection({ next, token }: { next: PublicBudgetPaymentNext; token:
 }
 
 function PreviewSection({ next }: { next: PublicBudgetPaymentNext }) {
-  const lines = buildPaymentSummaryLines(next)
-
   return (
     <div className="space-y-3">
-      <SummaryLines lines={lines} />
+      <PaymentSummaryList next={next} />
       <p className="flex items-start gap-1.5 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
         Ao aprovar o orçamento você poderá pagar online por aqui.
@@ -149,24 +141,12 @@ function UnavailableSection({ reason }: { reason?: string | null }) {
   )
 }
 
-function SummaryLines({ lines }: { lines: string[] }) {
-  if (lines.length === 0) return null
-  return (
-    <ul className="space-y-1 text-sm text-neutral-700">
-      {lines.map((line, i) => (
-        <li key={line} className={i === 0 ? 'font-medium text-neutral-900' : undefined}>
-          {line}
-        </li>
-      ))}
-    </ul>
-  )
-}
-
 function ReceiptList({ receipts }: { receipts: PublicBudgetPaymentReceipt[] }) {
   return (
     <ul className="space-y-2">
       {receipts.map((receipt, index) => {
-        const receiptUrl = sanitizeHttpUrl(receipt.receipt_url)
+        // Only link receipts that are genuine InfinitePay https URLs; otherwise drop the link.
+        const receiptUrl = isInfinitePayUrl(receipt.receipt_url) ? receipt.receipt_url : null
         const method = receipt.capture_method
           ? CAPTURE_METHOD_LABEL[receipt.capture_method] ?? receipt.capture_method
           : null
@@ -203,18 +183,4 @@ function ReceiptList({ receipts }: { receipts: PublicBudgetPaymentReceipt[] }) {
       })}
     </ul>
   )
-}
-
-/**
- * Whether the payment card has anything worth rendering. When payments are disabled and
- * nothing was ever paid we hide the card entirely to avoid noise on the public page.
- */
-export function shouldRenderPaymentCard(payment?: PublicBudgetPayment | null): payment is PublicBudgetPayment {
-  if (!payment) return false
-  if (payment.status !== 'unpaid') return true
-  if (payment.payments.length > 0) return true
-  if (payment.can_pay) return true
-  // Still show the "ao aprovar você poderá pagar…" preview for sent budgets.
-  if (payment.next && payment.unavailable_reason === 'not_approved') return true
-  return false
 }

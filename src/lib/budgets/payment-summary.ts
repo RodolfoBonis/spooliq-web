@@ -4,12 +4,12 @@ import type { PublicBudgetPaymentNext } from '@/types/models'
 /**
  * Builds the human-readable payment summary lines shown on the public budget page,
  * e.g.:
- *   "R$ 95,00 no Pix (5% off)"
+ *   "R$ 95,00 no Pix (5% de desconto)"
  *   "ou até 3x de R$ 33,33 sem juros"
  *   "até 12x no cartão"
  *
  * Rules (from the product spec):
- * - The Pix line always shows; the "(N% off)" suffix is dropped when the discount is 0.
+ * - The Pix line always shows; the "(N% de desconto)" suffix is dropped when the discount is 0.
  * - The interest-free line is dropped when there are fewer than 2 interest-free
  *   installments (there is nothing to split).
  * - The "até Nx no cartão" line is dropped when the interest-free plan already reaches
@@ -23,7 +23,7 @@ export function buildPaymentSummaryLines(next: PublicBudgetPaymentNext): string[
   const pixDiscount = next.pix_discount_percent
   const pixLine =
     pixDiscount > 0
-      ? `${formatCurrency(next.pix_amount)} no Pix (${formatPercent(pixDiscount)}% off)`
+      ? `${formatCurrency(next.pix_amount)} no Pix (${formatPercent(pixDiscount)}% de desconto)`
       : `${formatCurrency(next.pix_amount)} no Pix`
   lines.push(pixLine)
 

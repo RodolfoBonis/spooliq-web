@@ -19,14 +19,14 @@ describe('buildPaymentSummaryLines', () => {
   it('renders the Pix line with the discount percentage', () => {
     const [pixLine] = buildPaymentSummaryLines(makeNext())
     expect(pixLine).toContain('no Pix')
-    expect(pixLine).toContain('(5% off)')
+    expect(pixLine).toContain('(5% de desconto)')
     expect(pixLine).toMatch(/95,00/)
   })
 
-  it('drops the "(N% off)" suffix when there is no Pix discount', () => {
+  it('drops the "(N% de desconto)" suffix when there is no Pix discount', () => {
     const [pixLine] = buildPaymentSummaryLines(makeNext({ pix_discount_percent: 0 }))
     expect(pixLine).toContain('no Pix')
-    expect(pixLine).not.toContain('% off')
+    expect(pixLine).not.toContain('desconto')
   })
 
   it('renders all three lines when there is a discount, interest-free plan and a higher card max', () => {

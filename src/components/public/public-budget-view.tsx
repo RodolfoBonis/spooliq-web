@@ -14,7 +14,8 @@ import {
 } from '@/components/ui/table'
 import { StatusBadge } from '@/components/budgets/status-badge'
 import { PublicResponseDialogs, type ResponseMode } from '@/components/public/public-response-dialogs'
-import { PublicPaymentCard, shouldRenderPaymentCard } from '@/components/public/public-payment-card'
+import { PublicPaymentCard } from '@/components/public/public-payment-card'
+import { shouldRenderPaymentCard } from '@/lib/budgets/payment-view'
 import { useDownloadPublicPDF } from '@/lib/hooks/use-public-budget'
 import { formatCurrency, formatDateShort, formatQuoteNumberPadded } from '@/lib/utils/format'
 import {

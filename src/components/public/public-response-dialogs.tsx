@@ -21,8 +21,7 @@ import {
   useCreatePublicPayment,
   getPublicBudgetErrorMessage,
 } from '@/lib/hooks/use-public-budget'
-import { buildPaymentSummaryLines } from '@/lib/budgets/payment-summary'
-import { formatCurrency } from '@/lib/utils/format'
+import { PaymentSummaryList, payButtonLabel } from '@/components/public/payment-labels'
 import type { PublicBudgetPaymentNext } from '@/types/models'
 import {
   publicApproveSchema,
@@ -142,11 +141,6 @@ function ApproveDialog({
   )
 }
 
-const PAY_BUTTON_LABEL: Record<PublicBudgetPaymentNext['kind'], string> = {
-  deposit: 'Pagar sinal',
-  full: 'Pagar agora',
-  balance: 'Pagar restante',
-}
 
 /** Post-approval step: shows the payment summary and a "Pagar agora" CTA. */
 function ApprovedPayStep({
@@ -159,35 +153,29 @@ function ApprovedPayStep({
   onClose: () => void
 }) {
   const createPayment = useCreatePublicPayment(token)
-  const lines = buildPaymentSummaryLines(next)
+  // Keep disabled after success too: a valid checkout_url triggers a full-page redirect.
+  const busy = createPayment.isPending || createPayment.isSuccess
 
   return (
     <div className="space-y-4">
-      <ul className="space-y-1 text-sm text-neutral-700">
-        {lines.map((line, i) => (
-          <li key={line} className={i === 0 ? 'font-medium text-neutral-900' : undefined}>
-            {line}
-          </li>
-        ))}
-      </ul>
+      <PaymentSummaryList next={next} />
 
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onClose} disabled={createPayment.isPending}>
+        <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
           Pagar depois
         </Button>
         <Button
           type="button"
           onClick={() => createPayment.mutate({ kind: next.kind })}
-          disabled={createPayment.isPending}
+          disabled={busy}
           className="bg-primary-600 hover:bg-primary-700 text-white"
         >
-          {createPayment.isPending ? (
+          {busy ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <CreditCard className="mr-2 h-4 w-4" />
           )}
-          {PAY_BUTTON_LABEL[next.kind]}
-          {next.kind !== 'full' ? ` · ${formatCurrency(next.amount)}` : ''}
+          {payButtonLabel(next)}
         </Button>
       </DialogFooter>
     </div>
