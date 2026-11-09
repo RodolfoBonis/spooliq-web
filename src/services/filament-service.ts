@@ -1,7 +1,14 @@
 import api from '@/lib/api/client'
 import { buildListParams, toPage } from '@/lib/api/pagination'
 import type { PaginatedResponse } from '@/types/api'
-import type { Filament, ColorType, ColorData } from '@/types/models'
+import type {
+  Filament,
+  ColorType,
+  ColorData,
+  StockMovement,
+  StockMovementFilamentState,
+  StockMovementType,
+} from '@/types/models'
 
 export interface FilamentFilters {
   search?: string
@@ -14,6 +21,8 @@ export interface FilamentFilters {
   /** Price range in cents. */
   min_price?: number
   max_price?: number
+  /** Only return filaments flagged as low stock (sends `low_stock=true`). */
+  low_stock?: boolean
   page?: number
   pageSize?: number
 }
@@ -45,6 +54,29 @@ export interface UpdateFilamentDTO {
   min_stock_alert?: number
   description?: string
   is_active?: boolean
+  // Stock control (Phase 4C).
+  track_stock?: boolean
+  low_stock_threshold_grams?: number | null
+}
+
+/** Body for POST /filaments/:id/stock-movements. `unit_price_per_kg` is purchase-only. */
+export interface CreateStockMovementDTO {
+  type: 'purchase' | 'adjustment' | 'waste'
+  grams: number
+  note?: string
+  unit_price_per_kg?: number // cents
+}
+
+/** Response of POST /filaments/:id/stock-movements. */
+export interface StockMovementResult {
+  movement: StockMovement
+  filament: StockMovementFilamentState
+}
+
+export interface StockMovementFilters {
+  page?: number
+  pageSize?: number
+  type?: StockMovementType
 }
 
 /** Raw filament as returned by the API; list/search endpoints embed brand/material objects. */
@@ -62,6 +94,26 @@ function normalizeFilament(raw: RawFilament): Filament {
   }
 }
 
+/**
+ * Centralizes the "clear threshold" semantics for the stock settings part of a
+ * filament update. An empty threshold is sent as `null`.
+ *
+ * API contract: `null` clears the threshold and `0` sets a zero threshold.
+ */
+export function buildStockSettingsPayload(input: {
+  track_stock?: boolean
+  low_stock_threshold_grams?: number | null | ''
+}): Pick<UpdateFilamentDTO, 'track_stock' | 'low_stock_threshold_grams'> {
+  const payload: Pick<UpdateFilamentDTO, 'track_stock' | 'low_stock_threshold_grams'> = {}
+  if (input.track_stock !== undefined) {
+    payload.track_stock = input.track_stock
+  }
+  const threshold = input.low_stock_threshold_grams
+  payload.low_stock_threshold_grams =
+    threshold === '' || threshold === undefined || threshold === null ? null : threshold
+  return payload
+}
+
 /** Shared filter params for both list and search (the API now accepts the same keys on both). */
 function filamentListParams(filters?: FilamentFilters) {
   const {
@@ -72,6 +124,7 @@ function filamentListParams(filters?: FilamentFilters) {
     diameter,
     min_price,
     max_price,
+    low_stock,
     page,
     pageSize,
   } = filters || {}
@@ -85,6 +138,8 @@ function filamentListParams(filters?: FilamentFilters) {
     diameter,
     min_price,
     max_price,
+    // Only send the flag when enabled so it never narrows the default listing.
+    low_stock: low_stock ? true : undefined,
   }
 }
 
@@ -108,7 +163,7 @@ export const filamentService = {
   /**
    * List filaments. Tolerant to both the new `{ data, total, ... }` envelope and legacy arrays.
    * The list endpoint now accepts the same filters as search (brand_id, material_id,
-   * color_type, diameter, min_price, max_price).
+   * color_type, diameter, min_price, max_price, low_stock).
    */
   async list(filters?: FilamentFilters): Promise<PaginatedResponse<Filament>> {
     const { data } = await api.get('/filaments/', {
@@ -122,8 +177,10 @@ export const filamentService = {
    * Get filament by ID
    */
   async getById(id: string): Promise<Filament> {
-    const { data } = await api.get<{ data: RawFilament }>(`/filaments/${id}`)
-    return normalizeFilament(data.data)
+    // The API returns the filament object itself (no `data` envelope); accept both.
+    const { data } = await api.get<RawFilament | { data: RawFilament }>(`/filaments/${id}`)
+    const raw = 'data' in data && data.data ? data.data : (data as RawFilament)
+    return normalizeFilament(raw)
   },
 
   /**
@@ -149,6 +206,39 @@ export const filamentService = {
    */
   async delete(id: string): Promise<void> {
     await api.delete(`/filaments/${id}`)
+  },
+
+  /**
+   * Register a manual stock movement. Any manual movement turns `track_stock` on.
+   * Returns the created movement plus the filament's updated stock state.
+   */
+  async createStockMovement(
+    id: string,
+    movement: CreateStockMovementDTO
+  ): Promise<StockMovementResult> {
+    const { data } = await api.post<StockMovementResult>(
+      `/filaments/${id}/stock-movements`,
+      movement
+    )
+    return data
+  },
+
+  /**
+   * List a filament's stock movements, newest first. Tolerant to the standard
+   * `{ data, total, page, page_size, total_pages }` envelope.
+   */
+  async listStockMovements(
+    id: string,
+    filters?: StockMovementFilters
+  ): Promise<PaginatedResponse<StockMovement>> {
+    const { data } = await api.get(`/filaments/${id}/stock-movements`, {
+      params: buildListParams({
+        page: filters?.page,
+        pageSize: filters?.pageSize,
+        type: filters?.type,
+      }),
+    })
+    return toPage<StockMovement>(data)
   },
 }
 
