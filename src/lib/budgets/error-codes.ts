@@ -37,6 +37,8 @@ export const PUBLIC_PAYMENT_ERROR_CODES = {
   payments_disabled: 'Pagamento online não está disponível para este orçamento.',
   payment_amount_below_minimum:
     'O valor é menor que o mínimo aceito para pagamento online (R$ 1,00).',
+  payment_link_in_progress:
+    'Estamos preparando o seu link de pagamento. Aguarde alguns segundos e tente novamente.',
   payment_provider_unavailable:
     'O meio de pagamento está indisponível no momento. Tente novamente em instantes.',
   payments_not_configured:
