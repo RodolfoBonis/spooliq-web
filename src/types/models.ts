@@ -785,4 +785,62 @@ export interface PublicBudget {
   delivery_days?: number | null
   payment_terms?: string | null
   notes?: string | null
+  /** InfinitePay payment block (API contract: InfinitePay public payments). */
+  payment?: PublicBudgetPayment | null
+}
+
+
+/** Payment aggregate status on the public budget view. */
+export type PublicBudgetPaymentStatus = 'unpaid' | 'partial' | 'paid'
+
+/** Which slice of the total the next charge covers. */
+export type PublicBudgetPaymentKind = 'deposit' | 'balance' | 'full'
+
+/**
+ * Why online payment is not currently available. Open string union: the backend may
+ * add reasons over time, so unknown values fall back to a generic message.
+ */
+export type PublicBudgetPaymentUnavailableReason =
+  | 'not_approved'
+  | 'below_minimum'
+  | 'payments_disabled'
+  | 'already_paid'
+  | 'disconnected'
+  | (string & {})
+
+/** The next chargeable slice, with Pix and installment projections (all cents). */
+export interface PublicBudgetPaymentNext {
+  kind: PublicBudgetPaymentKind
+  amount: number // cents
+  pix_amount: number // cents
+  pix_discount_percent: number // 0-30
+  interest_free_installments: number // 1-12
+  installment_amount: number // cents, value of each interest-free installment
+  max_installments: number // 1-12
+}
+
+/** A settled (or in-flight) payment shown with its receipt on the public view. */
+export interface PublicBudgetPaymentReceipt {
+  kind: PublicBudgetPaymentKind
+  amount: number // cents
+  paid_amount: number // cents (may exceed `amount` when the buyer paid card interest)
+  capture_method?: string | null // e.g. "pix", "credit"
+  installments?: number | null
+  paid_at?: string | null // ISO 8601
+  receipt_url?: string | null
+}
+
+/** InfinitePay payment block attached to the public budget view. */
+export interface PublicBudgetPayment {
+  enabled: boolean
+  status: PublicBudgetPaymentStatus
+  total: number // cents
+  paid: number // cents
+  balance: number // cents
+  deposit_percent?: number | null // null = charge the full total
+  can_pay: boolean
+  unavailable_reason?: PublicBudgetPaymentUnavailableReason | null
+  next?: PublicBudgetPaymentNext | null
+  has_pending_link: boolean
+  payments: PublicBudgetPaymentReceipt[]
 }

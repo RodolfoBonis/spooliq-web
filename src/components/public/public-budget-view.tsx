@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/table'
 import { StatusBadge } from '@/components/budgets/status-badge'
 import { PublicResponseDialogs, type ResponseMode } from '@/components/public/public-response-dialogs'
+import { PublicPaymentCard, shouldRenderPaymentCard } from '@/components/public/public-payment-card'
 import { useDownloadPublicPDF } from '@/lib/hooks/use-public-budget'
 import { formatCurrency, formatDateShort, formatQuoteNumberPadded } from '@/lib/utils/format'
 import {
@@ -88,6 +89,11 @@ export function PublicBudgetView({ budget, token }: PublicBudgetViewProps) {
           <TotalsBlock budget={budget} />
         </CardContent>
       </Card>
+
+      {/* Payment (InfinitePay) */}
+      {shouldRenderPaymentCard(budget.payment) && (
+        <PublicPaymentCard payment={budget.payment} token={token} />
+      )}
 
       {/* Commercial info */}
       {(budget.delivery_days || budget.payment_terms || budget.notes || budget.valid_until) && (
@@ -288,6 +294,7 @@ function StatusBanner({
     return (
       <Banner tone="green" icon={<CheckCircle className="h-5 w-5" />}>
         <p className="font-semibold">Orçamento aprovado{who ? ` por ${who}` : ''} em {when}</p>
+        <PaymentStatusLine payment={budget.payment} />
       </Banner>
     )
   }
@@ -329,6 +336,25 @@ function Banner({
       <div>{children}</div>
     </div>
   )
+}
+
+/** Small payment status line shown inside the "aprovado" banner. */
+function PaymentStatusLine({ payment }: { payment: PublicBudget['payment'] }) {
+  if (!payment) return null
+  if (payment.status === 'paid') {
+    return <p className="mt-1 text-sm">Pagamento confirmado.</p>
+  }
+  if (payment.status === 'partial') {
+    return (
+      <p className="mt-1 text-sm">
+        Pagamento parcial — saldo de {formatCurrency(payment.balance)}.
+      </p>
+    )
+  }
+  if (payment.can_pay) {
+    return <p className="mt-1 text-sm">Pagamento pendente.</p>
+  }
+  return null
 }
 
 function ItemsTable({ items }: { items: PublicBudget['items'] }) {

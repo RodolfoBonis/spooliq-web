@@ -1,8 +1,9 @@
 'use client'
 
-import { use } from 'react'
+import { Suspense, use } from 'react'
 import { usePublicBudget } from '@/lib/hooks/use-public-budget'
 import { PublicBudgetView } from '@/components/public/public-budget-view'
+import { PublicPaymentReturn } from '@/components/public/public-payment-return'
 import { Skeleton } from '@/components/ui/skeleton'
 import { resolveErrorScreen } from '@/lib/budgets/public-error-screen'
 
@@ -12,6 +13,17 @@ export default function PublicBudgetPage({
   params: Promise<{ token: string }>
 }) {
   const { token } = use(params)
+
+  // Suspense boundary is required because the payment-return handler reads the query
+  // string via `useSearchParams`.
+  return (
+    <Suspense fallback={<PublicLoading />}>
+      <PublicBudgetContent token={token} />
+    </Suspense>
+  )
+}
+
+function PublicBudgetContent({ token }: { token: string }) {
   const { data: budget, isLoading, error } = usePublicBudget(token)
 
   if (isLoading) {
@@ -22,7 +34,12 @@ export default function PublicBudgetPage({
     return <PublicErrorState error={error} />
   }
 
-  return <PublicBudgetView budget={budget} token={token} />
+  return (
+    <>
+      <PublicBudgetView budget={budget} token={token} />
+      <PublicPaymentReturn token={token} />
+    </>
+  )
 }
 
 function PublicLoading() {

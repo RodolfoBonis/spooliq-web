@@ -4,10 +4,16 @@ import {
   publicBudgetService,
   type PublicApproveDTO,
   type PublicRejectDTO,
+  type CreatePublicPaymentDTO,
+  type ConfirmPublicPaymentDTO,
 } from '@/services/public-budget-service'
 import type { PublicBudget } from '@/types/models'
 import { getApiErrorMessage } from '@/lib/api/errors'
-import { PUBLIC_BUDGET_ERROR_CODES } from '@/lib/budgets/error-codes'
+import {
+  PUBLIC_BUDGET_ERROR_CODES,
+  PUBLIC_PAYMENT_ERROR_CODES,
+} from '@/lib/budgets/error-codes'
+import { isInfinitePayCheckoutUrl } from '@/lib/budgets/infinitepay'
 
 const publicBudgetKey = (token: string) => ['public-budget', token] as const
 
@@ -78,7 +84,55 @@ export function useDownloadPublicPDF(token: string, quoteNumber?: number) {
   })
 }
 
+/**
+ * Create an InfinitePay checkout link for the budget's next charge and redirect the
+ * browser to it. For safety the redirect only happens when the returned `checkout_url`
+ * is an https URL on `infinitepay.io` (see `isInfinitePayCheckoutUrl`); otherwise the
+ * mutation fails loudly so a stale/malicious URL never navigates the customer away.
+ */
+export function useCreatePublicPayment(token: string) {
+  return useMutation({
+    mutationFn: (body: CreatePublicPaymentDTO) => publicBudgetService.createPayment(token, body),
+    onSuccess: ({ checkout_url }) => {
+      if (isInfinitePayCheckoutUrl(checkout_url)) {
+        window.location.assign(checkout_url)
+        return
+      }
+      toast.error('Não foi possível abrir o pagamento. Tente novamente em instantes.')
+    },
+    onError: (error: unknown) => {
+      toast.error(getPublicPaymentErrorMessage(error, 'Não foi possível iniciar o pagamento'))
+    },
+  })
+}
+
+/**
+ * Confirm a payment on return from the InfinitePay checkout. The refreshed public view
+ * is written straight into the cache (same `setQueryData` pattern as approve/reject) so
+ * the page reflects the new payment status immediately. The `confirmation` field is kept
+ * only on the mutation result for the return screen to drive its paid/processing state.
+ */
+export function useConfirmPublicPayment(token: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (body: ConfirmPublicPaymentDTO) => publicBudgetService.confirmPayment(token, body),
+    onSuccess: (data) => {
+      // Persist only the budget view in the cache; `confirmation` is transient state
+      // the return screen reads from the mutation result, not from the cached budget.
+      const { confirmation, ...view } = data
+      void confirmation
+      queryClient.setQueryData(publicBudgetKey(token), view as PublicBudget)
+    },
+  })
+}
+
 /** Maps a public-budget mutation/query error to a pt-BR message. */
 export function getPublicBudgetErrorMessage(error: unknown, fallback: string): string {
   return getApiErrorMessage(error, fallback, { byCode: PUBLIC_BUDGET_ERROR_CODES })
+}
+
+/** Maps a public-payment mutation error to a pt-BR message. */
+export function getPublicPaymentErrorMessage(error: unknown, fallback: string): string {
+  return getApiErrorMessage(error, fallback, { byCode: PUBLIC_PAYMENT_ERROR_CODES })
 }
