@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateOrigin, unauthorizedOriginResponse } from '@/lib/api/origin-validator'
 
+/** Mask the public share token so it never lands in logs. */
+function maskPublicToken(url: string): string {
+  return url.replace(/(public\/budgets\/)[^/?#]+/, '$1***')
+}
+
 const API_BASE_URL = process.env.API_URL || 'http://localhost:8080/v1'
 const API_BASE = new URL(API_BASE_URL)
 const API_ORIGIN = `${API_BASE.protocol}//${API_BASE.host}`
@@ -141,7 +146,7 @@ async function proxyRequest(
 
     const targetUrl = `${API_BASE_URL}/${targetPath}${request.nextUrl.search}`
 
-    console.log('🔄 Proxy Request:', method, targetUrl)
+    console.log('🔄 Proxy Request:', method, maskPublicToken(targetUrl))
 
     const headers = buildForwardRequestHeaders(request)
 
@@ -210,7 +215,7 @@ async function proxyRequest(
       // redirect response as-is rather than refetch with a consumed stream.
     }
 
-    console.log('✅ Proxy Response:', response.status, targetUrl)
+    console.log('✅ Proxy Response:', response.status, maskPublicToken(targetUrl))
 
     // Handle 204 No Content - return empty response
     if (response.status === 204) {

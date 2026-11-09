@@ -11,6 +11,11 @@ const config: Config = {
   	extend: {
   		colors: {
   			primary: {
+  				// Bare `bg-primary`/`text-primary`/`ring-primary` (used by shadcn
+  				// Progress, Checkbox, Badge, Button link and many screens) need a
+  				// DEFAULT; without it those utilities aren't generated at all.
+  				DEFAULT: 'hsl(var(--primary))',
+  				foreground: 'hsl(var(--primary-foreground))',
   				'50': '#fff5f5',
   				'100': '#ffe3e3',
   				'200': '#ffc9c9',
