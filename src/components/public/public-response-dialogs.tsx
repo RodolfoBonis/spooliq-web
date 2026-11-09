@@ -18,15 +18,18 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   useApprovePublicBudget,
   useRejectPublicBudget,
+  useCreatePublicPayment,
   getPublicBudgetErrorMessage,
 } from '@/lib/hooks/use-public-budget'
+import { PaymentSummaryList, payButtonLabel } from '@/components/public/payment-labels'
+import type { PublicBudgetPaymentNext } from '@/types/models'
 import {
   publicApproveSchema,
   publicRejectSchema,
   type PublicApproveFormData,
   type PublicRejectFormData,
 } from '@/lib/validations/public-budget'
-import { CheckCircle, Loader2, XCircle } from 'lucide-react'
+import { CheckCircle, CreditCard, Loader2, XCircle } from 'lucide-react'
 
 export type ResponseMode = 'approve' | 'reject' | null
 
@@ -70,8 +73,20 @@ function ApproveDialog({
 
   const onSubmit = (data: PublicApproveFormData) => {
     if (approve.isPending) return
-    approve.mutate({ name: data.name }, { onSuccess: () => onClose() })
+    approve.mutate(
+      { name: data.name },
+      {
+        // When the approved budget can be paid right away we keep the dialog open and
+        // offer "Pagar agora"; otherwise we close as before.
+        onSuccess: (budget) => {
+          if (!budget.payment?.can_pay || !budget.payment.next) onClose()
+        },
+      }
+    )
   }
+
+  const payNext =
+    approve.isSuccess && approve.data.payment?.can_pay ? approve.data.payment.next : null
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -79,44 +94,91 @@ function ApproveDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-emerald-600" />
-            Aprovar orçamento
+            {payNext ? 'Orçamento aprovado!' : 'Aprovar orçamento'}
           </DialogTitle>
           <DialogDescription>
-            Confirme seu nome para registrar a aprovação deste orçamento.
+            {payNext
+              ? 'Você já pode pagar online agora ou fechar e pagar mais tarde pelo mesmo link.'
+              : 'Confirme seu nome para registrar a aprovação deste orçamento.'}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="approve-name">Seu nome</Label>
-            <Input id="approve-name" autoFocus {...form.register('name')} />
-            {form.formState.errors.name && (
-              <p className="text-sm text-red-600">{form.formState.errors.name.message}</p>
+        {payNext ? (
+          <ApprovedPayStep next={payNext} token={token} onClose={onClose} />
+        ) : (
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="approve-name">Seu nome</Label>
+              <Input id="approve-name" autoFocus {...form.register('name')} />
+              {form.formState.errors.name && (
+                <p className="text-sm text-red-600">{form.formState.errors.name.message}</p>
+              )}
+            </div>
+
+            {approve.isError && (
+              <p className="text-sm text-red-600">
+                {getPublicBudgetErrorMessage(approve.error, 'Erro ao aprovar o orçamento')}
+              </p>
             )}
-          </div>
 
-          {approve.isError && (
-            <p className="text-sm text-red-600">
-              {getPublicBudgetErrorMessage(approve.error, 'Erro ao aprovar o orçamento')}
-            </p>
-          )}
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={approve.isPending}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={approve.isPending}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-            >
-              {approve.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Confirmar aprovação
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose} disabled={approve.isPending}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={approve.isPending}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {approve.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Confirmar aprovação
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
+  )
+}
+
+
+/** Post-approval step: shows the payment summary and a "Pagar agora" CTA. */
+function ApprovedPayStep({
+  next,
+  token,
+  onClose,
+}: {
+  next: PublicBudgetPaymentNext
+  token: string
+  onClose: () => void
+}) {
+  const createPayment = useCreatePublicPayment(token)
+  // Keep disabled after success too: a valid checkout_url triggers a full-page redirect.
+  const busy = createPayment.isPending || createPayment.isSuccess
+
+  return (
+    <div className="space-y-4">
+      <PaymentSummaryList next={next} />
+
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
+          Pagar depois
+        </Button>
+        <Button
+          type="button"
+          onClick={() => createPayment.mutate({ kind: next.kind })}
+          disabled={busy}
+          className="bg-primary-600 hover:bg-primary-700 text-white"
+        >
+          {busy ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <CreditCard className="mr-2 h-4 w-4" />
+          )}
+          {payButtonLabel(next)}
+        </Button>
+      </DialogFooter>
+    </div>
   )
 }
 

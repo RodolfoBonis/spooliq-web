@@ -1,5 +1,8 @@
 import axios, { isAxiosError, type AxiosInstance } from 'axios'
-import type { PublicBudget } from '@/types/models'
+import type {
+  PublicBudget,
+  PublicBudgetPaymentKind,
+} from '@/types/models'
 
 /**
  * Dedicated axios instance for the PUBLIC budget approval flow.
@@ -23,6 +26,38 @@ export interface PublicApproveDTO {
 export interface PublicRejectDTO {
   name: string
   reason?: string
+}
+
+export interface CreatePublicPaymentDTO {
+  kind: PublicBudgetPaymentKind
+}
+
+/** API returns the InfinitePay hosted checkout URL to redirect the customer to. */
+export interface CreatePublicPaymentResponse {
+  checkout_url: string
+}
+
+export interface ConfirmPublicPaymentDTO {
+  order_nsu: string
+  transaction_nsu: string
+  slug: string
+  receipt_url?: string
+}
+
+/** Confirm returns the refreshed public view plus the resolved confirmation state. */
+export type ConfirmPublicPaymentResponse = PublicBudget & {
+  confirmation: 'paid' | 'processing'
+}
+
+/**
+ * Strips the transient `confirmation` flag from a confirm response, returning just the
+ * budget view to store in the query cache. Fully typed — no cast needed, since the rest
+ * of the intersection is exactly `PublicBudget`.
+ */
+export function toBudgetView(res: ConfirmPublicPaymentResponse): PublicBudget {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- drop the transient flag
+  const { confirmation, ...view } = res
+  return view
 }
 
 export const publicBudgetService = {
@@ -68,6 +103,30 @@ export const publicBudgetService = {
   async reject(token: string, body: PublicRejectDTO): Promise<PublicBudget> {
     const { data } = await publicApi.post<PublicBudget>(
       `/public/budgets/${encodeURIComponent(token)}/reject`,
+      body
+    )
+    return data
+  },
+
+  /** Create (or reuse) an InfinitePay checkout link for the budget's next charge. */
+  async createPayment(
+    token: string,
+    body: CreatePublicPaymentDTO
+  ): Promise<CreatePublicPaymentResponse> {
+    const { data } = await publicApi.post<CreatePublicPaymentResponse>(
+      `/public/budgets/${encodeURIComponent(token)}/payments`,
+      body
+    )
+    return data
+  },
+
+  /** Confirm a payment after the customer returns from the InfinitePay checkout. */
+  async confirmPayment(
+    token: string,
+    body: ConfirmPublicPaymentDTO
+  ): Promise<ConfirmPublicPaymentResponse> {
+    const { data } = await publicApi.post<ConfirmPublicPaymentResponse>(
+      `/public/budgets/${encodeURIComponent(token)}/payments/confirm`,
       body
     )
     return data
